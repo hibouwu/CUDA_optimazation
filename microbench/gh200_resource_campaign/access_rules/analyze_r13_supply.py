@@ -4147,8 +4147,32 @@ def _second_prefill_wide_candidates(processes):
         handoff_profile.append(dict(handoff_delay=delta,rows=rows,
             calibration_rms=float(np.sqrt(np.mean(((pred-target)/target)[selected]**2))),
             max_calibration_change_cycles=float(np.max(np.abs(pred-baseline)[selected]))))
+    off_spans=[r for r in initial_wait_observed if r['second_prefill']==0]
+    # Conditional per-process decomposition Y=alpha+R, with one nonnegative
+    # fixed software cost and nonnegative residual. This does not label R TMA latency.
+    alpha_upper=min(r['minimum'] for r in off_spans)
+    initial_mapping=dict(common_fixed_path_upper_cycles=alpha_upper,
+        central_fixed_path_upper_cycles=min(r['median'] for r in off_spans),
+        off_residual_median_bounds=[dict(stages=r['stages'],
+            lower=r['median']-alpha_upper,upper=r['median'],
+            positive_lower_bound_processes=sum(p['cycles']>alpha_upper for p in r['processes'])) for r in off_spans],
+        candidate_shared_offset_repairs=[],
+        assumptions=['Per-process bounds assume a common fixed nonnegative alpha and Y=alpha+R with R>=0 across all off calls.',
+            'These bounds are not conditions imposed on the central fit and are not confidence intervals. R can include waiting, scheduling, recovery or variable observer work.',
+            'On spans are comparisons only. They neither set alpha nor split pre-check and post-return costs.'],
+        observation_equation='P is the observed prefill_end; Y=FIRST-P=max(A-P,a_pre)+a_post. The separate pre/post costs and ready time are not observed.',
+        uniform_tc_offset_equivalence='For E_i=max(B_i+v,E_(i-1))+c, q>=v>=0: Eprime=E-v, qprime=q-v, lambdaprime=lambda+v reproduces all observable events. A prologue-only or variable v is outside this equivalence.')
+    for fit in fits:
+        residual=[]
+        for row in off_spans:
+            pred=next(r for r in fit['rows'] if r['stages']==row['stages'] and r['second_prefill']==0)
+            residual.append(row['median']-pred['initial_ready_wait_cycles'])
+        correction=max(0.,(min(residual)+max(residual))/2)
+        initial_mapping['candidate_shared_offset_repairs'].append(dict(objective=fit['objective'],
+            target_minus_ideal_wait_cycles=residual,best_common_offset_cycles=correction,
+            minimum_maximum_absolute_error_cycles=max(abs(r-correction) for r in residual)))
     return dict(fields=list(fields),calibration_target_cycles=target.tolist(),fits=fits,handoff_profile=handoff_profile,
-        initial_wait_observed=initial_wait_observed,
+        initial_wait_observed=initial_wait_observed,initial_observation_mapping=initial_mapping,
         parameterization="u=ell+a is represented by ready_latency=u, reuse_delay=0; this is a coordinate choice, not a physical zero reuse cost.",
         search_upper=dict(zip(names,upper.tolist())),seed=739790,
         necessary_median_conditions=dict(q_lower=371.5,g_upper=281.75,w_upper=49.,
@@ -4164,7 +4188,7 @@ def _second_prefill_wide_candidates(processes):
 
 
 def stage_second_prefill_diagnostics(root, output):
-    """Same-stage joint initial-state intervention; no fitting or cross-stage residual."""
+    """Replay same-stage initial-state controls; keep later off-only development fits separate."""
     import gzip
     from analyze_r13_sm import select_attempts, validate_setup
     import v06_run as common
@@ -4254,6 +4278,16 @@ def stage_second_prefill_diagnostics(root, output):
                     first_tail_minus_end_cycles=prefill['first_tail_minus_end_cycles'],
                     first_tail_minus_end_ns=prefill['first_tail_minus_end_ns'])
                 if min(metrics['early_ns'],metrics['post_ns'])<=0:raise ValueError('nonpositive second prefill phase window')
+                metrics.update(first_after_prefill_cycles=c['first_mma']-prefill['end_c'],
+                    prefill_begin_to_commit1_cycles=c['commit1']-prefill['begin_c'],
+                    prefill_begin_to_commit16_cycles=c['commit16']-prefill['begin_c'],
+                    prefill_begin_to_mma_cycles=c['mma_return']-prefill['begin_c'],
+                    prefill_begin_to_commit16_ns=end-prefill['begin_ns'],
+                    prefill_begin_to_mma_ns=M-prefill['begin_ns'])
+                closed=(metrics['prefill_wait_cycles']+metrics['first_after_prefill_cycles']+
+                    metrics['first_to_commit1_cycles']+metrics['early_cycles'])
+                if closed!=metrics['prefill_begin_to_commit16_cycles'] or closed+metrics['post_cycles']!=metrics['prefill_begin_to_mma_cycles']:
+                    raise ValueError('same-consumer prefill/first/early/post closure failed')
                 metrics.update(early_frequency_ghz=metrics['early_cycles']/metrics['early_ns'],
                                post_frequency_ghz=metrics['post_cycles']/metrics['post_ns'])
                 entry.update(cta=p['cta'],sm=p['sm'],work=p['work'],sender_work=p['sender_work'],
@@ -4380,6 +4414,20 @@ def stage_second_prefill_diagnostics(root, output):
         if t['variant']=='progress':
             lines.append(f'| stage{t["stages"]} | '+' | '.join(cell(t['delta'][k]) for k in
                 ('early_cycles','early_ns','post_cycles','post_ns','first_to_commit1_cycles','prefill_wait_ns'))+' |')
+    lines+=['','把起点移到预等之前，直接检查同消费者的累计进度：','',
+        '| stage，on−off | 预等开始→C1 cycle | →C16 cycle / ns | →M cycle / ns |',
+        '|---|---:|---:|---:|']
+    for t in treatment:
+        if t['variant']!='progress':continue
+        v=t['delta']
+        lines.append(f'| {t["stages"]} | {cell(v["prefill_begin_to_commit1_cycles"])} | '
+            f'{cell(v["prefill_begin_to_commit16_cycles"])} / {cell(v["prefill_begin_to_commit16_ns"])} | '
+            f'{cell(v["prefill_begin_to_mma_cycles"])} / {cell(v["prefill_begin_to_mma_ns"])} |')
+    lines+=['','每个调用先按实际端点闭合：开始→C16=预等+结束→FIRST+FIRST→C1+early；'
+        '再加post得到开始→M。随后作on−off配对；各分项中位数不可直接相加。'
+        'stage4到C1十次均变晚，early虽十次缩短，到C16和M的累计变化却有正有负；'
+        'stage6则十次推迟到C16和M。说明早段收缩含有等待重分配，不能单由缩短的窗口提高服务率。'
+        '这些是同消费者局部累计时间，不是CUDA event完整时间，也未证明剩余变化全部由等待搬移解释。','']
     lines+=['','| 完整时间 on−off | Δµs | 相对变化 |','|---|---:|---:|']
     for t in treatment:
         v=t['whole_relative'];percent={k:100*v[k] for k in ('median','trial_min','trial_max')}
@@ -4396,7 +4444,7 @@ def stage_second_prefill_diagnostics(root, output):
         'E0重叠只是同调用执行背景，求和不去重，不能归因共享端口或硬件带宽。', '',
         '四份独立完整输出比较均检查全部4325376个元素，on/off差异与非有限数为0。'
         '两条plain参照共20进程先于80个控制进程完成，且属于同一GPU；原始身份、失败记录、资源、'
-        '预热与逐进程同stage配对保留于[B-second-prefill.json](B-second-prefill.json)。没有重拟参数、筛选进程或更新冻结成绩。','']
+        '预热与逐进程同stage配对保留于[B-second-prefill.json](B-second-prefill.json)。回放未筛选进程；下文另列开发拟合，冻结成绩未改。','']
     lines+=['## 全预填后的恒定复用检验','',
         '本检验只针对已声明的reduced局部递推：p≤c、g≤c−q、q+λ≤c、q≥w+h，'
         'ready/复用成本和软件路径恒定。预等使初始S槽全ready、前WG已排空；'
@@ -4463,6 +4511,21 @@ def stage_second_prefill_diagnostics(root, output):
     lines+=['','它包含prologue检查、full等待返回与标记成本，尚未单独识别ready延迟；'
         '不能把on约110cycle直接用作off拟合常数。现有两组解的理想初始ready等待均为0，'
         '下一轮应先明确这段的观察映射，再用off端点约束入口；无需为获取这段另加探针。']
+    mapping=report['wide_constant_candidates']['initial_observation_mapping']
+    lines+=['','若只要求中央中位映射，两stage共享α且R≥0给α≤155cycle，stage4中央残差至少503.5cycle。'
+        '这不构成逐进程保证。','',
+        '如果逐进程假设共同固定软件项α≥0、Y=α+R且R≥0，只用off得到'
+        f'α≤{mapping["common_fixed_path_upper_cycles"]:.0f}cycle。R仍可包含等待、调度恢复或变化的观察开销，不能叫裸TMA延迟。','',
+        '| stage | off残差R中位的条件范围cycle | R下界为正的进程 |','|---|---:|---:|']
+    for r in mapping['off_residual_median_bounds']:
+        lines.append(f'| {r["stages"]} | [{r["lower"]:.1f},{r["upper"]:.1f}] | {r["positive_lower_bound_processes"]}/10 |')
+    lines+=['','这是所有off调用共享固定α时的逐进程约束，不把最小观测值作为中央预测的硬验收线。'
+        '两组候选都给两stage理想初始等待0；即使只修中央中位目标，一个共同加法修正也至少留下'
+        f'{mapping["candidate_shared_offset_repairs"][0]["minimum_maximum_absolute_error_cycles"]:.2f}cycle的最大绝对残差。'
+        '这个小范围结论只排除给现有解补同一个常数，不排除重新求解带状态或不同观察映射的候选。','',
+        '也不增加统一FIRST→TC起动偏移v：若E_i=max(B_i+v,E_(i−1))+c且q≥v≥0，'
+        '改记E′=E−v、q′=q−v、λ′=λ+v后，B/C/D、producer、释放与预等事件都与原递推相同。'
+        '该偏移在这些观测下不可辨识，不能修复预测；只在prologue改变或q<v时才不属于这个等价类。']
     lines+=['','七个δ全部保留，不按on残差挑选。若off训练窗口保持不变而模型预等改变，'
         '该坐标方向便没有被这些训练量唯一确定；它不是物理交接延迟的测量。','',
         'off中位量还给出必要条件q≥371.5、g≤281.75、w≤49、w+r≤53及λ+w≤424.522、u+w+G≤1894.9，'

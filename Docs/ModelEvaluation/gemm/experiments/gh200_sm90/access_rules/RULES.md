@@ -115,7 +115,7 @@ max中的两项单位为cycle/Ktile，ΔL为SM cycle。纯计算入口为 `suppl
 
 后续候选必须保留时间状态。[同位置起步干预](R10-layout-cache.md#producer-delay)在工作/SM不变时改变了行距响应，而且B0在扣除实际producer后移量后，首输出仍多耗816 ns、1156.5 cycle。固定事件前驱、固定同域边成本且其它根时刻不变的max-plus图，不能把单根延迟放大；仅平移旧时间线或增加固定位置罚项不充分。该约束不排除带可变仲裁、等待返回与初态的有限stage模型。producer/FIRST软件名次也不是物理请求到达，不直接拟合为服务价格。 [首次供给端点](R13-async-retirement.md#first-supply)把额外量定位在copy发出标记到FIRST之间，首次发射前成本与consumer进入等待时刻未明显增长；仍不能把此段当裸TMA延迟。[释放前端点约束的ready观察](R13-async-retirement.md#ready-observer)在新批40/40次绑定首代事务：延迟干预的issue→ready增量下界在两种行距各十次均正，ready→FIRST增量区间全部含零，排除本协议下仅consumer返回变慢的解释。请求排队、数据服务与完成可见性仍不可分；B32的L缩短也大多兼容等待移入S，不能直接提高稳态供给价。
 
-[第二WG联合初态对照](R13-async-retirement.md#second-prefill)进一步支持保留交接状态：同时预等S槽、排空前WG并改变相位，使stage4 early十对均缩短，stage6基本不变，完整调用未稳定改善。候选须由槽ready与未完成计算依赖预测该响应；全预填后，恒定reduced复用关系的无参数窗口界仍在stage4十次全部失败，故仅修初态不够。此界不覆盖宽提交/退休分支；后续off-only宽拟合虽能使部分窗口RMS降至0.28%，仍失配局部端点和early干预，不采用。内部量只能辨识u=ℓ+a，交接δ也存在训练量不变方向；不能把分开的拟合系数解释为硬件价格。尚不能分离三个作用，不采用early专属价格。stage6后段与更多E0重叠而周期基本不变，也排除了直接按重叠数收费的解释。
+[第二WG联合初态对照](R13-async-retirement.md#second-prefill)进一步支持保留交接状态：同时预等S槽、排空前WG并改变相位，使stage4 early十对均缩短，stage6基本不变，完整调用未稳定改善。候选须由槽ready与未完成计算依赖预测该响应；全预填后，恒定reduced复用关系的无参数窗口界仍在stage4十次全部失败，故仅修初态不够。此界不覆盖宽提交/退休分支；后续off-only宽拟合虽能使部分窗口RMS降至0.28%，仍失配局部端点和early干预，不采用。内部量只能辨识u=ℓ+a，交接δ也存在训练量不变方向；不能把分开的拟合系数解释为硬件价格。从预等开始核算，stage4到C16/M均未稳定缩短，stage6十次均变晚；early收缩包含等待重分配，不采用early专属价格。FIRST在barrier返回后、首HGMMA前；统一TC起动偏移在q≥v时只重参数化q/λ，不能修复当前响应。尚不能分离三个作用。stage6后段与更多E0重叠而周期基本不变，也排除了直接按重叠数收费的解释。
 
 ## 计量与组合约定
 
