@@ -669,6 +669,16 @@ series sw8排除首个切换后的180次，紧前event基线RMS为1.23%、最大
 
 主集成的raw→前序输入提取器原先忽略call中的重复协议字段；仅改call的前序策略、swizzle、observer flag或源副本数，与setup冲突后仍得到相同预测。A对20份原raw构造10种值矛盾和3种类型矛盾，共260例：旧44a01fdd快照全部接受，主集成3233d2e0修复后的368c2ecb快照全部拒绝。20份原有效记录的预测均不变，目标trace/event毒值及check失败仍不阻止前序投影，数值失败留后续评分。原／修复快照及[独立复现](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-prefix-projection-review-v1/README.md)保留；未来局部冻结还须绑定提取器SHA及raw→prefix→预测身份，200c规则没有自动绑定后来新增的投影源码。没有重复评分计时、改变共同规则/binary或取得观察、新留出及跨卡资格。
 
+### GT前后读取能给中央cycle什么时间边界？
+
+拟议GT_before→clock64→GT_after与740071的CLOCK_before→GT→CLOCK_after不同，旧帧不能直接重解为新包围。纯CPU接口[r09_gt_brackets.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_gt_brackets.py)要求同GPU/SM、完整非零uint64端点和显式单GT读数误差预算e。仅在真实采样包围及该预算成立的前提下，正cycle差C对应：
+
+`T_low=max(0,GT_end_before−GT_start_after−2e)`，`T_high=GT_end_after−GT_start_before+2e`，`C/T∈[C/T_high,C/T_low]`。
+
+T_low=0时正时间下端开、率上端无界，不夹到1ns；没有正时间窗口则拒绝。接口同时传播固定周期误差、条件换算误差与自由时间误差，同一T的乘法关系及对应区间端点精确闭合。仅当整个误差范围达标才判within，范围跨越门槛则undetermined；不能挑有利T或中点当通过，多窗口边际相容也不证明联合相容。
+
+[九项解析测试与540个合成端点盒复验](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-gt-bracket-contract-v1/README.md)拒绝72个无正时间盒，核对1386个正角点和225个开零下界案例，错误界／闭合但分项互换负例被拒绝。当前只是条件数学合同，没有新GT-CLOCK-GT设备记录、独立GT误差界或硬件包围证明；不解除原observer/off-off失败，不改B口径、公共组合、原门槛或新留出/跨卡边界。
+
 ## 作业与复核索引
 
 | 实验问题 / 作业 | 一句结果 | 证据入口 |
