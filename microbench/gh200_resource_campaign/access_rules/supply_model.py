@@ -131,7 +131,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         source_join_boundary='ready',local_epilogue_exclusion='none',
                         output_counts=None, source_service_costs_ns=None,
                         source_address_units=None, source_unit_service_ns=None,
-                        destination_latency_ns=0., input_min_latency_ns=0.):
+                        destination_latency_ns=0., input_min_latency_ns=0.,
+                        input_path_service_ns=0.):
     """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -189,6 +190,13 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     A subscriber therefore cannot inherit a completion earlier than its own
     path allows. This does not extend source or address-unit subscription,
     charge extra source work, or identify an actual hardware latency.
+    input_path_service_ns optionally puts every logical input demand through
+    one independent FIFO at issue, charging this cost times its nominal work.
+    Its completion plus input_min_latency joins the source branch at destination
+    admission. Joined sources still pay their own demand-path work. This queue
+    does not delay original source issue or serve outputs; backpressure changes
+    future requests only through destination/consumer/stage prerequisites.
+    This abstract common queue has no hardware or per-SM attribution.
     """
     import heapq
 
@@ -213,6 +221,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     if (type(input_min_latency_ns) not in (int,float) or not math.isfinite(input_min_latency_ns)
             or input_min_latency_ns<0):
         raise ValueError('finite nonnegative per-input minimum latency required')
+    if (type(input_path_service_ns) not in (int,float) or not math.isfinite(input_path_service_ns)
+            or input_path_service_ns<0):
+        raise ValueError('finite nonnegative input path service required')
     counts=[2]*cta_count if output_counts is None else list(output_counts)
     if len(counts)!=cta_count or any(type(n) is not int or n<1 for n in counts):
         raise ValueError('positive per-CTA output counts required')
@@ -263,10 +274,11 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     input_demand_count=0;input_source_count=0;input_merged_count=0;input_delivery_count=0
     input_demand_work=0.;input_source_work=0.;input_merged_work=0.;input_delivery_work=0.
     input_source_busy=0.
+    input_path_frontier=0.;input_path_busy=0.
     destination_frontiers=[0.]*cta_count;destination_busy=[0.]*cta_count
     local_intervals=[[] for _ in range(cta_count)]
     local_blocked={'producer':0.,'consumer':0.}
-    routed_inputs=share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0 or input_min_latency_ns>0
+    routed_inputs=share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0 or input_min_latency_ns>0 or input_path_service_ns>0
     prefill=None
     actors=[]
     def push(time,kind,cta,index):
@@ -342,6 +354,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         nonlocal input_demand_work,input_source_work,input_merged_work,input_delivery_work
         nonlocal input_source_busy
         nonlocal address_unit_generations,address_unit_joins
+        nonlocal input_path_frontier,input_path_busy
         atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[kind]
         key=source_keys[cta][index][atom] if share_inflight_sources else None
         existing=pending.get(key) if share_inflight_sources else None
@@ -390,10 +403,16 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             demand=dict(demand_id=demand_id,source_id=source_id,source_key=key,merged=merged,
                 cta=cta,kind=kind,index=index,arrival_ns=t,source_ready_ns=done,work=weight)
         if routed_inputs:
-            destination_arrival=max(done+destination_latency_ns,t+input_min_latency_ns)
-            if destination_latency_ns or input_min_latency_ns:
+            path_end=t
+            if input_path_service_ns:
+                path_start=max(t,input_path_frontier);duration=input_path_service_ns*weight
+                path_end=path_start+duration;input_path_frontier=path_end;input_path_busy+=duration
+                demand.update(input_path_start_ns=path_start,input_path_end_ns=path_end)
+            destination_arrival=max(done+destination_latency_ns,path_end+input_min_latency_ns)
+            if destination_latency_ns or input_min_latency_ns or input_path_service_ns:
                 demand['destination_arrival_ns']=destination_arrival
-            if input_min_latency_ns: demand['input_earliest_destination_ns']=t+input_min_latency_ns
+            if input_min_latency_ns or input_path_service_ns:
+                demand['input_earliest_destination_ns']=path_end+input_min_latency_ns
             demands.append(demand);push(destination_arrival,'deliver_input',cta,demand_id)
         else:
             # Preserve the original zero-destination event ordering exactly.
@@ -511,6 +530,10 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             if all(n==2 for n in counts) else
             'cfg_b variable-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time'))
     if prefill is not None:result['second_prefill']=prefill
+    if input_path_service_ns:result['input_path_service']=dict(demands=input_demand_count,
+        work=input_demand_work,busy_ns=input_path_busy,last_service_end_ns=input_path_frontier,
+        service_ns=input_path_service_ns,
+        scope='Every logical input demand; independent request-path FIFO, not source reads or D work.')
     if unit_mode:result['address_unit_service']=dict(generations=address_unit_generations,
         joins_between_box_generations=address_unit_joins,service_ns=source_unit_service_ns,
         scope='In-flight address units in FIFO batches; logical box work remains distinct, no physical traffic claim.')

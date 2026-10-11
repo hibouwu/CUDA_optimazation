@@ -286,6 +286,23 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 复核：`analyze_r13_supply.py --source-candidate-replay --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。18项依赖与守恒测试通过只证明事件实现检查通过，不证明共享假设成立。原始样本、V09评分和正式预测参数未改。
 
+<a id="request-path-joint"></a>
+
+### 独立请求路径的前缀选点未复现stage4预等改善
+
+[R10独立请求路径选点](R10-layout-cache.md#request-path-complete)取先前必要区间中点σ=0.808098282ns/16KiB，τ取既有read latency。完整供给、有限stage和D图使用同一参数；R13保留2816×1536×4096实际两输出源程序与`epilogue_defer=2`，只改变stage4/6和CTA0第二WG预等开关，没有另拟stage价格。
+
+| 预等on−off，ns | stage4预测 | stage4已有中位〔范围〕 | stage6预测 | stage6已有中位〔范围〕 |
+|---|---:|---:|---:|---:|
+| early | +5.736 | −768〔−1024,−64〕 | 0 | 0〔−32,64〕 |
+| post | +5.347 | +144〔−384,672〕 | 0 | +16〔−352,96〕 |
+| 入口→C16 | +727.382 | −96〔−544,640〕 | +968.401 | +1024〔768,1120〕 |
+| 入口→mma返回 | +732.728 | +208〔−608,576〕 | +968.401 | +1008〔672,1184〕 |
+
+模型入口明确取前WG的mma返回加handoff；实际入口是软件预等开始，映射限制与前述探索比较相同，不能把累计窗口的近似相容当成端点识别。stage4/off的early/post为5248/16322.901ns，接近已有5168/16320ns，但同价on的early却增加而不是十对均缩短；这个响应失败已足以拒绝本点。stage6方向相容不能抵消stage4和R10 B32/空间失败。
+
+[联合结果](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json)保留四个完整图的局部窗口、累计入口、路径工作和模型末端。这里未重拟、未升级观察资格，也未判定整个共享请求路径家族不可行；当前开发点不采用。
+
 <a id="source-spatial"></a>
 
 ### stage4周期离散集中在A行组，但源与位置尚未分开
