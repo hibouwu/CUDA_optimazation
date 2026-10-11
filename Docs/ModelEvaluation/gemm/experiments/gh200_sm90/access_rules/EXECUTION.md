@@ -240,6 +240,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [MMA参考独立审查重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/reanalysis/main-mma-reference-review-v1/README.md)：C报告重跑SHA完全相同，交付及全部输入SHA核对；841源、196608正式值、4320旧同CTA窗口通过。明确起始描述符设置、末尾128 FADD/同步及ScaleOut/producer组织差异，不把参考窗口等同GEMM服务，不扣803cycle，不授观察或完整预测资格；无新GPU。
 
+[冻结r2包络主线重算](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/main-envelope-contract-v1/README.md)：接入A30abc0ba，三个完整JSON重算相同，14SHA/30条件/3516CTA/1113分支/45包络段及三负例通过；360数值核对最大相对差2.0e-15。固定公式正根唯一，不能换根修复误差；29预测/1不支持保持，不推广到新供给/历史或新卡，无新GPU或资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

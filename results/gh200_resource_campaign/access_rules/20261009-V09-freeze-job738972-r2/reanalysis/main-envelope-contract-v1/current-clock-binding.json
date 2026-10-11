@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "solver_AST_identical": true,
+    "clock_mapping_AST_after_import_qualification": true,
+    "duration_AST_identical": true
+  },
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/clock_model.py": "5e11855fcd5785c76ec144ca74ef34f9d51a6595e50a67404ec2fbe8fd1e5fff",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/source/r09_input_source_clock.py": "157de937dfcd8c086872238ac7d307f50220d83ea37281c5c5efcf4a35fb25f5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/source/r09_v08_clock.py": "e6f49cc1437df1dbf5aa25062500b18f875dabd935abd051d82d79ab67ea5fb2"
+  },
+  "scope": "Read-only current main clock binding; only clock.duration_term import qualification normalized. Does not bind later changes to a caller envelope."
+}

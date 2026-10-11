@@ -1,0 +1,10 @@
+{
+  "analyze.py": "565b1259eb3a6c63cbd1189f78f1e6a35accee8105410eb0c769a71e4b590e7d",
+  "envelope.json.gz": "98b710ffa597207946fd31bea6b1d8c434349462941d1af3bd4f268f080f986f",
+  "verify.py": "29048251d239e4be77c8243357c37b0d985cab8b60fd1eb8728305535c539b45",
+  "verification.json": "3e943baa483acbeafa3a20528fb882e726634a7e904eba5bdee60f7c09d857dd",
+  "current-clock-binding.json": "610b696a3878e461f99e5f0d3ab56c6c7cc2e8fe2f8d17e23500261f2f1e947c",
+  "binding.py": "6640b078fc5136744c79d8ae6a03072a6cff01ed5e16481dc88b18e4d6f3ddf5",
+  "README.md": "d30694d478df247a76cf60d0a117488edc1aab49e6067f119beed04e42c9dba4",
+  "code-identity.json": "3eca3a4acf5bf9f20a90d4fd0b13b8fb737801ba9e50cf5fe60dcfa8fe2b2131"
+}
