@@ -136,6 +136,103 @@ def cfg_a_output_source_guarantees(output_tiles):
     return guarantees
 
 
+def cooperative_output_source_layout(config, output_tiles):
+    """Local output generations for the fixed a/c and legacy R14 baseline tiles.
+
+    cfg_c is 256x128, not R14 baseline's 128x256. Their eight subtiles have
+    different coordinates despite identical two-buffer source-guarantee counts.
+    No full/empty input dependencies or service prices are transferred here.
+    """
+    if type(output_tiles) is not int or output_tiles<1:
+        raise ValueError('positive integer output tile count required')
+    dimensions={'cfg_a':(128,128),'cfg_c':(256,128),'r14_baseline':(128,256)}
+    if config not in dimensions:raise ValueError('unsupported cooperative output layout')
+    tile_m,tile_n=dimensions[config];epi_m_count=tile_m//128;epi_n_count=tile_n//32
+    chunks=epi_m_count*epi_n_count
+    subtiles=[];guarantees=[]
+    for tile in range(output_tiles):
+        for epi_n in range(epi_n_count):
+            for epi_m in range(epi_m_count):
+                local=epi_n*epi_m_count+epi_m;q=tile*chunks+local
+                subtiles.append(dict(tile=tile,local_subtile=local,subtile=q,epi_m=epi_m,epi_n=epi_n,
+                    origin=[128*epi_m,32*epi_n],shape=[128,32],nominal_bytes=16384,
+                    buffer=q%2,generation=q//2))
+        last=(tile+1)*chunks-1;terminal=tile==output_tiles-1
+        acquire=None if terminal else last+1
+        guarantees.append(dict(rank=0,tile=tile,issuer_wg=1,terminal=terminal,
+            last_subtile=last,protected_buffer=last%2,source_generation=last//2,
+            read_through_count=last+1,committed_count=last+1 if terminal else acquire+1,
+            pending_batches=0 if terminal else 1,acquire_subtile=acquire,
+            reuse_subtile=None if terminal else last+2,
+            source_completion=f'r0.d{last}.read_retired',
+            guarantee_token='r0.store_tail_read0' if terminal else f'r0.d{acquire}.acquire_after',
+            observation='r14_source_tail' if terminal else 'r14_source_acquire',
+            following_output=None if terminal else tile+1))
+    return dict(config=config,tile=[tile_m,tile_n],epilogue_tile=[128,32],subtiles_per_output=chunks,
+        store_buffers=2,unacquired_stages=1,delay_tma_store=True,reuse_smem_c=False,
+        subtiles=subtiles,source_guarantees=guarantees,
+        scope='Local source lifecycle only; cfg_c and R14 baseline timing and input clusters remain distinct.')
+
+
+def cooperative_output_source_dependencies(config, output_tiles):
+    """One local CTA's cooperative output order, without its input/mainloop graph."""
+    layout=cooperative_output_source_layout(config,output_tiles)
+    nodes={};markers={};chunks=layout['subtiles_per_output']
+    def add(event,parents):nodes[event]=list(dict.fromkeys(parents))
+    for tile in range(output_tiles):
+        for wg in range(2):
+            prefix=f'r0.w{wg}.t{tile}.'
+            add(prefix+'MAIN',[f'r0.w{wg}.t{tile-1}.DONE'] if tile else [])
+            add(prefix+'PERMIT',[prefix+'MAIN'])
+            add(prefix+'DONE',[f'r0.w{other}.t{tile}.PERMIT' for other in range(2)]
+                +[f'r0.d{(tile+1)*chunks-1}.acquire_after'])
+            for event in ('MAIN','PERMIT','DONE'):markers[prefix+event]=prefix+event
+    for item in layout['subtiles']:
+        q=item['subtile'];tile=item['tile'];local=item['local_subtile'];prefix=f'r0.d{q}.'
+        parents=[f'r0.w{wg}.t{tile}.PERMIT' for wg in range(2)]
+        if local:parents.append(f'r0.d{q-1}.r2s')
+        add(prefix+'register_prepare',parents)
+        add(prefix+'r2s',[prefix+'register_prepare']+([f'r0.d{q-1}.acquire_after'] if q else []))
+        add(prefix+'store_issue',[prefix+'r2s']+([f'r0.d{q+1}.register_prepare'] if local<chunks-1 else []))
+        add(prefix+'store_commit',[prefix+'store_issue'])
+        add(prefix+'source_read',[prefix+'store_issue'])
+        add(prefix+'read_retired',[prefix+'source_read']+([f'r0.d{q-1}.read_retired'] if q else []))
+        add(prefix+'acquire_after',[prefix+'store_commit']+([f'r0.d{q-1}.read_retired'] if q else []))
+        add(prefix+'D_visible',[prefix+'source_read'])
+    add('r0.store_tail_read0',[f'r0.w1.t{output_tiles-1}.DONE',f'r0.d{output_tiles*chunks-1}.read_retired'])
+    for wg in range(2):
+        event=f'r0.w{wg}.FINAL'
+        add(event,[f'r0.w{wg}.t{output_tiles-1}.DONE']+(['r0.store_tail_read0'] if wg==1 else []))
+        markers[event]=event
+    add('r0.D_visible',[f'r0.d{q}.D_visible' for q in range(output_tiles*chunks)])
+    return dict(nodes=nodes,markers=markers,layout=layout,
+        scope='Local cooperative output only; no input cluster, producer tail, kernel-completion or service prediction.')
+
+
+def cooperative_output_valid_subtiles(config, logical_m, logical_n, tile_coord, output_index=0):
+    """Logical FP32 output coverage in source-buffer order, not physical traffic."""
+    if config not in ('cfg_a','cfg_c'):raise ValueError('fixed cooperative a/c output geometry required')
+    if (type(logical_m) is not int or type(logical_n) is not int or min(logical_m,logical_n)<=0
+        or type(output_index) is not int or output_index<0):
+        raise ValueError('positive integer logical shape and nonnegative output index required')
+    if len(tile_coord)!=2 or any(type(value) is not int or value<0 for value in tile_coord):
+        raise ValueError('nonnegative integer output tile coordinate required')
+    layout=cooperative_output_source_layout(config,output_index+1)
+    chunks=layout['subtiles_per_output'];tile_m,tile_n=layout['tile']
+    items=[];buffer_bytes=[0,0];last_valid=None
+    for original in layout['subtiles'][-chunks:]:
+        item=dict(original)
+        m=tile_coord[0]*tile_m+item['origin'][0];n=tile_coord[1]*tile_n+item['origin'][1]
+        rows=max(0,min(128,logical_m-m));columns=max(0,min(32,logical_n-n))
+        item.update(global_origin=[m,n],valid_rows=rows,valid_columns=columns,valid_bytes=rows*columns*4)
+        items.append(item);buffer_bytes[item['buffer']]+=item['valid_bytes']
+        if item['valid_bytes']:last_valid=item['subtile']
+    return dict(config=config,coord=list(tile_coord),output_index=output_index,subtiles=items,
+        valid_bytes=sum(item['valid_bytes'] for item in items),buffer_valid_bytes=buffer_bytes,
+        last_valid_subtile=last_valid,
+        scope='Logical destination coverage only; empty descriptor boxes retain source pipeline groups and no service price is inferred.')
+
+
 def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
     """Source-derived partial order for cluster2x1, two consumer WGs, K_PIPE_MMAS=1.
 

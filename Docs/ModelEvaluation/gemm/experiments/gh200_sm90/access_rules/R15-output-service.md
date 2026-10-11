@@ -285,3 +285,20 @@ P1 中输出项偏高、主循环偏低，构成局部误差抵消。P2 输出�
 | 最后输出PERMIT→末尾source戳 | 3052 | 原tail read0后的终端保证 |
 
 t1终端区间中位3167.5cycles。每条记录的分解精确可加，分别汇总的中位数不要求可加。这些是旧卡4CTA合格域的端点核对，不给整卡或新卡转入服务价。[独立生命周期报告](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-output-lifecycle-v4/README.md)保存逐tile代次与实际源完成的可行区间。细化tail节点后，R18/V09原100进程再次重放，五份逐CTA/分项/区间/配对CSV解压内容与首批交付精确一致；原冻结评分保持不变。
+
+### cfg_c 的八子tile顺序与 R14 baseline 边界
+
+R14归档没有正式cfg_c。其`baseline`为128×256、cluster2×1、stage4；正式cfg_c为256×128、cluster1×2、stage4。两者都用128×32 epilogue、两D缓冲、DelayTmaStore及八个名义16KiB子tile，但源码按epi_n外层、epi_m内层遍历，前四个子tile的局部起点分别为：
+
+| 配置 | q0 / q1 / q2 / q3 的(M,N)起点 |
+|---|---|
+| cfg_c | (0,0) / (128,0) / (0,32) / (128,32) |
+| R14 baseline | (0,0) / (0,32) / (0,64) / (0,96) |
+
+`cooperative_output_source_layout`保留这些坐标及跨输出buffer generation，`cooperative_output_source_dependencies`只构造本CTA输出子图，不含输入full/empty、producer tail或内核完成。八子tile输出t的末组为q=`8t+7`，下一输出q+1提交/acquire的count=`8t+9`、pending=1，保证读完count=`8t+8`；实际重用buffer1的是q+2。cfg_c源保证计数可由匹配的dispatch源码推导，baseline的周期价与输入依赖不随之迁移。
+
+新增离线入口`analyze_r15_lifecycle.py --config baseline --cfg-c-reference <V09归档>`复核852份R14源码、baseline两二进制、40个进程及23,592,960个保存输出值。20份trace的90个源保证窗口与本地输出图相容，70个中间保证仍在下一输出PERMIT之后。按每进程七个中间tile中位再取十进程中位，PERMIT→旧源保证为71695.5cycle，下一PERMIT→同保证为1146cycle；t8终端区间5677cycle，t1为5718.5cycle。这些都是旧baseline的端点窗口，不作为cfg_c计时证据。正式cfg_c的probe、P2 setup、plain/dual二进制及四份共享输出dispatch源另核对SHA，源码匹配未补造cfg_c细阶段记录。
+
+`cooperative_output_valid_subtiles`还保留各子tile的逻辑有效输出量。cfg_c的50% N边界为`[16,16,16,16,0,0,0,0]KiB`，两buffer各32KiB；同面积M边界为`[16,0,16,0,16,0,16,0]KiB`，两buffer分别64/0KiB。面积相同不保留最后有效子tile及缓冲分布，仍需实测才能判断这些差别是否改变服务。全OOB保留八个pipeline group，逻辑有效字节不解释为物理源读量或带宽。
+
+V09 P2的静态512个输出tile中，272个完整、16个上述N半边界、224个全OOB；逻辑有效FP32字节总和36,700,160，精确等于4096×2240×4。该账本不读取实测时间、不改关键CTA集合或partial插值，也不把P2的主循环漏算转成输出罚项。26项针对性CPU测试通过；cfg_a原40进程复放的两个CSV完整相同，JSON只变代码SHA，T1/T2/T8原完整依赖图逐字段相同。[八子tile报告与静态账本](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-eight-subtile-lifecycle-v2/README.md)保存适用范围与复算命令。尚无新局部留出或输出服务价。
