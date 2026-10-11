@@ -111,6 +111,8 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 
 入口为`analyze_cfg_a_supply.py --data-root <结果根> --c-model <只读C/output_model.py> --output <新B目录>`，保存源文件、case/setup、record/raw哈希与压缩后的绑定/完整图。v1加入了尚未由本次SASS确认的B0→B1顺序；v2删除该额外边并重新复核，v1保留。74项相关测试通过。以上仅确认结构接口及旧样本工作绑定，不证明源/目的服务价格、局部窗口、干预或空间时间分布；R10/V09失败结果不变，新的独立冻结局部留出仍未完成。
 
+C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组合复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v3/B-cfg-a-source-composition.json)仍通过同一22条件/220进程；静态绑定压缩文件与v2逐字一致，12种图保留全部新增端点及输出保证。empty实际发出、目的可见和producer返回不再合为同一事件；这些仍是cfg_a接口，不能套用cfg_b的四warp leader观察。
+
 <a id="release-prerequisites"></a>
 
 ## cfg_b的释放标记没有定位全部128次empty arrival
@@ -132,6 +134,21 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 [具体观察请求](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-minimal-release-observation.json)预列两stage×开关×十进程、实际GPU-ef8692f3、完整D检查和全部窗口。64cycle是预定辨识尺度，依据旧20～23cycle release bracket及60～69cycle acquire→三输入发出窗口选择，不是全GEMM百分比或物理常数。四warp的arrival分散上界≤64支持集中arrival解释；最后emit→acquire后上界≤64支持晚arrival解释；对应下界>64则排除该近似，跨界或两者都大时保留未分辨/混合结果。观察有效性另检查每warp bracket≤32cycle、局部on/off绝对误差门槛及整调用扰动，不能用整调用合格代替局部检查。
 
 该请求是开发辨识，不是新的独立冻结留出或参数验收。公共probe和GPU仅由主集成实施，并在采样前保存最终范围、端点、具体门槛与source/binary身份。本组没有提交GPU任务。[20次原始端点与见证](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-release-prerequisites.json)由 `analyze_r13_release.py --run <739556归档> --output <新的B目录>`复放；输入记录/raw/source/SASS哈希全部保留。
+
+### 四warp smoke保留了明显的局部观察差
+
+主集成740054的正确性准备在GPU-43269fbc进行，每stage×开关各一次，未独占性能环境，未进入原GPU-ef的40进程研究。B直接复放四份原始gz、严格decoder和每进程4096个D抽样值；暖机按归档`run.sh`明确声明的`common-sw1-16`绑定，不将构建cases的默认adaptive身份移作实际命令。主线的全D检查与静态覆盖证据另行维护，不由本分析代替。
+
+| stage | leader release前→acquire后的on−off，cycle | H16→wait1-return的on−off，cycle | CUDA event on/off变化 |
+|---|---:|---:|---:|
+| 4 | 0 | +368 | +1.5873% |
+| 6 | +82 | −1 | +0.2566% |
+
+stage4上游单对差超过原最大192cycle；stage6单对local差超过原中位32cycle。两者仅一对，不能由此判正式研究通过/失败，也不能唯一归因观察器；整调用差小不能替代局部门槛。主集成已在正式采样前明确中位口径为`median(abs(on−off))`，`abs(median(on−off))`只列诊断，避免正负抵消。其余门槛保持32/128cycle、64/192cycle和2%/5%。
+
+两个开启记录的其它三个warp均在leader前发出arrival。条件于四warp bracket确实覆盖全部必要arrival，stage4的post-last-emit→acquire后区间为[209,232]cycle、warp-skew为[0,23]；stage6分别为[206,231]、[0,25]。按64cycle尺度，两次条件分类均排除“最后arrival之后很短”的近似，与arrival集中近似相容。但GPU、样本数和观察资格尚未满足，**不采用机制解释，也不定barrier或供给价格**。
+
+[逐进程区间与门槛](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-warp-smoke-v2/B-release-warp-smoke.json)由专用`analyze_r13_release_interpretation.py`生成；纯`paired_observer_gates`保留缺失配对、SM/工作身份不符、宽bracket、最大单对超限及不足十次的原因。v1因将构建case当作smoke命令而被暖机身份检查拒绝；v2按两份一致的归档run.sh绑定，未修改旧case或raw。10项新增测试覆盖区间边界、混合/未分辨、符号抵消和失效保留，连同既有测试共84项通过。
 
 <a id="second-prefill"></a>
 

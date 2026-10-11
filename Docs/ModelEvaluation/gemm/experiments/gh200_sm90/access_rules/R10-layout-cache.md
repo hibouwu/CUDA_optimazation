@@ -27,7 +27,7 @@
 
 继续同一工作/状态定义，`cfg_b_source_program`从账本生成每CTA全部K-group的A/B0/B1源身份，不再限于2816×1536的两输出。`shared_stage_events(output_counts=...)`接入实际1/3/4输出，输入环不重置；两WG交替复用accumulator，j≥2须等自身E_(j−2)返回，E_j又须等E_(j−1)释放共享输出SMEM。该前驱来自原pingpong的store_tail、epilogue次序到达和下一次scheduler loop，不把其它WG的math返回直接当自身可开始。两输出默认的13组旧核心结果精确重现；事件实现通过不代表价格成立。
 
-本次只用GPU-ef8692f3的739571/739585，复放100个dual原记录并逐CTA核对工作与SHA。固定[R13已保存共享参数点](R13-async-retirement.md#source-candidate-replay)，每个源atom费用为原名义payload服务加`π×B_extra128_KiB`，目的投递和D工作不变。只以AlongM later的全部匹配窗口B32/B0比例中位18.4003%解一个π；括区间[0,4]ns/KiB，一次标量求根至π=0.973627275，无额外起点、A16价、stage4价或方向/位置常数。其它参数来自既有探索，未证明其选择历史未使用这些数据；这是开发参数点，不是独立留出，也不声称π唯一或物理可辨识。
+本次只用GPU-ef8692f3的739571/739585，复放100个dual原记录并逐CTA核对工作与SHA。固定[R13已保存共享参数点](R13-async-retirement.md#source-candidate-replay)，每个源atom费用为原名义payload服务加`π×B_extra128_KiB`，目的投递和D工作不变。只以AlongM later的全部匹配窗口B32/B0比例中位18.4003%定位一个π；Brent在[0,4]ns/KiB内按价格容差定位至π=0.973627275，共27次求值，无额外起点、A16价、stage4价或方向/位置常数。定位点的响应残差仍为+7.42029127×10⁻⁵，价格收敛不证明存在精确响应零点；这是近似开发点。其它参数来自既有探索，未证明其选择历史未使用这些数据；本轮不是独立留出，也不声称π唯一或物理可辨识。
 
 | 检查窗口 | 预测B32响应 | 实测中位响应 | 结论 |
 |---|---:|---:|---|
@@ -40,7 +40,7 @@
 | single126首36 CTA | 0% | +23.36% | 无下一输出也存在的规模响应仍漏失 |
 | persistent132首36 CTA | 0% | +20.40% | 首窗仍漏失 |
 
-全部j/T的基线、响应、十次范围和逐CTA预测保存在[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v2/B-r10-event-transfer.json)。空间检验同样失败：AlongM B32首轮T3/T4的预测局部L跨度为7.18/0ns，实测中位1504/1648ns，对应原生cycle跨度2569.5/2735；single126 B32预测约0ns，实测1344ns。两个时钟域分别保存；本候选的ns价尚无可靠first周期映射，不用目标实测f换算预测。不是只缺一个完整时间常数。所拟价格只改变源服务时长，模型source/delivery工作守恒，不能把错误解释成应再删目的请求。
+全部j/T的基线、响应、十次范围和逐CTA预测保存在[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json)。v3仅澄清定位点的非零响应残差；价格、27次求值、全部预测/观察/空间字段与v2精确一致。空间检验同样失败：AlongM B32首轮T3/T4的预测局部L跨度为7.18/0ns，实测中位1504/1648ns，对应原生cycle跨度2569.5/2735；single126 B32预测约0ns，实测1344ns。两个时钟域分别保存；本候选的ns价尚无可靠first周期映射，不用目标实测f换算预测。不是只缺一个完整时间常数。所拟价格只改变源服务时长，模型source/delivery工作守恒，不能把错误解释成应再删目的请求。
 
 本具体参数点不采用。原始432卡B曲线及V09 G5没有接收ef卡的时间价格；当前卡的raster干预已提供旧/新几何差异中的一个同卡因果桥，另一卡的数值迁移仍未完成。源身份、输入slot与accumulator前驱是必须保留的结构，但这套固定共同服务、同时入口和源订阅图仍不足以解释首/后输出、方向、规模及空间的联合响应。不据此排除全部源共享模型，不追加方向常数、A16价或stage4价。复核用 `analyze_r10_supply_events.py --data-root <主checkout结果根> --output <新的B目录>`，没有GPU操作或原冻结修改。
 

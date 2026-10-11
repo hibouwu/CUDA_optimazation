@@ -129,10 +129,14 @@ def analyze(root, output):
     left,right=(residual(p) for p in bounds)
     if left*right>0:
         raise ValueError('declared B32 price interval does not bracket response; no bound expansion')
-    price=float(brentq(residual,*bounds,xtol=1e-8,maxiter=40))
+    located_price, solver = brentq(residual,*bounds,xtol=1e-8,maxiter=40,full_output=True)
+    price=float(located_price)
     for case,c in contexts.items():
         if case not in predicted:
             predicted[case]=simulate(c['row'],c['setup'],c['program'],parameters,price)
+    final_response=statistics.median(w['L_ns_ratio'] for w in paired_windows(
+        predicted[base_case],predicted[calibration],lambda w:w['j']>0))
+    final_residual=final_response-target
     observations={}
     raw_checks=0
     for case,c in contexts.items():
@@ -197,7 +201,11 @@ def analyze(root, output):
         gpu_uuid=GPU,parameters=parameters,coverage_price_ns_per_KiB=price,
         calibration=dict(case=calibration,target='median matched later-window B32/B0 ns ratio',
             observed_target=target,price_bounds=bounds,evaluations=evaluations,
-            method='One bracketed scalar root, at most 40 iterations. No A16, first, stage4, AlongN or scale target in this scalar solve.'),
+            located_response=final_response,response_residual=final_residual,
+            zero_response_residual=final_residual==0,
+            solver_price_tolerance=1e-8,solver_converged=bool(solver.converged),
+            solver_iterations=solver.iterations,solver_function_calls=solver.function_calls,
+            method='Brent bracket locator, at most 40 iterations; convergence is in price, not proof of a zero response residual. Retain the nonzero residual at this approximate development point. No A16, first, stage4, AlongN or scale target.'),
         source_price='Existing nominal source service + one nonnegative B extra128 coverage price. Coverage is not physical traffic.',
         contexts={k:dict(row=v['row'],setup=v['setup'],counts=v['program']['output_counts'],
             totals=v['program']['totals']) for k,v in contexts.items()},
@@ -212,7 +220,8 @@ def analyze(root, output):
     (output/'B-r10-event-transfer.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     lines=['# R10：同一供给图中的B32开发迁移','',
         '保留cfg_b真实每CTA输出次数、输入环代次、源box身份和两WG accumulator复用；源/目的/D分账不变。固定既有R13探索参数，仅以AlongM later配对的一个量解B extra128覆盖价。','',
-        f'覆盖价={price:.9g} ns/KiB；这是条件源服务代理，不是物理请求价。40次以内括区间求根，范围[0,4]，未另拟A16或stage4。','',
+        f'覆盖价={price:.9g} ns/KiB；这是条件源服务代理，不是物理请求价。Brent在[0,4]内按价格容差定位近似开发点，最多40次迭代，未另拟A16或stage4。',
+        f'定位点later响应={final_response:.12g}，目标={target:.12g}，残差={final_residual:+.12g}；价格收敛不证明响应有精确零点。','',
         '| 配对 j/T | 预测B32响应 | 实测中位〔范围〕 | 预测/实测基线L ns |',
         '|---|---:|---:|---:|']
     for row in comparisons:

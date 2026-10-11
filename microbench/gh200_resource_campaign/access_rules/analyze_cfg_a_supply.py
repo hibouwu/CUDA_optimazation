@@ -41,9 +41,13 @@ def audit_graph(original, graph, dependency_order):
         if not set(predecessors).issubset(graph['nodes'][name]):
             raise ValueError('C dependency removed: '+name)
         preserved += len(predecessors)
-    for field in ('groups', 'outputs', 'markers', 'transfers'):
-        if graph[field] != original[field]:
+    for field in ('groups', 'outputs', 'markers', 'transfers', 'source_guarantees'):
+        if graph.get(field) != original.get(field):
             raise ValueError('C metadata changed: '+field)
+    for guarantee in original.get('source_guarantees', []):
+        for field in ('guarantee_token', 'source_completion'):
+            if guarantee[field] not in graph['nodes']:
+                raise ValueError('missing C output source guarantee node')
     total = graph['k_tiles']*graph['output_tiles']
     for g in range(total):
         requests = [r for r in graph['input_requests'] if r['group']==g]
