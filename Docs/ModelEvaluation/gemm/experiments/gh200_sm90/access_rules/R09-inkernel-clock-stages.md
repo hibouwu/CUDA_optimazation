@@ -433,6 +433,8 @@ r4纠正提案的grid维度：该cfg_b 2816×1536×4096、stage6、heuristic Alo
 
 [静态样件与失败版本](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-clock-stamp-static-v1/README.md)保留源码、机械提取的PTX、cubin、SASS和工具版本。[专用检查器](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_clock_stamp_static.py)仅检查该隔离样件的64位比较、退出分支、两次重读上限和全零失效路径，不是通用CUTLASS审计器。当地CUDA C++编译在主机GNU版本检查处失败，因此只声称同一inline PTX的sm_90a汇编证据；没有运行设备、没有得到实际CUTLASS帧或采样误差界。控制依赖比相邻读数提供更强的编译证据，仍不能单独证明硬件采样包围关系。r4继续未冻结/延后，公共集成、目标工具链复核与局部扰动资格由主集成决定，本样件不触发GPU请求。
 
+随后用本地NVRTC13.0直接编译**同一未改写的设备C++ header**，显式配置CUDA提供的NVRTC适配`cstdint`与CCCL include路径，未注入typedef或覆盖主机编译器限制。[专属设备编译入口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_clock_stamp_device_cpp.py)检查64位类型、24字节结构和8字节对齐；单处/双处调用均生成PTX，汇编后的SASS与前述机械提取样件逐字节一致。增加一个word的布局反例被静态断言拒绝，前CLOCK改成32位的反例被inline asm的`l`约束拒绝，未产生PTX。[设备C++前端证据](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-clock-stamp-device-cpp-v1/README.md)保留四条件、SDK身份上集与两次回放；它补上本地设备C++层，不追改先前NVCC失败，也不证明目标CUDA12.9、实际CUTLASS帧、运行时观察或时间规则资格。
+
 ### 同plain前序接口的两进程冒烟证明了什么？
 
 主集成740048在GPU-43269fbc上完成plain-host/dual-host各一进程，二者都通过共享库调用16次同plain kernel，再在同A/B/D上执行目标。实际grid均为`[1,132,1]`、stage6；各4096值按原标准精确正确、padding/非有限为零。本组独立重放原gzip及检查值。设备SASS与冻结plain/dual各自相同的证明来自主集成，本组绑定其报告与源包哈希，不把两进程冒烟算正式计时、观察扰动资格或局部留出。
