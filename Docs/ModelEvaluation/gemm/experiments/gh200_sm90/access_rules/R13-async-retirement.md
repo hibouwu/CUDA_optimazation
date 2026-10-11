@@ -97,6 +97,28 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 
 下一轮先检验有限局部发射/消费/释放前驱与源ready的联合可行性，保留first/later和空间约束；没有两个明确解释给出现有证据无法区分的预测前，不申请补测。该里程碑没有独立冻结局部留出，持续目标未完成。
 
+<a id="release-prerequisites"></a>
+
+## cfg_b的释放标记没有定位全部128次empty arrival
+
+本轮继续离线复核739556全部20个同调用稀疏记录。kernel为cfg_b设置`num_consumers=NumThreadsPerWarpGroup=128`；cluster1的`PipelineTmaAsync`以128初始化empty arrival count，所有consumer线程均`is_signaling_thread=true`。Ktile17的wait1确认前group安全后，128线程各执行原`consumer_release`，释放Ktile16；原观察只给thread256打点，不能据该线程返回认定其它三个warp已经arrival。源码与SASS均属于同一归档，未拼接其它观察批次。
+
+| 同SM原生cycle窗口 | stage4中位〔范围〕 | stage6中位〔范围〕 |
+|---|---:|---:|
+| thread256 release前→producer refill acquire后 | 232〔161,273〕 | 242〔146,249〕 |
+| thread256 release后→producer refill acquire后 | 211〔141,253〕 | 220.5〔126,229〕 |
+| thread256自身release前/后标记 | 20〔20,22〕 | 22〔20,23〕 |
+
+20/20个producer在thread256 release前已开始等待同slot的下一代；真实slot/phase已由原replay验证。stage4为全局group80/slot0、producer等待phase1，stage6为group80/slot2、等待phase0；补发分别是group84/86。stage4 SASS的前clock/arrival/后clock为0x2190/0x21f0/0x2200，stage6为0x2220/0x2280/0x2290，clock只对目标线程执行。
+
+把thread256实际emit取在其前后界内，令未观测的最后warp arrival为R、producer acquire后标记为A。两项非负量`R−leader_emit`与`A−R`只有和被约束。两组明确见证在20/20次均精确重现端点：一组令最后arrival之后为32cycle，其余是warp arrival分散；另一组令其它warp只比leader晚16cycle，其余在最后arrival之后。16/32只是非唯一性的诊断见证，不是硬件价格。后一项还包含arrival处理、empty可见性、轮询/调度、`arrive_and_expect_tx`和acquire后clock路径，不能命名为裸barrier延迟。这补齐了旧“release→复用非零”结论中的必要线程前驱。
+
+最小新观察只在同样的stage4/6、同geometry和原slot上，为thread288/320/352补原arrival的clock64前后界；thread256原标记保留，同stage同binary用runtime开关比较leader-only与四warp观察。无需新增polling warp、named barrier、arrival或同步依赖。若全部四warp到达前/后分别为B/E，则最后emit位于`[max(B),min(max(E),A)]`，可保守分开arrival分散与最后emit之后的路径。各warp标记之后才producer返回不是必要条件，后clock可晚于已完成arrival。
+
+[具体观察请求](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-minimal-release-observation.json)预列两stage×开关×十进程、实际GPU-ef8692f3、完整D检查和全部窗口。64cycle是预定辨识尺度，依据旧20～23cycle release bracket及60～69cycle acquire→三输入发出窗口选择，不是全GEMM百分比或物理常数。四warp的arrival分散上界≤64支持集中arrival解释；最后emit→acquire后上界≤64支持晚arrival解释；对应下界>64则排除该近似，跨界或两者都大时保留未分辨/混合结果。观察有效性另检查每warp bracket≤32cycle、局部on/off绝对误差门槛及整调用扰动，不能用整调用合格代替局部检查。
+
+该请求是开发辨识，不是新的独立冻结留出或参数验收。公共probe和GPU仅由主集成实施，并在采样前保存最终范围、端点、具体门槛与source/binary身份。本组没有提交GPU任务。[20次原始端点与见证](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-release-prerequisites.json)由 `analyze_r13_release.py --run <739556归档> --output <新的B目录>`复放；输入记录/raw/source/SASS哈希全部保留。
+
 <a id="second-prefill"></a>
 
 ## 第二WG的初态是否影响早段推进？
