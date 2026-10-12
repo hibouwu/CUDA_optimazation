@@ -1,8 +1,6 @@
 # GH200 GEMM 时间预测计划
 
-更新：2026-10-12。两条测量线均已结束，没有新候选；当前整理计划与检查用途，GPU 0。提交保留本地 main，不推送。执行状态见 [EXECUTION](EXECUTION.md#status)。
-
-<a id="prediction-boundary"></a>
+更新：2026-10-12。
 
 ## 目标
 
@@ -24,24 +22,16 @@
 2. **SMEM 的阶段与广播：** 哪种静态的 lane、字和广播描述能区分已有反例，并解释依赖执行？原模型已经按 128 B lane 子组算冲突，简单重用它不足以解决密集布局反例。[m11 任务](M11-SMEM.md)
 3. **完整时间转换：** event−包络增量 0.688–0.848 µs 影响哪些预测用途？原因尚未识别；局部 L、SMEM 和完整时间的有效性分别检查。[测量检查](RESEARCH-GUIDE.md#measurement-checks)
 
-<a id="order"></a><a id="measurement-next"></a>
+<a id="measurement-next"></a>
 
 ## 下一步选择
 
-本次先完成文档收缩；新的研究尚未启动。建议先用现有反例推导 m11 的静态预测，再决定是否需要新测量；主线补测先明确待定参数和必要对照，重新申请作业预算。代码收敛另做小范围任务，先合并活跃分析器的重复逻辑。
+先用现有反例推导 m11 的静态预测，再决定是否需要新测量；主线补测先明确待定参数和必要对照，重新申请作业预算。代码收敛另做小范围任务，先合并活跃分析器的重复逻辑。
 
-两项已授权测量的预算与终点见[已结束的安排](MEASUREMENT-20261012.md)。未使用的 m11 条件留出预算不能转作开发。得到候选后，V10 使用新形状：先校准、冻结全部预测和支持范围，用户确认最终 SHA，再采留出；完整时间目标中位 ≤5%、最大 ≤10%，分项与关键 CTA 按各自冻结标准判断。[验证细则](RESEARCH-GUIDE.md#validation)
-
-<a id="model-interface"></a><a id="7-验证规则"></a><a id="full-validation"></a>
+已结束测量的预算与终点分别见[主线](MAINLINE-LONG-K.md#measurement-20261012)与[m11](M11-SMEM.md#measurement-20261012)。未使用的 m11 条件留出预算不能转作开发。得到候选后，V10 使用新形状：先校准、冻结全部预测和支持范围，用户确认最终 SHA，再采留出；完整时间目标中位 ≤5%、最大 ≤10%，分项与关键 CTA 按各自冻结标准判断。[验证细则](RESEARCH-GUIDE.md#validation)
 
 模型接口、按用途划分的停止条件和留出要求见[研究细则](RESEARCH-GUIDE.md)。正文先写发现；身份和传输记录放 manifest。保留同卡配对、提交前 SASS 检查、原始数据及失败，不靠删除条件或重做旧留出来宣称通过。
 
-<a id="mechanism-backlog"></a>
+<a id="m01"></a>
 
-<a id="m01"></a><a id="m02"></a><a id="m03"></a><a id="m04"></a><a id="m05"></a><a id="m06"></a><a id="m07"></a><a id="m08"></a><a id="m09"></a><a id="m10"></a><a id="m11"></a><a id="m12"></a><a id="m13"></a><a id="m14"></a><a id="m15"></a><a id="m16"></a><a id="m17"></a><a id="m18"></a><a id="m19"></a><a id="m20"></a><a id="m21"></a><a id="m22"></a><a id="m23"></a><a id="m24"></a><a id="m25"></a>
-
-机制储备 m01–m25 移至[清单](MECHANISM-BACKLOG.md)；旧入口保留，详细任务与预算不再占本页。现行公式见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，已通过独立留出的规则见 [RULES](RULES.md)。
-
-<a id="1-目标与预测边界"></a><a id="2-主线合同长-k-时钟与事件组合修正"></a><a id="起点与问题"></a><a id="预算检查点与交付"></a><a id="支持评分与采用规则"></a><a id="终点"></a><a id="3-之后的顺序与工作规则"></a><a id="顺序"></a><a id="工作规则"></a><a id="4-研究范围与共同模型接口"></a><a id="共同的模型接口"></a><a id="5-实验共用条件"></a><a id="6-机制储备清单"></a><a id="m11-第一轮合同普通-smem-访问模型"></a><a id="m11-后续离线任务需求聚合诊断"></a><a id="整理后的测量合同2026-10-12-用户授权"></a><a id="每条机制规则先有自己的留出"></a><a id="组合验证检查误差是否抵消"></a><a id="v10-留出的覆盖组织"></a><a id="8-文档职责"></a>
-
-原各节入口对应[预测与验证细则](RESEARCH-GUIDE.md)、[主线任务](MAINLINE-LONG-K.md)、[m11 任务](M11-SMEM.md)与[已结束的测量安排](MEASUREMENT-20261012.md)。
+机制储备与已有证据见[微架构审阅](MICROARCH-REVIEW.md#m01)。现行公式见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，已通过独立留出的规则见 [RULES](RULES.md)。

@@ -1,6 +1,6 @@
 # GH200 微架构机制与建模证据审阅
 
-日期：2026-10-08。对象：用户提供的三份材料——微架构文献综述、寄存器服务专题、当前模型缺口分析，以及本仓库的 EXP-04–20、R00–R19、B01、V07/V08 和预测代码。审阅后 EXP-04、R04、R07、R17 已按维护位置并入其他页面，下表链接指向新位置。当前选择见 [PLAN](PLAN.md)，机制储备见[清单](MECHANISM-BACKLOG.md)，现有条件规则见 [RULES](RULES.md)。本报告记录证据与缺口，不新增测量结果。
+日期：2026-10-08。对象：用户提供的三份材料——微架构文献综述、寄存器服务专题、当前模型缺口分析，以及本仓库的 EXP-04–20、R00–R19、B01、V07/V08 和预测代码。审阅后 EXP-04、R04、R07、R17 已按维护位置并入其他页面，下表链接指向新位置。当前选择见 [PLAN](PLAN.md)，机制储备见本页第 4 节，现有条件规则见 [RULES](RULES.md)。本报告记录证据与缺口，不新增测量结果。
 
 ## 1. 审阅结论与研究范围
 
@@ -39,31 +39,31 @@
 
 | 机制与原实验扩展入口 | 已有依据 | 尚需识别的关系 |
 |---|---|---|
-| [M01 依赖与结果可用](MECHANISM-BACKLOG.md#m01) | [R01](R01-readiness.md)、[EXP-18](../EXP-18-occupancy-aux.md) 的依赖/独立流窗口 | 生产者、消费者及源位置的就绪间隔；控制开销与真实依赖分开 |
-| [M02 RF 读服务](MECHANISM-BACKLOG.md#m02) | [R02](R02-register-service.md) 固定 40 reg/thread 后仍有 5.26% 源形式差异 | 普通/uniform/立即数、物理编号、源位置、宽度如何改变服务；bank/端口结构未定 |
-| [M03 RF reuse 与缓存状态](MECHANISM-BACKLOG.md#m03) | R02 已保存复用与轮换 SASS | 缓存建立、命中、消耗、覆盖与失效；重用距离和 warp 交错的影响 |
-| [M04 写回、旁路、返回竞争](MECHANISM-BACKLOG.md#m04) | R02 的保留结果、消费尾部和混合返回 | 返回相撞影响发出还是消费；目标编号与路径的关联；旁路和物理写入的区分 |
-| [M05 warp 调度与子分区](MECHANISM-BACKLOG.md#m05) | [R06](R06-issue-residency.md)、EXP-18 的 warp 数与资源扫描 | 活跃 warp 的竞争等价类、ready 集合与局部发出；不先指定映射公式 |
-| [M06 算术、特殊、warp 交换服务](MECHANISM-BACKLOG.md#m06) | [EXP-05](../EXP-05-fma.md)、[EXP-08](../EXP-08-fp8-int8.md)、[EXP-10](../EXP-10-ldmatrix-shfl.md)、EXP-18 | 各类指令的依赖与接收服务、数据宽度和执行路径组合；补缺而非重复峰值表 |
-| [M07 前端、I-cache、分歧](MECHANISM-BACKLOG.md#m07) | R06 中的前端条件扩展，现有循环 SASS | 静态足迹、PC 序列、分支/谓词与 fetch 竞争；代码展开的因果分离 |
-| [M08 静态资源、驻留、local/spill](MECHANISM-BACKLOG.md#m08) | EXP-18 已有 local 数组、spill 压力、寄存器/SMEM；[R16](R16-residency-quota.md) 有驻留对照 | 多 CTA 实际驻留、分配粒度、local 请求组织及 spill 与调度的组合代价 |
-| [M09 动态 setmaxnreg](MECHANISM-BACKLOG.md#m09) | R16 已验证先释放/后释放、配额算术和等待 | 多个合法申请如何由不同释放满足；等待与仲裁的条件关系 |
-| [M10 普通 global/local LSU 请求](MECHANISM-BACKLOG.md#m10) | [原 EXP-04](../EXP-13-global-rw.md#exp-04)、[R03](R03-access-demand.md)、EXP-18 | 地址、宽度、mask 到需求；在途合并、分批、返回及 local 路径影响 |
-| [M11 SMEM 标量/向量/矩阵布局](MECHANISM-BACKLOG.md#m11) | [EXP-09](../EXP-09-smem.md) 已测 stride/广播；EXP-10、R03 有矩阵与宽访问 | 访问拆分、不同 word 竞争和矩阵片段映射；不同路径能否共用同一规则 |
-| [M12 cp.async](MECHANISM-BACKLOG.md#m12) | [EXP-12](../EXP-12-cp-async.md)、[R05](R05-async-lifecycle.md) 的拷贝与流水 | 请求/commit/等待组织、部分复制、接收限制与跨线程消费；不与 TMA 合并参数 |
-| [M13 TMA 描述符与请求形成](MECHANISM-BACKLOG.md#m13) | [EXP-15](../EXP-15-tma-2d.md)、R03/R05、V08 行距对照 | stride、box、对齐、swizzle、有效区域到服务需求；请求放大仍待独立证据 |
-| [M14 TMA 在途与排空](MECHANISM-BACKLOG.md#m14) | [EXP-14](../EXP-14-tma-1d.md)、[EXP-16](../EXP-16-tma-pipeline.md)、R05 | 发出、后端完成、资源恢复与共享范围；软件槽数不是硬件队列数 |
-| [M15 WGMMA 组与累加器](MECHANISM-BACKLOG.md#m15) | [EXP-07](../EXP-07-wgmma.md)、R05、[R13](R13-async-retirement.md) | 指令数/group 数/累加器与输入槽分别产生的限制；第二 WG 的覆盖能力 |
-| [M16 同步与 buffer 生命周期](MECHANISM-BACKLOG.md#m16) | [EXP-11](../EXP-11-sync.md)、R05、R13、[R14](R14-stage-handoff.md) | 等待传播、phase、proxy 可见性、最后消费者释放；负载下 fence 的窗口 |
-| [M17 缓存、合并与替换](MECHANISM-BACKLOG.md#m17) | [R08](R08-waves-l2-reuse.md)、[R10](R10-layout-cache.md)、[B01](B01-bandwidth-cache.md) | 真实复访顺序、冲突/容量失效、在途同地址合并、输出挤出；不只看 footprint |
-| [M18 地址翻译](MECHANISM-BACKLOG.md#m18) | 当前缺少独立的翻译识别结果 | 页跨度、复访与并发翻译的条件效应；与 cache、物理地址分布分开 |
-| [M19 L2 互连、DSM、多播](MECHANISM-BACKLOG.md#m19) | [EXP-17](../EXP-17-cluster.md)、[R18](R18-cluster-boundary.md) | 来源/目标服务类别、跨流干扰、多播源读取与接收 payload、目标端节奏 |
-| [M20 HBM 读写服务](MECHANISM-BACKLOG.md#m20) | [EXP-13](../EXP-13-global-rw.md) 已有 7 种读写比、依赖/独立复制 | 固定比值下交错粒度、地址分布、并发流如何改变服务；无需重做简单比例覆盖 |
-| [M21 原子](MECHANISM-BACKLOG.md#m21) | EXP-18 已测 global/shared 同址与异址 | 竞争地址数、返回值消费、作用域和排序语义对并发服务的影响 |
-| [M22 多路径共享资源](MECHANISM-BACKLOG.md#m22) | [原 R04](R11-mixed-issue.md#r04)、[R11](R11-mixed-issue.md)、[R12](R12-smem-path-contention.md) | 配比、重叠时段、线程/CTA 位置改变时的联合服务；固定百分比不能通用 |
-| [M23 真实 epilogue 与最终完成](MECHANISM-BACKLOG.md#m23) | R05 与 [R15](R15-output-service.md) 已区分源读完/完整写出；V06/V08 使用真实输出窗口 | STSM/转换/整理与并发输出 CTA、槽数、最终排空的关系；标量 STS 帧不能替代 |
-| [M24 CTA/cluster 调度及 OOB](MECHANISM-BACKLOG.md#m24) | [原 R17](R18-cluster-boundary.md#r17)、R18、[R19](R19-critical-cta-tail.md)、V08 | 物理 tile、启动、工作分配、边界路径与共享服务如何决定全 kernel 包络 |
-| [M25 频率、计时与观测扰动](MECHANISM-BACKLOG.md#m25) | [原 R07](R09-inkernel-clock-stages.md#r07)、[R09](R09-inkernel-clock-stages.md)、[V03](V03-clock-rule.md)、V07/V08 | 周期到微秒的迁移、短长调用差异、打点偏差；最长周期 CTA 与最晚退出 CTA 分开 |
+| <a id="m01"></a>M01 依赖与结果可用 | [R01](R01-readiness.md)、[EXP-18](../EXP-18-occupancy-aux.md) 的依赖/独立流窗口 | 生产者、消费者及源位置的就绪间隔；控制开销与真实依赖分开 |
+| <a id="m02"></a>M02 RF 读服务 | [R02](R02-register-service.md) 固定 40 reg/thread 后仍有 5.26% 源形式差异 | 普通/uniform/立即数、物理编号、源位置、宽度如何改变服务；bank/端口结构未定 |
+| <a id="m03"></a>M03 RF reuse 与缓存状态 | R02 已保存复用与轮换 SASS | 缓存建立、命中、消耗、覆盖与失效；重用距离和 warp 交错的影响 |
+| <a id="m04"></a>M04 写回、旁路、返回竞争 | R02 的保留结果、消费尾部和混合返回 | 返回相撞影响发出还是消费；目标编号与路径的关联；旁路和物理写入的区分 |
+| <a id="m05"></a>M05 warp 调度与子分区 | [R06](R06-issue-residency.md)、EXP-18 的 warp 数与资源扫描 | 活跃 warp 的竞争等价类、ready 集合与局部发出；不先指定映射公式 |
+| <a id="m06"></a>M06 算术、特殊、warp 交换服务 | [EXP-05](../EXP-05-fma.md)、[EXP-08](../EXP-08-fp8-int8.md)、[EXP-10](../EXP-10-ldmatrix-shfl.md)、EXP-18 | 各类指令的依赖与接收服务、数据宽度和执行路径组合；补缺而非重复峰值表 |
+| <a id="m07"></a>M07 前端、I-cache、分歧 | R06 中的前端条件扩展，现有循环 SASS | 静态足迹、PC 序列、分支/谓词与 fetch 竞争；代码展开的因果分离 |
+| <a id="m08"></a>M08 静态资源、驻留、local/spill | EXP-18 已有 local 数组、spill 压力、寄存器/SMEM；[R16](R16-residency-quota.md) 有驻留对照 | 多 CTA 实际驻留、分配粒度、local 请求组织及 spill 与调度的组合代价 |
+| <a id="m09"></a>M09 动态 setmaxnreg | R16 已验证先释放/后释放、配额算术和等待 | 多个合法申请如何由不同释放满足；等待与仲裁的条件关系 |
+| <a id="m10"></a>M10 普通 global/local LSU 请求 | [原 EXP-04](../EXP-13-global-rw.md#exp-04)、[R03](R03-access-demand.md)、EXP-18 | 地址、宽度、mask 到需求；在途合并、分批、返回及 local 路径影响 |
+| <a id="m11"></a>M11 SMEM 标量/向量/矩阵布局 | [EXP-09](../EXP-09-smem.md) 已测 stride/广播；EXP-10、R03 有矩阵与宽访问 | 访问拆分、不同 word 竞争和矩阵片段映射；不同路径能否共用同一规则 |
+| <a id="m12"></a>M12 cp.async | [EXP-12](../EXP-12-cp-async.md)、[R05](R05-async-lifecycle.md) 的拷贝与流水 | 请求/commit/等待组织、部分复制、接收限制与跨线程消费；不与 TMA 合并参数 |
+| <a id="m13"></a>M13 TMA 描述符与请求形成 | [EXP-15](../EXP-15-tma-2d.md)、R03/R05、V08 行距对照 | stride、box、对齐、swizzle、有效区域到服务需求；请求放大仍待独立证据 |
+| <a id="m14"></a>M14 TMA 在途与排空 | [EXP-14](../EXP-14-tma-1d.md)、[EXP-16](../EXP-16-tma-pipeline.md)、R05 | 发出、后端完成、资源恢复与共享范围；软件槽数不是硬件队列数 |
+| <a id="m15"></a>M15 WGMMA 组与累加器 | [EXP-07](../EXP-07-wgmma.md)、R05、[R13](R13-async-retirement.md) | 指令数/group 数/累加器与输入槽分别产生的限制；第二 WG 的覆盖能力 |
+| <a id="m16"></a>M16 同步与 buffer 生命周期 | [EXP-11](../EXP-11-sync.md)、R05、R13、[R14](R14-stage-handoff.md) | 等待传播、phase、proxy 可见性、最后消费者释放；负载下 fence 的窗口 |
+| <a id="m17"></a>M17 缓存、合并与替换 | [R08](R08-waves-l2-reuse.md)、[R10](R10-layout-cache.md)、[B01](B01-bandwidth-cache.md) | 真实复访顺序、冲突/容量失效、在途同地址合并、输出挤出；不只看 footprint |
+| <a id="m18"></a>M18 地址翻译 | 当前缺少独立的翻译识别结果 | 页跨度、复访与并发翻译的条件效应；与 cache、物理地址分布分开 |
+| <a id="m19"></a>M19 L2 互连、DSM、多播 | [EXP-17](../EXP-17-cluster.md)、[R18](R18-cluster-boundary.md) | 来源/目标服务类别、跨流干扰、多播源读取与接收 payload、目标端节奏 |
+| <a id="m20"></a>M20 HBM 读写服务 | [EXP-13](../EXP-13-global-rw.md) 已有 7 种读写比、依赖/独立复制 | 固定比值下交错粒度、地址分布、并发流如何改变服务；无需重做简单比例覆盖 |
+| <a id="m21"></a>M21 原子 | EXP-18 已测 global/shared 同址与异址 | 竞争地址数、返回值消费、作用域和排序语义对并发服务的影响 |
+| <a id="m22"></a>M22 多路径共享资源 | [原 R04](R11-mixed-issue.md#r04)、[R11](R11-mixed-issue.md)、[R12](R12-smem-path-contention.md) | 配比、重叠时段、线程/CTA 位置改变时的联合服务；固定百分比不能通用 |
+| <a id="m23"></a>M23 真实 epilogue 与最终完成 | R05 与 [R15](R15-output-service.md) 已区分源读完/完整写出；V06/V08 使用真实输出窗口 | STSM/转换/整理与并发输出 CTA、槽数、最终排空的关系；标量 STS 帧不能替代 |
+| <a id="m24"></a>M24 CTA/cluster 调度及 OOB | [原 R17](R18-cluster-boundary.md#r17)、R18、[R19](R19-critical-cta-tail.md)、V08 | 物理 tile、启动、工作分配、边界路径与共享服务如何决定全 kernel 包络 |
+| <a id="m25"></a>M25 频率、计时与观测扰动 | [原 R07](R09-inkernel-clock-stages.md#r07)、[R09](R09-inkernel-clock-stages.md)、[V03](V03-clock-rule.md)、V07/V08 | 周期到微秒的迁移、短长调用差异、打点偏差；最长周期 CTA 与最晚退出 CTA 分开 |
 
 ## 5. 需要保留的解释边界
 

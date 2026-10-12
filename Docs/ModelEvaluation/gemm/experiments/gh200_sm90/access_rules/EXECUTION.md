@@ -1,78 +1,33 @@
-# GH200 实验执行规范
+# GH200 分工与当前状态
 
-问题见 [PLAN](PLAN.md)，现行候选见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，已验证规则见 [RULES](RULES.md)。本页只维护分工、执行边界与当前状态；任务细节分别见[主线](MAINLINE-LONG-K.md)、[m11](M11-SMEM.md)和[已结束的测量安排](MEASUREMENT-20261012.md)。
+问题见 [PLAN](PLAN.md)，测量、数据和验证规则只在 [RESEARCH-GUIDE](RESEARCH-GUIDE.md)维护；任务详情见[主线](MAINLINE-LONG-K.md)与[m11](M11-SMEM.md)。
 
-## 分工与交回
-
-每个文件和运行目录只有一个写入者；主集成维护公共模型、计划、GPU分配与最终评分。专业组只写独占研究产物，公共接口由主集成合入。用户已授权主集成与以下三个专业组互发有界协调消息，具体对话身份保留在已有授权、执行记录和 git 历史中。
+## 分工
 
 | 写入者 | 归属 |
 |---|---|
-| 主集成 | PLAN/RULES/EXECUTION、公共probe/runner、v09_model、集成与冻结评分 |
-| A：时间输入 | R09、clock_model、r09专属分析与测试 |
-| B：供给请求 | R10/R13、R14输入生命周期、supply_model及供给分析 |
-| C：输出边界 | R15/R18/R19、output_model；m11专属probe/模型/runner与R03/EXP-09 |
+| 主集成 | PLAN/RULES/EXECUTION、公共 probe/runner、v09_model、集成与冻结评分；公共文件串行维护 |
+| A：时间输入 | R09、clock_model、r09 专属分析与测试；使用 B 定义的源工作口径 |
+| B：供给请求 | R10/R13、R14 输入生命周期、supply_model；接入 C 提出的跨 rank 前驱 |
+| C：输出边界 | R15/R18/R19、output_model；m11 专属 probe/模型/runner 与 R03/EXP-09 |
 
-最多并行一个主线和一个机制任务，各用独立分支/worktree/结果目录。整理后的两项测量已达到终点并停止；旧专业目标保持暂停或完成身份，新任务单独记录，不启动供给研究。当前待删除对象见[整理清单](CONSOLIDATION-20261012.md)，未经用户确认不删除。
-
-<a id="shared-gemm"></a>
-
-## 共享代码与计时边界
-
-- 公共cfg_a/b/c、CUTLASS覆盖头、trace ABI和最终预测由主集成维护。专属分析器属于相应组；跨rank前驱由C提出、B接入，源工作口径由B定义、A使用。
-- frozen源码、旧run、原始记录和summary只读；每次运行保存独立身份，新输出使用新目录。
-- 正式换算绑定实际tile、cluster、schedule、stage、输入、暖机及完成端点；旧R09的128×256×64、4stage常数不能直接移植。
-- plain/stamped/ends/wide/dual分别维护边界。完整调用与局部窗口分别检查：完整扰动小不证明局部窗口有效，event−包络漂移也不单独证明局部L无效。[按用途划分检查](RESEARCH-GUIDE.md#measurement-checks)。使用目标或前序实测的诊断不进入V10正式预测。
-- 被否决的长K接口隔离为 `v09_long_k_rejected.py`，仅供失败候选复现；公共 `v09_model.py` 未接入该成本。普通SMEM模型亦只用于研究，没有采用资格。
-
-## 数据与GPU资源
-
-本地归档根为 `results/gh200_resource_campaign/access_rules`。worktree读取主checkout的明确只读输入路径，不复制整份历史results。新run下保留各attempt的源码、失败和独有记录，不拼接不同协议为成功样本。结果目录的空间与独立证据清单见[整理清单](CONSOLIDATION-20261012.md#results)。
-
-正式计时仅在Slurm获配GPU上运行，每卡串行；整节点exclusive按实际AllocTRES计资源。先完成准备再申请，不占分配等待开发或人工确认，不重复提交同批副本，不取消其他研究作业。远端临时盘仅中转，先收齐本地再按明确授权清理；历史home/scratch近配额的状态不能当当前余量。
-
-<a id="reference-gpu"></a>
-
-## 参考卡
-
-V09为romeo-a057 / **GPU-43269fbc-449d-3e0f-908a-9c81229546d3**；V07/V08的GPU-099dda56是另一卡。新主线校准须绑定原参考卡和预列参照；新卡必须重做受影响校准，不能只换UUID。节点名不能证明设备身份或当前可用。
-
-m11开发740961绑定romeo-a048 / **GPU-009a8880-f309-a55d-d256-748fb9adad74**，SMID124；后续同协议桥接、校准和留出使用同卡并记录实际SMID。指定UUID必须先属于job/step分配，再收窄CUDA_VISIBLE_DEVICES。跨卡资格仍未完成。
-
-<a id="v09-freeze"></a>
-
-## V09确认边界（已经完成）
-
-V09 r2已经用户确认、job739011测完。原拒绝项、支持范围、失败分数和冻结SHA永久保留，见[V09完整记录](V09-component-validation.md)。
-
-V10先确定候选和新条件，必要校准完成后回传最终预测与manifest SHA，由用户确认这一版本，随后才采留出。参数或预测变化不能沿用原确认。本轮测量已结束，没有新候选或已确认的V10预测版本。
-
-<a id="counter-access"></a>
-
-## 计数器权限
-
-[已有诊断](../../../../../../microbench/gh200_l0/results/20260930-counter-access/README.md)记录普通/独占作业均受RmProfilingAdminOnly=1限制，NCU返回ERR_NVGPUCTRPERM。受支持入口仍待用户联系ROMEO管理员；没有计数器时不能从时间拟合宣称识别物理流量、事务或唯一硬件端口。
+用户已授权主集成与上述专业组之间的有界协调。具体对话身份保留在已有授权与执行记录中。
 
 <a id="status"></a>
 
 ## 当前状态
 
-更新：2026-10-12，已批准的[测量安排](MEASUREMENT-20261012.md)已达到终点。主线未采到必要开发数据，m11得到lane排列反证；两项均先通过CUDA 12.9.41的CPU构建/SASS/资源与协议检查。本轮主线1/1、SMEM1/2新GPU提交，无恢复或追加，条件留出未提交；没有新候选或V10。当前仅收缩文档，未来检查按测量用途声明，旧成绩和冻结身份不变。所有提交保留本地main，不推送、不登录GitHub。
+更新：2026-10-12。所有提交保留本地 main，不推送、不登录 GitHub。当前完成文档收尾，随后只推进 m11 离线推导，GPU 0。
 
-| 工作 | 交付与终点 | 下一步 |
+| 工作 | 当前结论 | 下一步 |
 |---|---|---|
-| 主线8小时任务 | 缺必要测量；第一修正cfg_a G6 −3.698%→−16.739%，未采用；GPU0 | 已结束；后续校准亦未采到开发条件，缺口保留；[主线任务](MAINLINE-LONG-K.md) |
-| 主线必要校准741159 | FAILED、1:0、1m52s，原GPU432；27setup及120参照采样后event−包络绝对门槛失败，540开发槽未执行 | 本轮提交1/1；独立定价与原采用比较未执行，交付失败终点并停止；[R09](R09-inkernel-clock-stages.md) |
-| m11第一轮 | 740708失败、740961开发完成；宽广播反证，无冻结；历史用2/3次 | 普通探针与分析器收口，独立留出未执行；[R03](R03-access-demand.md#m11-current) |
-| m11后续离线 | 两形式无候选；全warp形式相对门槛过而绝对周期/留布局失败；GPU0 | 已结束；48条件开发对照也已完成，下次先推导能区分已有反例的静态输入；[m11任务](M11-SMEM.md) |
-| m11 lane对照741153 | COMPLETED、0:0、1m35s，原GPU009；48/144有效、20/20桥接、SMID124，12/14对反证共同标量描述 | 本轮提交1/2；无候选、不冻结、不提交条件留出，依赖缺口保留；[R03](R03-access-demand.md#m11-current) |
-| 供给与其他机制 | 保持暂停 | 本次整理或补测不自动恢复 |
-| V10与跨卡 | 未冻结、未采样，联合验收未完成 | 校准后有候选才进入指定版本确认 |
+| 长 K 主线 | 校准 741159 在旧参照门槛处停止；120 个参照采样完成，540 个开发槽位未执行；新提交 1/1，无恢复。失败修正未接入公共模型 | 待定参数和最少对照明确后，再决定是否批准新校准；[主线](MAINLINE-LONG-K.md) |
+| m11 | 741153 完成 48 条件×3 进程；lane 排列反证旧需求标量，无候选、未冻结或留出；新提交 1/2，无恢复 | 用已有反例推导静态阶段／广播描述；剩余条件留出预算不转为开发；[m11](M11-SMEM.md) |
+| 供给与其他机制 | 暂停 | 不自动恢复 |
+| V10 与跨卡 | 未冻结、未采样，联合验证未完成 | 有候选后才进入最终 SHA 确认；[验证顺序](RESEARCH-GUIDE.md#order) |
 
-冻结与旧研究记录不回写。本轮两条线都已停止，旧授权不自动启动下一轮；新作业预算另经用户确认。两组结果和实际执行身份见[交付记录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-authorized-measurement-integration/authorization.json)。
+旧 worktree、分支、准备包和结果目录暂时保留，本次没有删除。原清理审计留在[结果记录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-repository-consolidation/)，需要清理时按当时 Git 与文件状态决定，不维护过期清单。
 
-<a id="goals"></a>
+<a id="counter-access"></a>
 
-## 目标模式
-
-目标完成指有界合同达到明确终点，不等于模型通过。文档模板不激活目标；已完成的反证目标不重开，后续测量用新记录保留原失败、开始时间和作业计数。
+计数器：[已有诊断](../../../../../../microbench/gh200_l0/results/20260930-counter-access/README.md)记录 NCU 权限受限，仍待用户联系 ROMEO 管理员，本次未尝试获取权限。两项测量的作业与身份见[交付记录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-authorized-measurement-integration/authorization.json)。
