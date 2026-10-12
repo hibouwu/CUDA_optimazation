@@ -284,6 +284,16 @@ def main(input_root, output, preregistration):
     spec = importlib.util.spec_from_file_location('archived_m11_model', input_root / 'package/source/r03_lds_sts_model.py')
     archived = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(archived)
+    previous_model_module = sys.modules.get('r03_lds_sts_model')
+    sys.modules['r03_lds_sts_model'] = archived
+    analyzer_spec = importlib.util.spec_from_file_location(
+        'archived_m11_analyzer', input_root / 'package/source/analyze_r03_lds_sts.py')
+    archived_analyzer = importlib.util.module_from_spec(analyzer_spec)
+    analyzer_spec.loader.exec_module(archived_analyzer)
+    if previous_model_module is None:
+        del sys.modules['r03_lds_sts_model']
+    else:
+        sys.modules['r03_lds_sts_model'] = previous_model_module
     cases = read_json(input_root / 'package/development-cases.json')
     old_rows = read_json(input_root / 'development-analysis/comparison.json')['rows']
     original_parameters = read_json(input_root / 'development-analysis/parameters.json')
@@ -321,8 +331,22 @@ def main(input_root, output, preregistration):
         fitted = fit(selected, [old_rows[i]['median_cycles'] for i in indices], [old_demands[i] for i in indices], 'F1')
         predictions = predict(selected, [old_demands[i] for i in indices], fitted)
         rows = [scored_row(cases[i], old_rows[i], p) for i, p in zip(indices, predictions)]
+        legacy_parameters = archived_analyzer.fit_group(selected, [old_rows[i] for i in indices])
+        assert legacy_parameters['status'] == 'fitted_conditional'
+        legacy_predictions = [archived.predict(case, {'groups': {group: legacy_parameters}})['window_cycles']
+                              for case in selected]
+        legacy_rows = [scored_row(cases[i], old_rows[i], p) for i, p in zip(indices, legacy_predictions)]
+        complete = grouped_indices[group]
+        replay_parameters = archived_analyzer.fit_group([cases[i] for i in complete], [old_rows[i] for i in complete])
+        replay_predictions = [archived.predict(cases[i], {'groups': {group: replay_parameters}})['window_cycles']
+                              for i in complete]
+        original_difference = max(abs(p - old_rows[i]['predicted_cycles']) for i, p in zip(complete, replay_predictions))
+        assert original_difference < .1
         original_nonbroadcast.append(dict(group=group, before=metrics([old_rows[i] for i in indices]),
-                                         refit=metrics(rows), fitted=fitted_json(fitted)))
+                                         refit=metrics(rows), fitted=fitted_json(fitted),
+                                         same_least_squares_objective_refit=metrics(legacy_rows),
+                                         original_full_fit_replay_maximum_cycle_difference=original_difference,
+                                         original_solver_nonbroadcast_parameters=legacy_parameters))
     write_json(output / 'original-nonbroadcast-refit.json', dict(
         interpretation='diagnostic refit with old features and original form; not a third adoption candidate', groups=original_nonbroadcast))
     decisions = {}
