@@ -11,6 +11,7 @@
 3. [Thor/SM110](hardware/thor_sm110/README.md)或 [GH200/SM90](hardware/gh200_sm90/README.md)：查阅目标硬件的参数、支持条件与来源。
 4. [FP32 分块模型](schemes/fp32_simt_tiled.md)：查看配置如何转为需求、事件和周期预测；[tc5a](schemes/tc5a.md)单独保留为后续阶段的历史候选。
 5. [GH200 实验](experiments/gh200_sm90/README.md)与[时间预测验证](experiments/gh200_sm90/access_rules/README.md)：查阅实测依据、预测误差和适用范围。
+6. [性能建模参考资料](../references/README.md)：查阅论文、模型源码与官方研究材料，按模型层级和输入要求选择对照。
 
 ## 模型层级
 
