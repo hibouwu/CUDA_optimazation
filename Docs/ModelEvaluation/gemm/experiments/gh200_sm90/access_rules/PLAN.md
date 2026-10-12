@@ -1,6 +1,6 @@
 # GH200 GEMM 时间预测计划
 
-更新：2026-10-12。**整理已完成，用户正式批准主线必要校准与m11开发对照，以及有条件的m11独立留出；本轮不推送、不登录GitHub，提交仅保留本地main。** V09整体未通过；现行候选见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，已验证规则见 [RULES](RULES.md)，状态与分工见 [EXECUTION](EXECUTION.md#status)。原合同与失败记录不改写，后续授权见[测量合同](#measurement-next)。
+更新：2026-10-12。**本轮测量达到终点：主线741159在冻结参照门槛处失败，m11开发741153得到lane排列反证，无候选、不执行条件留出。** 本轮不推送、不登录GitHub，提交仅保留本地main。V09整体未通过；现行候选见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，已验证规则见 [RULES](RULES.md)，状态与分工见 [EXECUTION](EXECUTION.md#status)。原合同与失败记录不改写，后续授权见[测量合同](#measurement-next)。
 
 <a id="prediction-boundary"></a>
 
@@ -237,6 +237,10 @@ Git收口、文档与证据检查已完成。用户取消main推送步骤：本�
 各组只修改专属文件，公共文件由主集成串行维护；旧结果、冻结文件与V09 SHA不变。各项达到终点即停止，不扩展矩阵、多CTA、跨卡、下一机制，不自动开始V10。两项各在终点汇报一次，中途仅在失败、资源不可用或需要用户决定时打断；结论写回R09/PLAN、R03/EXP-09及EXECUTION并本地提交。
 
 主线方案见[measurement-v2](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/measurement-v2/README.md)，SMEM48条件见[原提案](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/minimal-measurement-plan.json)。旧提案的“未授权”文字保持其交付时身份，本节记录此次新授权。主线V10仍须按第3节确认最终指定SHA。
+
+**本轮终点。** 主线741159通过CPU9个原plain/dual/ends构建与逐指令SASS/资源身份检查，在原GPU432上完成27个setup和120个冻结参照采样；四项event−dual包络增量0.688–0.848µs超过原0.5µs绝对上限，其余相对检查通过。参照失败后停止，540个开发槽位未启动，新长K、ends/dual桥接与G6开发均未采；新参数独立定价和29条件采用比较未执行，不能称为新修正被反证。唯一校准提交已计入预算，不追加；证据写回[R09](R09-inkernel-clock-stages.md)。
+
+m11开发741153在原GPU009/原二进制/协议完成48条件×3进程，失败和恢复0，20/20旧窗口桥接通过、全部SMID124。14对lane排列中12对没有满足原联合门槛的共同预测，两对4B负对照相容；16B主对照4194515与16777430cycle，约四倍，8B密集对照连旧子组需求标量也相同而时间仍差47.381%。全warp地址集合与旧子组需求总和均不足以描述完整范围，宽广播和依赖执行缺口仍在；无新候选、不冻结、不提交条件留出，不写入已验证RULES。结果写回[R03](R03-access-demand.md#m11-current)与[EXP-09](../EXP-09-smem.md)。本轮主线1/1、SMEM1/2新提交，无恢复；两个有界任务停止，不自动开启下一轮。
 
 ## 7. 验证规则
 
