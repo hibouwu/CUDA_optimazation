@@ -10,7 +10,7 @@
 
 [V07](V07-rule-validation.md) 在同卡、cfg_a/b/c、swizzle=1、K 位于校准范围内的 24 个条件（12 个不同 M×N）上为 **3.06% / 8.71%**，总时间通过；供给、末次输出和关键 CTA 定位仍失配，20/24 预测偏长。它使用 V06 事件递推、同卡重新校准与 R18 边界修正；R19 只作诊断，R02/R11/R12/R16/B01 未用于 V07。
 
-现行V09候选的公式、输入与限制维护在 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)；[RULES](RULES.md)只收符合既定留出资格的规则。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但不覆盖行距、边界和分项失败。两条有界线都已停止：主线缺参考卡长K后续L与协议桥接，m11两轮反证仍缺宽广播及依赖执行描述，没有独立留出成绩。当前先按[整理清单](CONSOLIDATION-20261012.md)收口（GPU0、无新分析），随后执行用户批准的[测量合同](PLAN.md#measurement-next)。实际分工与状态见 [EXECUTION](EXECUTION.md#status)，V09原采样和失败评分保持。
+现行V09候选的公式、输入与限制维护在 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)；[RULES](RULES.md)只收通过独立留出的规则。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但不覆盖行距、边界和分项失败。两项后续测量已结束：主线只完成参照，必要长K开发数据未采到；m11的48条件对照反证了旧需求描述，没有新候选或独立留出成绩。[一页计划](PLAN.md)列出当前结论和开放问题；任务细节见[主线](MAINLINE-LONG-K.md)、[m11](M11-SMEM.md)，已执行的范围与预算见[测量安排](MEASUREMENT-20261012.md)。实际分工与状态见 [EXECUTION](EXECUTION.md#status)，V09原采样和失败评分保持。
 
 <a id="当前状态2026-10-07"></a>
 
