@@ -2,11 +2,15 @@
 
 ## 当前结论
 
+2026-10-12 的必要校准以**冻结参照门槛失败，开发未执行**停止。唯一新提交 741159 在 romeo-a057 分配原四卡后确认 GPU-43269fbc 属于 job/step，再收窄设备可见性。CUDA 12.9.41 的九个 CPU 构建通过原 ARM GEMM SASS 逐指令与资源身份检查，原 ends 记录也通过 V09 读取器离线检查。27 个 setup 和 120 个参照采样进程完成；四条参照的 `event − dual包络` 增量为 0.688–0.848 µs，超过原定 0.5 µs 上限，其余完整时间、包络和换算率的相对门槛通过。[失败终点与完整证据](../../../../../../results/gh200_resource_campaign/access_rules/20261012-R09-long-k-calibration/README.md)。
+
+18 个新条件、12 组 ends/dual 桥接及 G6 三配置开发复现均未采样，剩余 540 个开发进程未启动。因此独立定价和固定 29 条件的新候选采用比较均未执行；本轮没有反证一个新修正，也没有得到新参数。实际新 GPU 提交为 1，无采样恢复、追加作业或阈值调整，V09 冻结身份与原成绩保持不变；不自动开始 V10。
+
 V09 r2 的长 K 时钟迁移未通过；后续八小时合同以“缺一个必要测量”结束，GPU 使用为 0，没有采用新系数或修正。固定 29 条件上的第一形式把 cfg_a G6 的 plain 误差从 −3.698% 改成 −16.739%，留掉 G6 形状后为 −36.507%；其他配置的改善不能抵消这一退化。[失败候选与独立复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/README.md)。
 
 包络误差必须分开局部窗口与 CTA 组合。G6 实测最晚 CTA 属于模型的 36 个最大值并列候选，10/10 次命中；代表编号在 max 之后选择，单改编号不会改变完整时间。后续 L 是主要残差位置，但尚未识别物理原因；读取实测频率的结果只是诊断。
 
-缺的是**参考卡、相同 dual 协议下，不依赖 G6 定价的长 K 后续 L 校准，以及匹配的 ends/dual 桥接**。已有高覆盖 ends 不能替代局部 dual 服务价格；旧 cfg_c K16384 dual 只有一个输出，也不能给 later L 定价。必要补测已预列 8192×6144、3072×16384，两形状各 K2048/4096/32768、三配置，共18条件；加桥接与参照共660进程。[测量方案与静态核对](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/measurement-v2/README.md)。用户已批准整理后执行这一校准作业；它不是 V10 留出。
+缺的是**参考卡、相同 dual 协议下，不依赖 G6 定价的长 K 后续 L 校准，以及匹配的 ends/dual 桥接**。已有高覆盖 ends 不能替代局部 dual 服务价格；旧 cfg_c K16384 dual 只有一个输出，也不能给 later L 定价。必要补测已预列 8192×6144、3072×16384，两形状各 K2048/4096/32768、三配置，共18条件；加桥接与参照共660进程。[测量方案与静态核对](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/measurement-v2/README.md)。本次授权作业在参照检查处停止，缺口保留；它不是 V10 留出。
 
 局部周期换算仍需匹配端点、执行历史和观察协议。完整 event 接近不能覆盖局部分项失败，边际中位数也不能直接组合成逐调用的最后完成时间。此前各项反证、未辨识项及原误差合同保留在下方索引。
 
@@ -14,6 +18,7 @@ V09 r2 的长 K 时钟迁移未通过；后续八小时合同以“缺一个必�
 
 | 实验问题 / 作业 | 一句结果 | 证据入口 |
 |---|---|---|
+| 必要校准参照，741159 | 四条 event-extra 超 0.5 µs 门槛；120 参照完成，540 开发未执行 | [终点复核](../../../../../../results/gh200_resource_campaign/access_rules/20261012-R09-long-k-calibration/terminal-audit.json) |
 | 调用内和调用后时钟，735634/735669 | 调用后探针导致旧20%开销误判 | [R07修正](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/summary.json)、[R09报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r09-clock-stages/report.md) |
 | V03/V08频率和周期抵消 | 只换频率使cfg_b周期低估更明显 | [V08诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/C-20261009-clock-diagnostic-v2/diagnostic.json) |
 | 公共数值检查，738097 | K65536 random失败保留 | [逐点误差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-R13-shared-smoke-job738097/reanalysis/C-20261009-random-error-v1/diagnostic.json) |
