@@ -56,7 +56,7 @@ git cherry的“+”只表示补丁不等价，不自动表示缺合；对GH200�
 
 ## 结果目录清单（只列，不删除）
 
-整个access_rules结果根目录du约15G。按顶层名称日期计，20261010/11/12分别20/44/2个目录，共66个，清单采集时约2.37GiB、56498文件；其中包含本次审计目录，清单及运行日志后续增加不属于新采样。“两天45目录”与此口径不同。完整大小、包、manifest和证据入口见[JSON清单](../../../../../../results/gh200_resource_campaign/access_rules/20261012-repository-consolidation/results-inventory.json)。
+整个access_rules结果根目录du约15G。按顶层名称日期计，20261010/11/12分别20/44/2个目录，共66个，清单采集时约2.37GiB、56498文件；其中包含本次审计目录，清单及运行日志后续增加不属于新采样。按10月11–12日计，排除本次审计目录后恰为45个研究目录，与你给出的数量一致；66是含10月10日及本次审计的三天口径，15G是整个结果根目录。完整大小、包、manifest和证据入口见[JSON清单](../../../../../../results/gh200_resource_campaign/access_rules/20261012-repository-consolidation/results-inventory.json)。
 
 下列独立性按已有作业/报告身份列出，源码/构建资格、correctness、计时、离线复核与独立留出不互相替代。“未确认”不是无价值或可删除。准备与失败attempt都可能有独有SASS、错误和源码，应先归档而非直接丢弃。
 
