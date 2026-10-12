@@ -72,7 +72,8 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     Only explicit phase inputs add consumer_phase_entry, full_wait_begin,
     full_wait_return and mma_begin arrays. With both omitted the complete
     legacy return schema, ordering and values are preserved.
-    In phased calls consumer_available is H and first_mma_or_commit is M.
+    In phased calls consumer_phase_entry is before pre, consumer_available is H,
+    and first_mma_or_commit is M.
     """
     values=(producer_interval,ready_latency,commit_lead,completion_lag,
             service_cycles,issue_floor,wait_overhead,loop_advance,

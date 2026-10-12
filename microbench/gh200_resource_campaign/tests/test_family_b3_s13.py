@@ -14,7 +14,7 @@ BASE=Path(__file__).resolve().parents[1]
 REPO=BASE.parents[1]
 sys.path.insert(0,str(BASE))
 from common import family_b3 as b3
-from common.suite_io import atomic_json,read_json,sha,DIMENSIONS
+from common.suite_io import atomic_json,read_json,sha,DIMENSIONS,gate_mapping,validate_gate
 from common.suite_snapshot import freeze,required_reviews
 from auditors.suite import adapter,load_run
 from runners import suite_runner
@@ -143,6 +143,22 @@ class S13FamilyB3Tests(unittest.TestCase):
 
     def make_run(self,directory):
         created=[]
+        restored=[]
+        # Historical live-code reviews are not current-core qualification.
+        # Rebind only copied CPU fixture reviews while exercising snapshot/load;
+        # preserve every original byte and all actual result-root reviews.
+        for stage,phase,name in required_reviews(self.original,True):
+            path=self.suite/name
+            if not path.exists():
+                continue
+            original=path.read_bytes()
+            review=read_json(path)
+            mapping=gate_mapping(review)
+            if any(sha(self.repo/name)!=digest for name,digest in mapping.items()):
+                restored.append((path,original))
+                review['review_scope']='CPU fixture only; current-core snapshot/load tests, no GPU or qualification.'
+                review['gate_files']={name:sha(self.repo/name) for name in mapping}
+                atomic_json(path,review)
         for stage,phase,name in required_reviews(self.original,True):
             p=self.suite/name
             if not p.exists():
@@ -151,6 +167,7 @@ class S13FamilyB3Tests(unittest.TestCase):
         try:frozen=freeze(self.repo,self.suite,root,self.repo/CONTRACT,preflight=True)
         finally:
             for p in created:p.unlink()
+            for path,original in restored:path.write_bytes(original)
         first=next(iter(self.bundle['cases'].values()))['root']
         for name in ('binary','build','environment'):shutil.copytree(first/name,root/name)
         for a,b in [('sass.stdout','sass.txt'),('sass.stdout','disassemble.stdout'),('sass.stderr','disassemble.stderr'),('sass.receipt.json','disassemble.receipt.json')]:shutil.copyfile(root/'build'/a,root/'build'/b)

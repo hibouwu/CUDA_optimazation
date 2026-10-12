@@ -57,12 +57,17 @@ def max_clock_cap(run):
 
 def source_design(points, tau):
     import numpy as np
-
-    return np.array([[1,
-        *[-p['tensor_mean_cycles'] / (1000 * p['observed_window_us']) * (p['input_mode'] == mode) for mode in MODES],
-        *[-p['source_mean_kib'] / p['observed_window_us']
-          * clock.duration_term(p['observed_window_us'], 'relaxation', tau)
-          * (p['input_mode'] == mode) for mode in MODES]] for p in points])
+    rows = []
+    for p in points:
+        weights = p.get('mode_weights', [float(p['input_mode'] == mode) for mode in MODES])
+        if (len(weights) != len(MODES) or any(not math.isfinite(w) or w < 0 for w in weights)
+                or not math.isclose(sum(weights), 1., abs_tol=1e-12)):
+            raise ValueError('clock mode weights must be a finite nonnegative unit sum')
+        tensor = p['tensor_mean_cycles'] / (1000 * p['observed_window_us'])
+        source = (p['source_mean_kib'] / p['observed_window_us']
+                  * clock.duration_term(p['observed_window_us'], 'relaxation', tau))
+        rows.append([1, *[-tensor * w for w in weights], *[-source * w for w in weights]])
+    return np.array(rows)
 
 
 def fit_source_clock(points, cap):
@@ -97,7 +102,8 @@ def fit_source_clock(points, cap):
     derivative = []
     for p in points:
         x = p['observed_window_us'] / tau
-        e = coefficients[4 + MODES.index(p['input_mode'])]
+        weights = p.get('mode_weights', [float(p['input_mode'] == mode) for mode in MODES])
+        e = sum(coefficients[4 + i] * w for i, w in enumerate(weights))
         derivative.append(e * p['source_mean_kib'] / p['observed_window_us']
                           * (-math.expm1(-x) - x * math.exp(-x)) / x)
     jacobian = np.column_stack((source_design(points, tau), derivative))
@@ -1886,9 +1892,23 @@ def response_development(base, output):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--run', type=Path, required=True)
-    parser.add_argument('--calibration-run', type=Path, required=True)
-    parser.add_argument('--old-long-run', type=Path, required=True)
+    parser.add_argument('--v10-clock-expansion', action='store_true')
+    parser.add_argument('--base', type=Path)
+    parser.add_argument('--public-code', type=Path)
+    parser.add_argument('--run', type=Path)
+    parser.add_argument('--calibration-run', type=Path)
+    parser.add_argument('--old-long-run', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    analyze_source_clock(args.run.resolve(), args.calibration_run.resolve(), args.old_long_run.resolve(), args.output.resolve())
+    if args.v10_clock_expansion:
+        if args.base is None or args.public_code is None:
+            parser.error('--v10-clock-expansion requires --base and --public-code')
+        import subprocess
+        import sys
+        subprocess.run([sys.executable, '-B', str(Path(__file__).with_name('r09_v10_clock_expansion.py')),
+                        '--base', str(args.base.resolve()), '--public-code', str(args.public_code.resolve()),
+                        '--output', str(args.output.resolve())], check=True)
+    else:
+        if any(p is None for p in (args.run, args.calibration_run, args.old_long_run)):
+            parser.error('original mode requires --run, --calibration-run and --old-long-run')
+        analyze_source_clock(args.run.resolve(), args.calibration_run.resolve(), args.old_long_run.resolve(), args.output.resolve())

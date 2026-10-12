@@ -18,8 +18,8 @@ BASE = Path(__file__).resolve().parents[1]
 REPO = BASE.parents[1]
 sys.path.insert(0, str(BASE))
 from common import family_b3 as b3
-from common.suite_io import atomic_json, read_json, sha, DIMENSIONS
-from common.suite_snapshot import freeze, required_reviews, check_snapshot
+from common.suite_io import atomic_json, read_json, sha, DIMENSIONS, gate_mapping, validate_gate
+from common.suite_snapshot import freeze, required_reviews, check_snapshot, local_cpp_closure
 from auditors.suite import adapter, load_run
 from runners import suite_runner
 from runners import validation_diagnostic
@@ -41,6 +41,7 @@ class FamilyB3Tests(unittest.TestCase):
             if path.exists():
                 names.add(path.relative_to(REPO).as_posix())
                 names.update(read_json(path)['gate_files'])
+        names = local_cpp_closure(REPO, names)
         # Copy the current implementation and tests too; no links to live files.
         for path in BASE.rglob('*'):
             if path.is_file() and '__pycache__' not in path.parts:
@@ -184,7 +185,7 @@ class FamilyB3Tests(unittest.TestCase):
         manifest=read_json(BASE/'contracts/async_copy_validation_adapter_v1.json')
         policy=read_json(BASE/'contracts/early_validation_v1.json')
         self.assertFalse(any(phase=='early-validation-B3' for _,phase,_ in validation_diagnostic.review_requirements(short,manifest,policy)))
-        self.assertEqual(validation_diagnostic.CORE_REVIEW,'reviews/S02-early-validation-B-review-r5.json')
+        self.assertEqual(validation_diagnostic.CORE_REVIEW,'reviews/S02-early-validation-B-review-r6.json')
         self.assertFalse(any(stage in ('S02','S03') and phase=='B' for stage,phase,_ in validation_diagnostic.review_requirements(short,manifest,policy)))
 
     def test_integrated_formal_adapter_checks_all_24_bound_resources(self):
@@ -215,10 +216,33 @@ class FamilyB3Tests(unittest.TestCase):
             self.assertEqual(caught.exception.code, 97)
             self.assertEqual(execute.call_args.args[1][2], str(root/'snapshot/repo/microbench/gh200_resource_campaign/run_suite.py'))
 
+    def test_saved_core_gate_rejects_changed_live_code(self):
+        # The original gate stays strict even though temporary CPU fixtures can
+        # test serialization against the current implementation.
+        path=self.suite/'reviews/S02-formal-b3-v2-B-review.json'
+        with self.assertRaisesRegex(ValueError, 'hash mismatch'):
+            validate_gate(path,self.repo,'S02','B')
+
     def make_run(self, directory):
         c=self.contract()
         # Test-only integration reviews: no run of any device program follows.
         created=[]
+        restored=[]
+        # Historical live-code reviews are not current-core qualification.
+        # Rebind only copied CPU fixture reviews while exercising snapshot/load;
+        # preserve every original byte and all actual result-root reviews.
+        for stage,phase,name in required_reviews(c,True):
+            path=self.suite/name
+            if not path.exists():
+                continue
+            original=path.read_bytes()
+            review=read_json(path)
+            mapping=gate_mapping(review)
+            if any(sha(self.repo/name)!=digest for name,digest in mapping.items()):
+                restored.append((path,original))
+                review['review_scope']='CPU fixture only; current-core snapshot/load tests, no GPU or qualification.'
+                review['gate_files']={name:sha(self.repo/name) for name in mapping}
+                atomic_json(path,review)
         for stage,phase,name in required_reviews(c,True):
             p=self.suite/name
             if not p.exists():
@@ -232,6 +256,7 @@ class FamilyB3Tests(unittest.TestCase):
             frozen=freeze(self.repo,self.suite,root,self.repo/CONTRACT,preflight=True)
         finally:
             for p in created:p.unlink()
+            for path,original in restored:path.write_bytes(original)
         first=next(iter(self.bundle['cases'].values()))['root']
         for name in ('binary','build','environment'):
             shutil.copytree(first/name,root/name)
