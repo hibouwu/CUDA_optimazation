@@ -1,6 +1,6 @@
 # GH200 实验执行规范
 
-问题与预算见 [PLAN](PLAN.md)，现行候选见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，可采用规则见 [RULES](RULES.md)。本页维护分工、边界与当前状态。历史复核、故障和启动记录见[整理前固定版本](https://github.com/hibouwu/CUDA_optimazation/blob/7e29f5b51cad3e9685f805e3573583ef946c7f19/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md)。
+问题与预算见 [PLAN](PLAN.md)，现行候选见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，可采用规则见 [RULES](RULES.md)。本页维护分工、边界与当前状态。历史复核、故障和启动记录保存在本地提交 `7e29f5b51cad3e9685f805e3573583ef946c7f19`，可用 `git show 7e29f5b5:Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md` 读取。该版本未推送，不提供尚不可用的远端链接。
 
 ## 分工与交回
 
@@ -57,7 +57,7 @@ V10先确定候选和新条件，必要校准完成后回传最终预测与manif
 
 ## 当前状态
 
-更新：2026-10-12，仓库整理阶段。整理不做新科学分析、不提交GPU作业；既有两个研究都已达到终点。
+更新：2026-10-12，本地整理完成，代码/文档两次提交已快进合入main，1038项CPU检查通过。HTTPS缺认证、CLI未登录、SSH公钥被拒绝；用户选择先保留本地结果，推送暂缓。整理GPU0，无新科学分析；两个后续测量均未提交，既有两轮研究终点与后续授权保留。
 
 | 工作 | 交付与终点 | 下一步 |
 |---|---|---|

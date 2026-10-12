@@ -131,6 +131,10 @@ git cherry的“+”只表示补丁不等价，不自动表示缺合；对GH200�
 
 压缩包逐字节SHA发现一组完全相同的7份：cfg-c-gt-controls原output.tar.gz与A-joint-extractor-audit-v1/v4的六个fixture副本。它们不是7次独立采样；这些副本是原分析器的验证fixture，是否改为共用归档需先检查复放引用，本次不删。全部SHA与路径见[重复包表](../../../../../../results/gh200_resource_campaign/access_rules/20261012-repository-consolidation/duplicate-packages.json)。其他包与展开目录只列为可能副本，未做完整等价核验，不能直接归为可删除。
 
+## 本地交付与推送状态
+
+代码收口提交 `32c12ca`，文档收口提交 `17447ed3`，均已快进合入本地main。HTTPS推送失败（无法读取用户名），GitHub CLI未登录，SSH也被拒绝；用户明确选择“先保留本地结果”，故没有更新远端。origin/main仍为 `7e11ced6`，本次原计划的推送未完成，不能把本地合入写成已发布。
+
 ## 整理后测量
 
-用户已批准一个主线必要校准，以及m11开发对照后追加独立留出预算，见[新合同](PLAN.md#measurement-next)。整理本身不提交作业；Git检查和main推送完成后再启动。被反证的形式不能只为用完预算而冻结，V10仍须确认最终指定SHA。
+用户已批准一个主线必要校准，以及m11开发对照后追加独立留出预算，见[新合同](PLAN.md#measurement-next)。整理本身不提交作业；用户选择暂留本地结果后，两项测量仍未启动、未提交GPU，后续授权与条件表保留。被反证的形式不能只为用完预算而冻结，V10仍须确认最终指定SHA。
