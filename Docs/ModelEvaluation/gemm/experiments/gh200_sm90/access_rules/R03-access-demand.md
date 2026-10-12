@@ -81,3 +81,14 @@ python3 microbench/gh200_resource_campaign/access_rules/run_r03.py --output <新
 python3 microbench/gh200_resource_campaign/access_rules/analyze_r03.py --input <结果目录>
 python3 microbench/gh200_resource_campaign/access_rules/analyze_r03.py --sectors '[0,4,8,...]' --access-width 4   # 地址 → 32B sector
 ```
+
+
+## m11 后续离线需求诊断（2026-10-12）
+
+第一轮普通 LDS/STS 开发作业740961及反证见[原交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)。本次用户批准GPU预算0，复用全部540开发条件，终点为没有满足原联合要求的可冻结候选；没有冻结或执行66条留出。
+
+全warp内按bank去重不同32bit地址字后，连续16B与广播不再具有相同需求。保留原时间包络、改用最大相对误差拟合，开发中位/最大误差为0.49113%/9.61986%；加性发射形式为6.27053%/25.03275%。前者仍有20/27组不存在同时满足原绝对周期容差及最大10%误差的参数，不能用相对误差覆盖局部失败。全部旧条件保留，需求批次仍非实测。
+
+三个直接结论：原非广播连续读的一部分误差来自共同拟合；移除宽广播后，其他布局不能唯一确定广播的时间下限；已有依赖读三点违反两个公式共有的凸性约束，即使各取原±64cycle边界，仍差63293.94cycle。因此不继续第三种形式，不以当前拟合宣布bank机制通过。推导、训练参数见证、完整误差与留布局诊断见[本轮报告](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)。
+
+后续48条件/144进程提案只用于区分完整warp地址集合与lane子组排列效应；同址复制的向量连续或交错排列，保持完整bank地址集合和逻辑返回字节不变。它没有提交，原剩余第三次作业的留出用途没有改动；开发后另做留出会需要当前未授权的第四次提交。

@@ -162,7 +162,7 @@ A时间与C边界的本次普通有界任务均已交付并停止；旧持续目
 | 新任务 | 工作树 / 分支 | 准备状态 | 执行预算 |
 |---|---|---|---|
 | 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | 本有界主线完成，终点2：必要测量；停止继续开发 | 最多8小时，实际GPU 0 |
-| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 本轮研究与交付复核完成；形式被反例否定，停止；模型未通过 | 截止2026-10-12巴黎18:00，GPU已提交2/3 |
+| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 第一轮及后续离线诊断完成；无可冻结候选；模型未通过 | 累计GPU2/3；后续离线预算0、实际0；均已停止 |
 
 当前主集成负责新主线目标；“GH200 输出与边界”负责新SMEM目标，每次命令显式选择新工作树。用户清除旧机制目标后工具已确认goal=null并成功创建新目标，原研究范围未恢复。时间与供给对话保持暂停。两工作树中的基点EXECUTION为历史副本；公共当前状态只在本主checkout维护。
 
@@ -183,6 +183,10 @@ m11作业740708失败完整保留：CUDA12.9编译成功，独立读及原CUTLAS
 2026-10-12 巴黎10:19前，第二开发作业740961已COMPLETED/0:0，耗时18m18s；提交账本记录552条件/1656进程、失败0。主集成加载本轮归档模型并独立复算540条件比较：绝对相对误差中位0.16212%、最大83.83293%，最大误差门槛失败。直接反例为16B、8warp、独立读、8192重复：stride1与broadcast均被当前需求形式压为每轮256，给出同一预测2088213.390cycle，但各三次记录分别恒为2097378/1135930cycle，SMID均124、数值错误0。任意共同预测值的最小最大相对误差为240362/808327=29.73574%，故不能仅调该形式的价格达到10%；这否定当前需求到时间的形式，不证明物理事务数或唯一硬件机制。见[独立反例复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-parallel-bounded-preparation/smem-counterexample-review-20261012.json)。按m11反证终点停止新增测量；累计2/3，未冻结、未提交第三留出、未授予模型通过或跨卡资格。专属最终报告/manifest正在整理，公共最终交付审查仍待完成。
 
 2026-10-12 巴黎10:28，主集成完成[m11最终交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)复核：清单SHA `891ad38a7ed246dd914b14dedd8805c7188b3ec441f99a6400164dacae8d5665`及10299文件SHA/大小全部匹配，七个专属仓库文件SHA和修订账本匹配，原交付manifest保持。最终文档提交`a3e5f7ce`只改R03/EXP-09，两工作树干净、未推送；未将失败候选合入公共模型。75条>5%与24条>10%开发失败全保留，66条预列留出未执行；native仅静态SASS通过，未执行数值重放。见[最终交付审查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-parallel-bounded-preparation/smem-final-delivery-review-20261012.json)。本轮研究与交付完成，模型资格仍false；目标工具结束状态由执行对话单独回传，不回写创建时blocked的历史manifest。主线和机制均不自动启动下一轮。随后执行对话实际调用 `update_goal(status=complete)` 返回complete，[工具终态](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/goal-completed.json)绑定上述已审查manifest；完成指有界研究反证终点，不授予模型通过。工具累计活动时间3926秒（约1小时5分），不含工具blocked期间的普通续做，不当作完整墙钟耗时。
+
+2026-10-12 用户批准 m11 零GPU后续离线诊断；由主集成本对话执行，不重启已完成目标或另开执行者。最多两种需求/时间形式，全部540条件与旧资格门槛固定，原3作业预算不增加。已完成需求聚合、拟合偏差和可辨识性；新结果归[离线目录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/preregistration.json)，第一轮反证与66未执行留出保持。
+
+本次[m11离线报告](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)交付无候选终点：全warp去重+原包络开发中位/最大0.49113%/9.61986%，但20/27组不满足原局部可行性，留布局最大84.64517%；加性形式最大25.03275%。相对门槛不覆盖局部标准。540旧预测、1620原进程结果复放，原10299交付文件SHA/大小全部未变；独立Fraction证明依赖读三点在±64cycle边界下仍违反凸性63293.94cycle，两份不同训练参数都满足原训练门槛却给出516228/2104203cycle广播预测。只交付48条件/144进程的静态合法新对照提案，未提交、未改变剩余第三作业用途、不追加第四。离线脚本独立于公共预测器，原模型与成绩不改，最多两形式已用完，停止本轮拟合。
 
 原分项、关键CTA及跨卡联合要求仍未完成；V09仅作开发，拟支持范围的成绩不改写原冻结评分。以下表格与后续逐批记录保存此前研究状态，本轮任务A结果单列于[新分析目录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/)。
 
