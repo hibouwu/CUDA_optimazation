@@ -10,7 +10,7 @@
 
 [V07](V07-rule-validation.md) 在同卡、cfg_a/b/c、swizzle=1、K 位于校准范围内的 24 个条件（12 个不同 M×N）上为 **3.06% / 8.71%**，总时间通过；供给、末次输出和关键 CTA 定位仍失配，20/24 预测偏长。它使用 V06 事件递推、同卡重新校准与 R18 边界修正；R19 只作诊断，R02/R11/R12/R16/B01 未用于 V07。
 
-现行V09候选的公式、输入与限制只维护在 [RULES](RULES.md#v09-model)。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但保留行距/边界反例；实验页以当前结论和证据索引为主。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口。任务 A 已以无可冻结候选结束；[PLAN 主线合同](PLAN.md#mainline)改为长 K 时钟与事件组合修正，[m11 合同](PLAN.md#smem-contract)限定单 CTA、普通 LDS/STS 的 32/64/128 bit 访问。两合同各最多八小时，GPU 上限分别为 0、2 个作业，可独立并行；实际启动、分工与作业状态只见 [EXECUTION](EXECUTION.md#status)。其余机制问题保持储备；[V09](V09-component-validation.md) 的原采样和失败评分保留。
+现行V09候选的公式、输入与限制维护在 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)；[RULES](RULES.md)只收符合既定留出资格的规则。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但不覆盖行距、边界和分项失败。两条有界线都已停止：主线缺参考卡长K后续L与协议桥接，m11两轮反证仍缺宽广播及依赖执行描述，没有独立留出成绩。当前先按[整理清单](CONSOLIDATION-20261012.md)收口（GPU0、无新分析），随后执行用户批准的[测量合同](PLAN.md#measurement-next)。实际分工与状态见 [EXECUTION](EXECUTION.md#status)，V09原采样和失败评分保持。
 
 <a id="当前状态2026-10-07"></a>
 

@@ -1,6 +1,6 @@
 # GH200 GEMM 时间预测计划
 
-更新：2026-10-11。**已批准两个有界合同：长 K 时钟与事件组合修正、m11 普通 SMEM 访问模型；各最多 8 小时，GPU 预算分别为 0、2 个作业。** [V09](V09-component-validation.md) 整体未通过；现行模型只在 [RULES](RULES.md#v09-model) 维护，执行分工与状态见 [EXECUTION](EXECUTION.md#status)，跨算子的分层 DAG 路线见[上层 PLAN](../../../PLAN.md)。本次改写前的全文，包括 V09 后各轮诊断，见提交 `a4cbdbf4`：`git show a4cbdbf4:Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/PLAN.md`。
+更新：2026-10-12。**两个既有合同都已结束，当前先整理仓库（GPU预算0、无新分析），随后执行用户批准的必要测量。** V09整体未通过；现行候选见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，已验证规则见 [RULES](RULES.md)，状态与分工见 [EXECUTION](EXECUTION.md#status)。原合同与失败记录不改写，后续授权见[测量合同](#measurement-next)。
 
 <a id="prediction-boundary"></a>
 
@@ -22,6 +22,8 @@
 <a id="mainline"></a>
 
 ## 2. 主线合同：长 K 时钟与事件组合修正
+
+**本合同已结束：缺一个必要测量，GPU0，未采用修正。** 第一形式把cfg_a G6完整时间误差从−3.698%改成−16.739%，组件留形状诊断也失败；第二形式移除G6后缺同协议later L价格，未实现或回填全数据参数。必要证据是参考卡上两个新长K几何的后续L、源覆盖对照及匹配ends/dual桥接；[交付与660进程方案](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/README.md)。用户已批准整理后执行一个校准作业；以下保留原合同，新的执行范围见[后续测量](#measurement-next)。
 
 ### 起点与问题
 
@@ -214,6 +216,22 @@ V10 后续只检验参考卡、受限支持范围内的完整时间。分项、�
 
 2026-10-12 用户批准继续零 GPU 任务，第一轮反证、提交上限3和已用2次保持历史。固定全部540开发条件，最多检验两种形式：全warp同bank不同字去重后的需求，分别接原max包络和非负加性发射项；分组保持op/宽度/warp数/依赖，不按布局定价。拟合前形式、LP分支约束、原相对/绝对周期门槛、留布局诊断与终点已写入[预声明](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/preregistration.json)。先区分需求错误与共同拟合偏差，报告返回字节项的可辨识性；只交付开发候选、最小补测或反证，不提交GPU、不改原预测器，不自动新开研究目标。本轮已交付无候选终点：全warp包络相对门槛通过但局部可行性和留布局诊断失败，加性形式相对门槛失败。已有依赖读的凸性反例与两份训练参数见证已复核；[报告与48条件提案](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)保留，不启动第三种形式或GPU作业。
 
+<a id="measurement-next"></a>
+
+### 整理后的测量合同（2026-10-12 用户授权）
+
+先完成Git收口、文档与证据检查、main推送；本次整理GPU预算0。两个旧合同的终点、失败和实际提交数保留。后续仅推进以下两个证据缺口，不恢复供给或另开机制。
+
+| 任务 | 范围与预期 | 预算与终点 |
+|---|---|---|
+| 主线必要校准 | 原GPU432卡、V09协议，18新条件+12组ends/dual桥接+冻结参照/G6开发复现，共660进程；区分固定后续迭代成本和源覆盖/共享状态响应 | 一个GPU校准提交，wall≤60分钟；交付数据、可独立定价性及原采用规则结果，或明确未定/失败；不是V10 |
+| m11开发对照 | 原GPU009卡、同二进制/协议，48条件×3进程；完整warp bank地址集合与返回字节不变，改变重复地址在lane子组内/跨组排列，含4B负对照和依赖控制 | 一个开发作业；两解释按原绝对/相对周期要求区分，保留失败、桥接和实际SMID |
+| m11独立留出 | 有符合原联合门槛的候选时，冻结模型/参数/全部新布局预测/协议/指标/SHA；旧66未测条件可按声明的支持范围保留，并在冻结前覆盖部分广播的新布局与受支持真实CUTLASS序列 | 追加一个留出作业，解决原第3次用于开发后无留出预算的问题；采样后不改阈值、不回调参数 |
+
+SMEM按已批准的“补开发并追加预算直到测完”执行：计划新增两个作业，含历史两次预计累计四次；失败、重试也记录实际提交，旧3次上限是历史合同。授权覆盖完成这份测量及必要的采样故障恢复，不授予无限机制尝试或强行拟合。若新开发仍反证或不可辨识，交付这一终点，不能为消耗留出预算冻结已失败形式。正常测完立即停止，不自动扩展矩阵、多CTA、跨卡或下一机制。
+
+主线方案见[measurement-v2](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/measurement-v2/README.md)，SMEM48条件见[原提案](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/minimal-measurement-plan.json)。旧提案的“未授权”文字保持其交付时身份，本节记录此次新授权。主线V10仍须按第3节确认最终指定SHA。
+
 ## 7. 验证规则
 
 ### 每条机制规则先有自己的留出
@@ -250,7 +268,7 @@ V10 的留出条件全部在本轮采用候选声明的支持范围内选取，�
 
 ## 8. 文档职责
 
-- **现行模型与公式：** [RULES](RULES.md#v09-model)。
+- **现行模型与公式：** [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)。
 - **执行分工、作业与当前状态：** [EXECUTION](EXECUTION.md#status)。
 - **证据与结论：** 各实验页开头；推导写在对应 reanalysis 目录的 README。
 - **机制证据快照：** [MICROARCH-REVIEW](MICROARCH-REVIEW.md)，2026-10-08 写成，不作长期状态表。
