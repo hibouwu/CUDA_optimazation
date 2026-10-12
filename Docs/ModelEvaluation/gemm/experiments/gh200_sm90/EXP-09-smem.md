@@ -18,6 +18,8 @@
 
 [各轮当前结论](access_rules/R03-access-demand.md#m11-current)、[新排列对照完整交付](../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)、[第一轮完整交付](../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、[两形式反证](../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)。
 
+后续零GPU推导用子组bank向量构造最忙bank标量，区分了密集排列，却仍将宽广播与密集交错合成相同输入，已由原容差反证。密集连续与全广播、密集交错与stride1的窗口周期相同，为下一种广播描述提供约束；[公式与反例](access_rules/R03-access-demand.md#m11-bank-vector)只维护在R03，未拟合或修改预测器。
+
 ## 配置
 
 1 CTA、256 线程、两个 32 KiB 数组；每线程每轮 8 次访问，8192 轮。窗口含循环、读 checksum 和 CTA 同步。
