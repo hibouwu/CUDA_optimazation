@@ -14,7 +14,9 @@
 
 原 EXP-09 与 job740961 兼容复测支持特定窗口的 stride 条件关系；它们没有证明普通 LDS/STS 的通用 wavefront 时间模型。原128 B子组需求把宽广播与连续访问算成同样需求，已由同组织反例否定。后续全 warp 形式也未满足原绝对周期与留布局要求，宽广播和依赖执行仍缺可迁移描述；没有独立留出成绩，不向 RULES 收录为已验证机制。
 
-[第一轮与后续离线结论](access_rules/R03-access-demand.md#m11-current)、[第一轮完整交付](../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、[两形式反证](../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)。
+新lane排列作业741153完成48条件/144进程，20/20旧窗口桥接中位周期完全一致；最大CV 1.37729%。完整warp地址集合、多重度和字节量均不变时，16 B主对照周期为4194515与16777430，接近4倍；8 B密集对照的原子组需求也相同，周期仍差47.38%。14对中12对不满足原联合容差，两对4 B负对照相容。旧8 B、1 warp依赖读缺口仍在；没有新合格候选，不冻结或提交条件留出。最终SASS没有显式WARPSYNC，原控制只能覆盖循环、消费与CTA会合的组合开销。
+
+[各轮当前结论](access_rules/R03-access-demand.md#m11-current)、[新排列对照完整交付](../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)、[第一轮完整交付](../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、[两形式反证](../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)。
 
 ## 配置
 
