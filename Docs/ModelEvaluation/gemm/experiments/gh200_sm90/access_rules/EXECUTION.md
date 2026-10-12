@@ -162,7 +162,7 @@ A时间与C边界的本次普通有界任务均已交付并停止；旧持续目
 | 新任务 | 工作树 / 分支 | 准备状态 | 执行预算 |
 |---|---|---|---|
 | 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | 本有界主线完成，终点2：必要测量；停止继续开发 | 最多8小时，实际GPU 0 |
-| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 人类已授权续做；CUDA12.9完整源码/SASS预检查进行中，校准及留出未完成 | 截止2026-10-12巴黎18:00，GPU已提交1/3 |
+| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | CUDA12.9静态预检查通过；第二开发作业740961运行于a048，校准及留出未完成 | 截止2026-10-12巴黎18:00，GPU已提交2/3 |
 
 当前主集成负责新主线目标；“GH200 输出与边界”负责新SMEM目标，每次命令显式选择新工作树。用户清除旧机制目标后工具已确认goal=null并成功创建新目标，原研究范围未恢复。时间与供给对话保持暂停。两工作树中的基点EXECUTION为历史副本；公共当前状态只在本主checkout维护。
 
@@ -177,6 +177,8 @@ m11作业740708失败完整保留：CUDA12.9编译成功，独立读及原CUTLAS
 随后m11执行对话确认，同一第二提交授权阻碍已连续出现三轮，`update_goal`实际返回`blocked`，停止无效自动继续。未标为complete；校准和独立留出仍未完成，唯一740708失败、无存活GPU作业、第二提交未执行。人类明确允许改为开发重试后，才可在原07:07:45截止与剩余一次提交内恢复；不重新计时，不追加第三作业。此前启动/交付清单的active字段是历史快照，当前状态以本表为准。
 
 2026-10-12 人类在“GH200 输出与边界”中直接批准累计 GPU 提交上限改为3，并将截止延长到当天巴黎18:00（UTC16:00）；主集成已核对原答复，授权身份和原合同见[修订记录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-parallel-bounded-preparation/smem-amendment-20261012.json)。原开始时间、失败740708及冻结快照保留；失败算第一次提交，剩余两次依次用于开发/校准和全量冻结后的独立留出。先在 CPU 上用 CUDA12.9 检查完整源码和最终 SASS，不提交额外编译作业；校准与留出保持同一 GPU UUID 和协议，指标、局部资格、native覆盖及禁止第四次提交不变。执行对话已收到答复并恢复普通任务工作，目标工具状态以该对话回传为准，不新建重复执行者。主集成本次只读查询 `squeue -u hibouwu` 返回空队列；此时累计仅740708，尚无新 GPU 作业。主线必要测量提案仍未获执行授权，保持停止和GPU0。
+
+2026-10-12 巴黎09:55前，主集成核对本地[CPU预检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/cpu-preflight/result.json)及最终SASS审计：CUDA12.9.41的9个普通和2个真实CUTLASS内核均保留循环内每轮8条目标LDS/STS，宽度对应4/8/16B；归档SHA `d3780bc500cc1042f336852f12162742a175f0b283e096fafbfe7ac02a83ff96`匹配。静态检查不授予运行时正确性或校准资格。[提交账本](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/submissions.json)记录第二开发作业740961；实时squeue确认RUNNING于romeo-a048，申请4 GPU/独占节点，计时流1。累计2/3，剩余1次只供全量冻结后的独立留出；目标工具仍blocked，执行以直接人类修订的普通有界任务继续。新开发结果与模型冻结尚未完成。
 
 原分项、关键CTA及跨卡联合要求仍未完成；V09仅作开发，拟支持范围的成绩不改写原冻结评分。以下表格与后续逐批记录保存此前研究状态，本轮任务A结果单列于[新分析目录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/)。
 
