@@ -14,7 +14,7 @@
 |---|---|---|
 | 源分配 | 目标GH200本地 `cudaMalloc`，由GPU HBM支撑，指令源为 `.global` | GPU UUID、分配大小、每CTA地址集合与整卡地址并集 |
 | 缓存准备 | 分别使用预热复用与弱复用协议 | 工作集、复访距离、预热序列、可用L2/HBM观测；无流量证据时按准备协议命名结果 |
-| 目标搬运 | 首轮16 KiB的1D bulk global→shared单目的请求 | 对齐、每CTA请求总量、发出组织；tensor-map形式另设匹配对照，不混用参数 |
+| 目标搬运 | 首轮16 KiB的1D bulk global→shared单目的请求 | 对齐、每CTA请求总量、发出组织；tensor-map 匹配对照使用 cfg_b 实际的 A/B 加载描述符：A 128×64、B 64×128，FP16 各 16 KiB，描述符与 TMA swizzle 以构建查询为准，不混用参数 |
 | 目的存储 | 发起CTA驻留SM上的本地SMEM，按最大并发请求数预留固定数据槽及barrier区域 | 活动槽改变时物理分配和barrier区域固定，记录寄存器与实际驻留 |
 | 控制与消费 | 完成等待、数据可读、固定消费者及槽释放 | 使用核对过的控制实现，分开记录等待与释放端点 |
 | 排除的路径 | SMEM→global输出、DSM、多播、Grace CPU LPDDR、host/managed、peer GPU | 不进入本轮参数与条件矩阵 |

@@ -9,6 +9,7 @@
 | 小任务，限额收口 | [S16 探针控制成本](model/mechanism/hardware_rules/TMA-S16-STAGE-COST.md) | 历史离线诊断完成；先准备同一二进制、活动S2/S4的A/B；C/D仅作必要复核 | 核对动态控制路径后冻结预测；做一次小规模判别，决定这批证据是否仍要求硬件组成本，然后归档 |
 | 主线，并列 | [多 CTA 的 TMA 共享服务](model/mechanism/hardware_rules/TMA-SHARED-SERVICE.md) | 复用多CTA记录；以实际并发CTA数×每CTA请求并发组织为主轴，先稀疏后按分歧加点 | 不等待S16完整归因；交付服务规则、共享范围约束及对GEMM供给/stage响应的组合诊断 |
 | 主线，并列 | [有效频率预测与机制](model/mechanism/hardware_rules/FREQUENCY-MECHANISM.md) | 复用V09/R09，接入合格的C1-01开发数据；建立运行前预测与可区分的频率状态候选 | 不等待TMA完成；分别交付C3所需预测器和C2干预结论 |
+| 主线，并列 | [cfg_b 组合](model/mechanism/composition.md) | (1) 将 cfg_b 的程序事实做成可执行输入：工作列表、操作顺序、槽代次，与源码、SASS、trace 核对。<br>(2) 接通聚合模式：交付可逐个替换模块的组合框架和逐端点输出，数值上等同于 V09；对 cfg_b 冻结预测逐位复现 V09，作为后续每次替换模块的回归基线。<br>(3) 接入请求级服务：TMA tensor 请求、计算完成与槽释放，每次只替换一组服务。<br>(4) 冻结后按 C2/C3 检验。<br>(5) 扩展到其他配置，进入候选集合比较后再做 C1。 | 第 1、2 步只用 CPU 和已有源码、SASS、trace，现在即可开展；第 3 步依赖 TMA 与频率两条主线。多 CTA 实验不以单 CTA 细节为前置条件。 |
 | 独立按既定协议推进 | [C1-01 模型比较](experiments/gh200_sm90/access_rules/C1-01-selection.md) | 既定八候选开发/留出设计，分别比较C1与C3 | 条件清单、冻结规则、测量安排由原任务维护；数据合格入库后供两条主线复用开发部分 |
 
 ## 2. 三类模型与程序图的接入依赖
