@@ -1,8 +1,8 @@
 # 操作、资源与事件接口
 
-[建模入口](../README.md) · [FP32 分块 GEMM 示例](../schemes/fp32_simt_tiled.md)
+[建模入口](../../README.md) · [FP32 分块 GEMM 示例](../../schemes/fp32_simt_tiled.md)
 
-本文件规定 L0–L4 和方案模型共用的接口。问题参数仍由 [problem.md](../problem.md) 定义；各架构维护服务参数与物理限制，方案模型负责将配置展开为操作、依赖和存储生存期。
+本文件规定 L0–L4 和方案模型共用的接口。问题参数仍由 [problem.md](../../problem.md) 定义；各架构维护服务参数与物理限制，方案模型负责将配置展开为操作、依赖和存储生存期。
 
 ## 1. 模型输入与输出
 
@@ -130,4 +130,22 @@ T\ge\max\left(T_{\mathrm{dep,LB}},\ \max_r\frac{D_r}{\mu_r}\right).
 
 [Roofline 作者介绍](https://amcr.lbl.gov/wp-content/uploads/2025/11/roofline-intro.pdf) 可用于建立计算与数据搬运的吞吐限制；[ECM 原论文](https://arxiv.org/html/1410.5010v2) 提醒模型必须明确可重叠和不可重叠的成本。借鉴这些方法时，具体 CPU 重叠规则不直接用作 GPU 的规则。
 
-EDP [第 3 课](</home/jianyeshi/Note/SiteCHPS/CHPS/M2/EDP/CM/3_edp_zh.md>) 中服务、等待、瞬态/稳态及 Little 定律的区分可用于检查这些关系。不能仅因存在排队就采用 M/M/1 或 Jackson 网络；它们的到达与服务假设需要另外成立。
+EDP [第 3 课](<../../../../../../../SiteCHPS/CHPS/M2/EDP/CM/3_edp_zh.md>) 中服务、等待、瞬态/稳态及 Little 定律的区分可用于检查这些关系。不能仅因存在排队就采用 M/M/1 或 Jackson 网络；它们的到达与服务假设需要另外成立。
+
+## 7. 程序图的组织与组合
+
+CUTLASS cooperative/pingpong 的具体操作、槽代次与现有递推对应关系见[程序图](../mechanism/program/cutlass_program_graph.md)；本节只维护通用接口。
+
+| 层 | DAG 中的对象 | TileLang 对应结构 | GH200 已有参数来源 |
+|---|---|---|---|
+| L0 基础操作 | 叶节点：一次 TMA 请求、一组 WGMMA、一次 ld/st、一次 barrier；带服务延迟、启动间隔、在途限制 | `T.copy`、`T.gemm`、同步原语 | EXP-05–18、R00、R01 |
+| L1 CTA/SM 片上 | 资源与容量：SMEM 缓冲槽、寄存器、驻留、片上共享通路 | `T.alloc_shared`、`T.alloc_fragment` | EXP-09、R03、R11、R12、R16 |
+| L2 协作流水 | 子图模板：每个 Ktile 的搬运、计算、释放与 epilogue；stage 表现为缓冲槽复用边 | `T.Pipelined`、warp specialization | R13、R14、R15 |
+| L3 完整 kernel | CTA 到 SM 的映射、持久调度、cluster 跨 CTA 边、整卡 L2/HBM、频率 | `T.Kernel` 的 grid 与 cluster | R08、R09、R18、R19、V 系列 |
+| L4 算子图 | kernel 间依赖、融合边界、中间张量位置、kernel 间状态 | 模型算子图 | 无 |
+
+五层是嵌套层次，不是每个节点各带一套五层模型：L0 是被模拟的叶节点，L1 是叶节点占用的片上资源，L2、L3 规定节点怎样连接并映射到 SM，L4 只在输入包含多个算子时需要。单个算子只需 L0–L3。
+
+DAG 的边包括三类：数据依赖；缓冲槽的写后读与读后写复用；cluster 多播与 barrier 造成的跨 CTA 依赖。K 循环展开到每个 Ktile，否则无法表达搬运与计算的重叠。新算子主要新增 L0 节点类型和 L2 子图模板，并验证它们与已有资源的交互；换硬件时核实生成代码、机制与资源拓扑，再更新 `hardware/<设备>/` 中的参数。
+
+节点服务接收操作属性、共享资源状态和时钟条件；程序组合需要时，把上层竞争与缓存状态传给下层服务。相互作用强的部分保留事件，已经检验的子图可以压缩为带吞吐、延迟和释放端点的复合节点。接口与验收边界见[模型目标](../../GOALS.md)，近期接入顺序见[计划](../../PLAN.md)。

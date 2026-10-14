@@ -47,4 +47,6 @@
 
 ## 数据
 
-[results.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/actual-report-v2/results.csv)、[samples.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/actual-report-v2/samples.csv)、[整卡图](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/actual-report-v2/all_gpu.png)。脚本：[families/s16](../../../../../microbench/gh200_resource_campaign/families/s16/README.md)。
+[results.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/results.csv)、[samples.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/samples.csv)、[整卡图](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/all_gpu.png)。脚本：[families/s16](../../../../../microbench/gh200_resource_campaign/families/s16/README.md)。
+
+发布资格由 [最终状态](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/publication-final-state.json)绑定独立审查：32个限定条件下的运输服务、4个容量排除。CSV保留原报告字节和`qualified=false`字段，数值资格须连同发布封套读取；原`actual-report-v2`与失败作业终态保留。物理HBM流量与硬件队列深度未获辨识。

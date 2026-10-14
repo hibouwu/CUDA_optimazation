@@ -1,6 +1,6 @@
 # FP32 CUDA Core 分块 GEMM：最小时间模型
 
-[统一接口](../model/interfaces.md) · [问题定义](../problem.md) · [层级总览](../README.md)
+[统一接口](../model/common/interfaces.md) · [问题定义](../problem.md) · [层级总览](../README.md)
 
 这是一个跨架构的参数化执行组织示例，用来走通“配置 → 操作需求 → 事件 → 完成周期”。它不对应已经选定的 CUDA 实现；下面的时间关系在列明的执行和服务假设下闭合，教学数值不代表 Thor 或 GH200 的性能。
 

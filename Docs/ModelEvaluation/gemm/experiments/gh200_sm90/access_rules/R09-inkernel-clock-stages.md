@@ -1,5 +1,7 @@
 # R09：调用内时钟、输入与时间换算
 
+当前时钟公式与参数绑定见[MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md)，频率机制候选见[频率主线](../../../model/mechanism/hardware_rules/FREQUENCY-MECHANISM.md)；本页及 reanalysis 保留各次测量与历史开发。
+
 ## 当前结论
 
 2026-10-12 的必要校准以**冻结参照门槛失败，开发未执行**停止。唯一新提交 741159 在 romeo-a057 分配原四卡后确认 GPU-43269fbc 属于 job/step，再收窄设备可见性。CUDA 12.9.41 的九个 CPU 构建通过原 ARM GEMM SASS 逐指令与资源身份检查，原 ends 记录也通过 V09 读取器离线检查。27 个 setup 和 120 个参照采样进程完成；四条参照的 `event − dual包络` 增量为 0.688–0.848 µs，超过原定 0.5 µs 上限，其余完整时间、包络和换算率的相对门槛通过。[失败终点与完整证据](../../../../../../results/gh200_resource_campaign/access_rules/20261012-R09-long-k-calibration/README.md)。

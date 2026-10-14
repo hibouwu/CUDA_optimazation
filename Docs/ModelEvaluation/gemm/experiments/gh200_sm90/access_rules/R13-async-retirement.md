@@ -1,5 +1,7 @@
 # R13：有效供给、阶段与可辨识性
 
+当前半经验参数见[MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md)，硬件候选见[TMA 假设](../../../model/mechanism/hardware_rules/TMA-GEMM-HYPOTHESES.md)，软件槽代次见[程序图](../../../model/mechanism/program/cutlass_program_graph.md)；本页及 reanalysis 保留测量和历史推导。
+
 ## 当前结论
 
 first/later 的有效供给模型是 V09 r2 的候选来源，整体及非默认 stage 的局部迁移未通过。软件 stage、源 ready、MMA 返回、槽释放和下一请求的允许时刻分别建模；当前没有可采用的新 stage 时间价格。

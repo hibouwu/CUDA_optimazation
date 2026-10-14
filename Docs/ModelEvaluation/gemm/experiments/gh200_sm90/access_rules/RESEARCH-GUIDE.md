@@ -40,7 +40,7 @@
 
 ## 模型与代码
 
-沿用 [model/interfaces](../../../model/interfaces.md)：输入说明指令、地址、参与范围与事先可知的状态；模型说明需求、共享资源、占用与释放，以及 eligible、issue、complete、visible、release 中哪些事件能预测。在途需求不超过容量，开始须满足依赖、资源可用与实际发射约束；只有资源和顺序确定后才能简化为 max 递推。参数无法分别识别时保留候选解释。
+沿用 [model/interfaces](../../../model/common/interfaces.md)：输入说明指令、地址、参与范围与事先可知的状态；模型说明需求、共享资源、占用与释放，以及 eligible、issue、complete、visible、release 中哪些事件能预测。在途需求不超过容量，开始须满足依赖、资源可用与实际发射约束；只有资源和顺序确定后才能简化为 max 递推。参数无法分别识别时保留候选解释。
 
 局部 L、供给 S、输出 E 可作比较基线；改成显式组件时去掉已有聚合收费。周期与纳秒按同一作用域换算，最长周期 CTA 与最晚退出 CTA 分开判断。经验字节率是条件估计，不能替代启动、排空、依赖或返回成本。
 
@@ -68,4 +68,4 @@ V10 留出按校准覆盖选择，至少六个新的 M×N 基形，涵盖 square
 
 最多并行一个主线和一个机制任务，各有边界、预算和终点，使用独立分支／worktree／结果目录；每个文件只有一个写入者，主集成串行维护公共文件。新研究或超预算作业另经用户批准，不能自动扩展。实际分工和状态见 [EXECUTION](EXECUTION.md)。
 
-正文先写发现、关键数字、限制和下一问题；会话、授权、构建／二进制／协议 SHA、分配与传输证明放对应 manifest 或执行记录。保留原数据、失败和冻结文件；不改已有只读归档。证据写回原实验页，详细推导写入对应 reanalysis；现行公式见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md)，通过独立留出的规则才进入 [RULES](RULES.md)。
+正文先写发现、关键数字、限制和下一问题；会话、授权、构建／二进制／协议 SHA、分配与传输证明放对应 manifest 或执行记录。保留原数据、失败和冻结文件；不改已有只读归档。证据写回原实验页，详细推导写入对应 reanalysis；现行公式见 [MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md)，通过独立留出的规则才进入 [RULES](RULES.md)。

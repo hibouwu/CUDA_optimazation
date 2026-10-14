@@ -1,5 +1,7 @@
 # R05：异步完成与缓冲复用
 
+当前软件依赖见[程序图](../../../model/mechanism/program/cutlass_program_graph.md)，硬件解释见[TMA 主线](../../../model/mechanism/hardware_rules/TMA-SHARED-SERVICE.md)；本页维护探针协议与实测。
+
 [总计划](README.md)。状态：40 点完成（2026-10-06）；R05-D、R05-E 于 2026-10-08 迁至 R13 与 EXP-15。代码：`run_r05.py`、`probes/r05.cu`。
 
 ## 问题

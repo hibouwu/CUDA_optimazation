@@ -1,6 +1,8 @@
 # R18：OOB、有效地址零值与填零服务
 
-**输入数值为零与 descriptor 越界填零具有不同的条件代价。** 同物理工作列表配对已在 cfg_a 的边界 cluster、cfg_b 的整 tile A/B 越界中观察到差异；cfg_c 早期首轮边界对照没有同类正惩罚。差异还依赖输出轮次，不能只给补齐 tile 乘一个常数。A/C 首轮补测改善了条件范围，但 cfg_c first-fill 在部分预测频率下仍不唯一。V09 的 partial 失败主要落在主循环，且影响传播到完整 tile；不能增加一个只收 partial tile 的常数。固定输出四点不支持单一精确增量规律；cluster-max在观测baseline上有受限近似价值，但只替换fill输入的完整供给重拟合未改善V09，关键CTA定位尚未解决。当前公式见 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)，可辨识性与阶段关系见 [R13](R13-async-retirement.md)。
+本页维护边界配对与各次历史分析；当前半经验条件价绑定见[MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md)，机制解释见[TMA 假设](../../../model/mechanism/hardware_rules/TMA-GEMM-HYPOTHESES.md)。
+
+**输入数值为零与 descriptor 越界填零具有不同的条件代价。** 同物理工作列表配对已在 cfg_a 的边界 cluster、cfg_b 的整 tile A/B 越界中观察到差异；cfg_c 早期首轮边界对照没有同类正惩罚。差异还依赖输出轮次，不能只给补齐 tile 乘一个常数。A/C 首轮补测改善了条件范围，但 cfg_c first-fill 在部分预测频率下仍不唯一。V09 的 partial 失败主要落在主循环，且影响传播到完整 tile；不能增加一个只收 partial tile 的常数。固定输出四点不支持单一精确增量规律；cluster-max在观测baseline上有受限近似价值，但只替换fill输入的完整供给重拟合未改善V09，关键CTA定位尚未解决。当前公式见 [MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md#v09-model)，可辨识性与阶段关系见 [R13](R13-async-retirement.md)。
 
 ## 作业与证据索引
 
@@ -130,7 +132,7 @@ j2/T3没有B部分越界，完整/仅M尾部约540.969/541.354。各组中位不
 
 ## 有效地址＋目的填零候选：改善与残差同时保留
 
-同a057卡的B曲线和M/N map共13条件用于测后开发：有效地址payload包含显式零，源覆盖只数有效地址；目的ZA/ZB数由OOB路径提供的nominal tile量。本批每操作数只有0或整块16 KiB，尚未证明partial-fill耗时与填零字节成正比。扩大map后有效源需求增加、目的fill归零，模型必须保留这个区别。完整定义与现行式只在 [MODEL-CANDIDATES](MODEL-CANDIDATES.md#v09-model)维护。
+同a057卡的B曲线和M/N map共13条件用于测后开发：有效地址payload包含显式零，源覆盖只数有效地址；目的ZA/ZB数由OOB路径提供的nominal tile量。本批每操作数只有0或整块16 KiB，尚未证明partial-fill耗时与填零字节成正比。扩大map后有效源需求增加、目的fill归零，模型必须保留这个区别。完整定义与现行式只在 [MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md#v09-model)维护。
 
 [旧有效地址＋填零报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-valid-fill-v4/summary.json)分别拟合cycle与直接ns；ns主表显式假设1.6 GHz，没有目标窗口实测频率回填。每case等权，各j/T/几何分组平分权重；全部是开发诊断。
 

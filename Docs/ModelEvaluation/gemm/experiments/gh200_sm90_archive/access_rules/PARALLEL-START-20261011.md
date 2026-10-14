@@ -1,6 +1,6 @@
 # 两个有界目标的启动准备
 
-本文件保存启动准备与目标消息；实际运行状态见[EXECUTION](EXECUTION.md#status)。准备完成时两个目标未启动、GPU 提交为 0。八小时从各目标实际启用时分别计时；GPU 排队计入上限。输入与源码 SHA、路径、分支及预算见[绑定清单](PARALLEL-START-20261011.json)。
+本文件保存启动准备与目标消息；实际运行状态见[EXECUTION](../../gh200_sm90/access_rules/EXECUTION.md#status)。准备完成时两个目标未启动、GPU 提交为 0。八小时从各目标实际启用时分别计时；GPU 排队计入上限。输入与源码 SHA、路径、分支及预算见[绑定清单](PARALLEL-START-20261011.json)。
 
 ## 基点与路径
 
@@ -11,7 +11,7 @@
 | 主线 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation`；`codex/gh200-long-k-event-20261011` | `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded` | 最多八小时，GPU 0 |
 | SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation`；`codex/gh200-smem-lds-sts-20261011` | `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded` | 最多八小时，GPU 作业 2 |
 
-两工作树的代码和 PLAN 与共同基点相同。公共执行状态以主 checkout 的[EXECUTION](EXECUTION.md#status)为准；新工作树内旧 EXECUTION 只反映基点历史，不能把其中旧“未提交/未准备”描述当实时状态。未移动现有对话的默认 cwd，执行者每次 shell 调用须显式使用上表工作树。
+两工作树的代码和 PLAN 与共同基点相同。公共执行状态以主 checkout 的[EXECUTION](../../gh200_sm90/access_rules/EXECUTION.md#status)为准；新工作树内旧 EXECUTION 只反映基点历史，不能把其中旧“未提交/未准备”描述当实时状态。未移动现有对话的默认 cwd，执行者每次 shell 调用须显式使用上表工作树。
 
 ## 数据与归属
 

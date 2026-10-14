@@ -45,7 +45,7 @@ v2 总控为 `run_suite.py`，新结果按 `<suite-id>/<family>/<run-id>/` 归�
 | v1 历史资源运行 | `results/gh200_resource_campaign/<run-id>/`，保留原路径 |
 | 实验设计与接受条件 | 当前目录，按资源家族分文件 |
 | 硬件参数 | [hardware/gh200_sm90](../../hardware/gh200_sm90/README.md)，引用通过相应检查的参数 |
-| 通用模型 | [model](../../model/interfaces.md)，保留 L0–L4 定义 |
+| 通用模型 | [model](../../model/common/interfaces.md)，保留 L0–L4 定义 |
 
 沿用 Thor 的“源码、run 归档、实验说明”分工。不另建 `GH200/microbench/` 或第二套 Hopper 通用模型；未来完整算子实现可以放 `GH200/kernels/`，继续引用这些组件测量。
 

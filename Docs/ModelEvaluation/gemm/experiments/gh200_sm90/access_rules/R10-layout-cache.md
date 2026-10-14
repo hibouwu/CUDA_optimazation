@@ -1,5 +1,7 @@
 # R10：A/B 行距、地址覆盖与执行规模
 
+当前半经验参数见[MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md)，TMA 机制候选见[路径研究](../../../model/mechanism/hardware_rules/TMA-GEMM-HYPOTHESES.md)；本页及 reanalysis 保留测量、当时拟合与反证。
+
 ## 当前结论
 
 A/B 行距的时间响应依赖配置、执行方向、规模和起步状态，不能只按地址覆盖加一个共同罚项。局部冻结两候选均失败；V09 行距失败保持原成绩。当前没有接入正式预测的新行距价格。

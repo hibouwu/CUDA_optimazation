@@ -1,6 +1,6 @@
 # R15：输出服务与完成边界
 
-当前输出候选按 **single/multi、real/OOB、首/中/末 tile** 分类，以直接 merged ns 接入 [V09 r2](MODEL-CANDIDATES.md#v09-model)。V09整体未通过，末次输出分项误差中位/最大为 **3.73%/35.60%**；参数与范围不能称为通用输出带宽。V09 partial 的主要漏算在主循环；输出残差在 P1 还部分抵消了它，不能靠增大输出费用补总时间。
+当前输出候选按 **single/multi、real/OOB、首/中/末 tile** 分类，以直接 merged ns 接入 [V09 r2](../../../model/semi_empirical/MODEL-CANDIDATES.md#v09-model)。V09整体未通过，末次输出分项误差中位/最大为 **3.73%/35.60%**；参数与范围不能称为通用输出带宽。V09 partial 的主要漏算在主循环；输出残差在 P1 还部分抵消了它，不能靠增大输出费用补总时间。
 固定CTA0本地处理后，只延后其它CTA输出仍使stage4早段10/10缩短，说明局部服务依赖全卡执行组织；完整调用没有因此变快，见[背景配对](#stage-output-background)。长K输出周期下降主要伴随局部cycle/ns变化；OOB仍有输出准备/同步成本；单tile规则不能直接用于多tile首轮。旧标量STS探针不提供CUTLASS epilogue常数。完整旧推导与准备记录见 [cee978a固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R15-output-service.md)。
 
 <a id="cutlass-epilogue"></a>

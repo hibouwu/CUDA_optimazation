@@ -62,10 +62,7 @@ consumer           start → inc_enter → [重试分配] → inc_return
 
 ## 模型适用范围
 
-- 容量输入：使用实测编译资源与CUDA查询上限；stage增加和CTA容量增加可分别覆盖等待，不能只按occupancy比例加速。
-- 配额依赖：consumer的请求必须能从producer释放获得所需资源；把释放前工作保留在事件依赖中，不能给所有setmaxnreg附加同一固定成本。
-- 后续消费：本组的192次依赖FADD与其输入/输出边界明确，仅作为活跃值和分配后执行见证，不替代CUTLASS实际consumer计算服务。
-- 未得到物理RF bank、端口容量、池仲裁公式，也未验证其他配额比例或tile形状。
+容量和配额依赖的当前解释见[驻留与配额](../../../model/mechanism/hardware_rules/residency.md)。本页保留实测资源、释放顺序和窗口。
 
 ## 复现
 

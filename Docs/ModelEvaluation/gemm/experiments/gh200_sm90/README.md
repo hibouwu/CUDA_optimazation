@@ -15,34 +15,47 @@
 
 例：FP32 FMA，1 CTA、32 线程、1 条链、每轮 16 个 FMA、128 轮，工作量 \(2\times32\times16\times128=131072\) FLOP，用时 9247 cycle，得 14.17 FLOP/cycle/CTA。
 
+按三类模型阅读见[模型入口](../../model/README.md)，按实验编号查阅见下表。类别与模型使用方分开：本表所有 EXP 均是实测证据，不能因被模型引用而升级为硬件机制。
+
 ## 主要结论
 
-下文"理论值"按 CC 9.0 每 SM 每周期：FP32 FMA 256 FLOP，FP16/BF16 Tensor Core 4096 FLOP，FP8/INT8 8192，SMEM 128 B。整卡 WGMMA 980 TFLOP/s 对应平均 SM 时钟约 1.81 GHz。
+规格计算另有[公式、来源与脚本入口](../../model/spec/spec_baseline.md)。下文"理论值"按 CC 9.0 每 SM 每周期：FP32 FMA 256 FLOP，FP16/BF16 Tensor Core 4096 FLOP，FP8/INT8 8192，SMEM 128 B。整卡 WGMMA 980 TFLOP/s 对应平均 SM 时钟约 1.81 GHz。
 
-| 资源 | 结论 | 详见 |
+| 资源 | 类别 | 供谁使用 | 结论 | 详见 |
+|---|---|---|---|---|
+| CUDA Core | 实测 | 半经验、机制-硬件 | FP32 整卡 65.7 TFLOP/s、FP64 33.5、FP16x2 117；单 SM 需 4 warp × 8 条独立链才接近 256 FLOP/cycle | [EXP-05](EXP-05-fma.md) |
+| mma.sync | 实测 | 半经验、机制-硬件 | FP16/BF16 约 2700 FLOP/cycle，TF32 约 1340，均约为理论值的 65%；**FP64 `m8n8k4` 只有 128 FLOP/cycle，整卡 33.5 TFLOP/s，与 FP64 FMA 相同，仅为数据表 67 TFLOP/s 的一半** | [EXP-06](EXP-06-mma.md) |
+| WGMMA | 实测 | 半经验、机制-硬件 | m64n64k16 单个 warpgroup 在 wait≥3 时达 4095.9 FLOP/cycle（满峰值），整卡 960–984 TFLOP/s；wait0 降到 3858；RS 与 SS 相差 <1% | [EXP-07](EXP-07-wgmma.md) |
+| FP8 / INT8 | 实测 | 半经验、机制-硬件 | WGMMA 两个 warpgroup 达 8180 FLOP(OP)/cycle，整卡约 1.96 PFLOP/s；**均匀输入下，FP8 WGMMA 的 FP32 累加器到 64 后不再增长**，单个乘积为 \(2^{-8}\)；结果与约 14 bit 对齐窗口的解释相符；FP8 `mma.sync` 被编译为转换加 FP16 MMA，不是原生路径 | [EXP-08](EXP-08-fp8-int8.md) |
+| SMEM | 实测 | 半经验、机制-硬件 | 8/16 B 访问的读、写、读写合计都约 128 B/cycle，建模时不能把读、写峰值相加；4 B 读只到 87；stride=k 时速率为 128/k 量级 | [EXP-09](EXP-09-smem.md) |
+| ldmatrix / shfl | 实测 | 半经验、机制-硬件 | 单 warp 下 `ldmatrix.x4` 35 B/cycle，shfl 依赖链约 26 cycle/条；[R03](access_rules/R03-access-demand.md) 测得 8 warp 时 `ldmatrix.x4` 127、`stmatrix.x4` 116 B/cycle | [EXP-10](EXP-10-ldmatrix-shfl.md) |
+| 同步 | 实测 | 半经验、机制-硬件 | CTA barrier 21–29 cycle/phase；mbarrier 218–226；GPU 范围 fence 267 cycle，CTA 范围 fence 与 `fence.proxy.async` 约 11 | [EXP-11](EXP-11-sync.md) |
+| cp.async | 实测 | 半经验、机制-硬件 | 单 CTA 128 线程最多 7.5 B/cycle；整卡 16 B、4 stage 达 5.3 TB/s（源仅 8 MiB，小于 L2，速率高于 HBM 产品值） | [EXP-12](EXP-12-cp-async.md) |
+| global | 实测 | 半经验、机制-硬件 | 大工作集读 3.52 TB/s、写 3.79、1:1 读写 3.43（HBM3 产品值 4 TB/s）；小工作集 `.ca` 读 13.5 TB/s | [EXP-13](EXP-13-global-rw.md) |
+| TMA 1D bulk | 实测 | 半经验、机制-硬件 | 整卡读 ≥8 KiB 时 3.8 TB/s；**bulk 写只有 2.6–2.7 TB/s**；单 CTA 单请求受往返时间限制 | [EXP-14](EXP-14-tma-1d.md) |
+| TMA 2D tensor | 实测 | 半经验、机制-硬件 | 连续布局读写整卡均 3.8–3.9 TB/s，SW128 无代价；行距 144 B（只按 16 B 对齐）时写降到 1.33–1.45 TB/s；[R05-E](EXP-15-tma-2d.md#r05-e) 证实行距 160 B（32 B 对齐）和 256 B 都正常，原因是行起点对齐 | [EXP-15](EXP-15-tma-2d.md) |
+| TMA 流水 | 实测 | 半经验、机制-硬件 | 单 CTA 读速率随缓冲容量增加：16 KiB 时 14.7 B/cycle，64 KiB 时 28.5–39.8；S1R1 时每个 16 KiB 请求的完整周期约 1110 cycle，是单请求往返时间的上界，不是实测延迟；整卡与 S、R 无关，约 3.7 TB/s | [EXP-16](EXP-16-tma-pipeline.md) |
+| cluster / DSM | 实测 | 半经验、机制-硬件 | 整卡 DSM 读约 2.2–2.5 TB/s，本地 SMEM 读 10–12 TB/s；TMA 多播在 C=2/4/8 时接收量均约 5 TB/s，逻辑源请求按 1/C 下降 | [EXP-17](EXP-17-cluster.md) |
+| 驻留与辅助 | 实测 | 半经验、机制-硬件 | local 访问每字约 59 cycle；同址原子约 73 cycle/轮，无争用 28；cvt、IMAD.WIDE 等依赖链 29–43 cycle/轮 | [EXP-18](EXP-18-occupancy-aux.md) |
+| FP32 tile 组合 | 实测 | 半经验、机制-硬件 | 32×32×32、128 线程只有 18 FLOP/cycle（峰值的 7%）；搬运与计算重叠后每 Ktile 从 4022 降到 3683 cycle | [EXP-19](EXP-19-fp32-tile.md) |
+| BF16 WGMMA 组合 | 实测 | 半经验、机制-硬件 | 64×64×64、1 warpgroup、每 Ktile wait0：纯计算 830 FLOP/cycle（20%），平均每条 WGMMA 约 150 cycle（含 fence、commit、wait0 与循环，不是裸延迟）；加入 TMA 供给后每 Ktile 约 1000–1120 cycle，搬运未被隐藏 | [EXP-20](EXP-20-bf16-wgmma-tile.md) |
+
+## 其他入口与历史合同
+
+| 文档 | 类别 | 供谁使用与状态 |
 |---|---|---|
-| CUDA Core | FP32 整卡 65.7 TFLOP/s、FP64 33.5、FP16x2 117；单 SM 需 4 warp × 8 条独立链才接近 256 FLOP/cycle | [EXP-05](EXP-05-fma.md) |
-| mma.sync | FP16/BF16 约 2700 FLOP/cycle，TF32 约 1340，均约为理论值的 65%；**FP64 `m8n8k4` 只有 128 FLOP/cycle，整卡 33.5 TFLOP/s，与 FP64 FMA 相同，仅为数据表 67 TFLOP/s 的一半** | [EXP-06](EXP-06-mma.md) |
-| WGMMA | m64n64k16 单个 warpgroup 在 wait≥3 时达 4095.9 FLOP/cycle（满峰值），整卡 960–984 TFLOP/s；wait0 降到 3858；RS 与 SS 相差 <1% | [EXP-07](EXP-07-wgmma.md) |
-| FP8 / INT8 | WGMMA 两个 warpgroup 达 8180 FLOP(OP)/cycle，整卡约 1.96 PFLOP/s；**均匀输入下，FP8 WGMMA 的 FP32 累加器到 64 后不再增长**，单个乘积为 \(2^{-8}\)；结果与约 14 bit 对齐窗口的解释相符；FP8 `mma.sync` 被编译为转换加 FP16 MMA，不是原生路径 | [EXP-08](EXP-08-fp8-int8.md) |
-| SMEM | 8/16 B 访问的读、写、读写合计都约 128 B/cycle，建模时不能把读、写峰值相加；4 B 读只到 87；stride=k 时速率为 128/k 量级 | [EXP-09](EXP-09-smem.md) |
-| ldmatrix / shfl | 单 warp 下 `ldmatrix.x4` 35 B/cycle，shfl 依赖链约 26 cycle/条；[R03](access_rules/R03-access-demand.md) 测得 8 warp 时 `ldmatrix.x4` 127、`stmatrix.x4` 116 B/cycle | [EXP-10](EXP-10-ldmatrix-shfl.md) |
-| 同步 | CTA barrier 21–29 cycle/phase；mbarrier 218–226；GPU 范围 fence 267 cycle，CTA 范围 fence 与 `fence.proxy.async` 约 11 | [EXP-11](EXP-11-sync.md) |
-| cp.async | 单 CTA 128 线程最多 7.5 B/cycle；整卡 16 B、4 stage 达 5.3 TB/s（源仅 8 MiB，小于 L2，速率高于 HBM 产品值） | [EXP-12](EXP-12-cp-async.md) |
-| global | 大工作集读 3.52 TB/s、写 3.79、1:1 读写 3.43（HBM3 产品值 4 TB/s）；小工作集 `.ca` 读 13.5 TB/s | [EXP-13](EXP-13-global-rw.md) |
-| TMA 1D bulk | 整卡读 ≥8 KiB 时 3.8 TB/s；**bulk 写只有 2.6–2.7 TB/s**；单 CTA 单请求受往返时间限制 | [EXP-14](EXP-14-tma-1d.md) |
-| TMA 2D tensor | 连续布局读写整卡均 3.8–3.9 TB/s，SW128 无代价；行距 144 B（只按 16 B 对齐）时写降到 1.33–1.45 TB/s；[R05-E](EXP-15-tma-2d.md#r05-e) 证实行距 160 B（32 B 对齐）和 256 B 都正常，原因是行起点对齐 | [EXP-15](EXP-15-tma-2d.md) |
-| TMA 流水 | 单 CTA 读速率随缓冲容量增加：16 KiB 时 14.7 B/cycle，64 KiB 时 28.5–39.8；S1R1 时每个 16 KiB 请求的完整周期约 1110 cycle，是单请求往返时间的上界，不是实测延迟；整卡与 S、R 无关，约 3.7 TB/s | [EXP-16](EXP-16-tma-pipeline.md) |
-| cluster / DSM | 整卡 DSM 读约 2.2–2.5 TB/s，本地 SMEM 读 10–12 TB/s；TMA 多播在 C=2/4/8 时接收量均约 5 TB/s，逻辑源请求按 1/C 下降 | [EXP-17](EXP-17-cluster.md) |
-| 驻留与辅助 | local 访问每字约 59 cycle；同址原子约 73 cycle/轮，无争用 28；cvt、IMAD.WIDE 等依赖链 29–43 cycle/轮 | [EXP-18](EXP-18-occupancy-aux.md) |
-| FP32 tile 组合 | 32×32×32、128 线程只有 18 FLOP/cycle（峰值的 7%）；搬运与计算重叠后每 Ktile 从 4022 降到 3683 cycle | [EXP-19](EXP-19-fp32-tile.md) |
-| BF16 WGMMA 组合 | 64×64×64、1 warpgroup、每 Ktile wait0：纯计算 830 FLOP/cycle（20%），平均每条 WGMMA 约 150 cycle（含 fence、commit、wait0 与循环，不是裸延迟）；加入 TMA 供给后每 Ktile 约 1000–1120 cycle，搬运未被隐藏 | [EXP-20](EXP-20-bf16-wgmma-tile.md) |
+| [规格基线](../../model/spec/spec_baseline.md) | 规格 | 三类模型的理想参照；硬件参数仍在 hardware 维护 |
+| [程序图](../../model/mechanism/program/cutlass_program_graph.md) | 机制-程序 | CUTLASS 依赖与槽代次；供机制组合 |
+| [硬件路径研究](../../model/mechanism/hardware_rules/README.md) | 机制-硬件 | 汇总 TMA、频率、m11 与其他路径；引用 EXP/R 证据 |
+| [EXP-01](EXP-01-compute-audit.md)、[EXP-03](EXP-03-compute-baseline.md) | 实测 | 早期计算审查/基线，只读历史，不替代当前 EXP-05/06/07 |
+| [EXP-04](EXP-04-memory-baseline.md) | 实测 | 内存基线已合并，保留原路径导航 |
+| [INTERFACE 合同及旧 EXP 副本](HISTORICAL-PATHS.md) | 实测 | 旧 suite 的采样合同、设计和审查绑定；31 个只读文件逐项列于该页，不作为当前模型或执行要求 |
 
 ## 锚点与访问规则实验（access_rules，2026-10-06 起）
 
 FP16 Tensor Core GEMM 的当前结论、适用范围和完整实验索引统一见 [access_rules](access_rules/README.md)。
 
-计算与访问规则、计量约定及事件组合见 [RULES](access_rules/RULES.md)。
+半经验公式见[MODEL-CANDIDATES](../../model/semi_empirical/MODEL-CANDIDATES.md)，采用资格见[RULES](access_rules/RULES.md)，测量细则见[RESEARCH-GUIDE](access_rules/RESEARCH-GUIDE.md)。
 
 ## 资源基准未覆盖的量与路径
 

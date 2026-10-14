@@ -1,6 +1,6 @@
 # tc5a：Thor/SM110 候选方案模型
 
-[建模入口](../README.md) · [统一接口](../model/interfaces.md) · [Thor 参数](../hardware/thor_sm110/README.md)
+[建模入口](../README.md) · [统一接口](../model/common/interfaces.md) · [Thor 参数](../hardware/thor_sm110/README.md)
 
 本文件保留历史候选方案，当前通用建模尚未选用 tc5a。
 
@@ -54,10 +54,10 @@ workload 要求逻辑 B[K,N] 按行主序存储；`Tc5OverlapRunner` 接收按 N
 
 | 来源 | 引用内容 | tc5a 在本文件中定义的内容 |
 |---|---|---|
-| [L0 模型](../model/L0.md) / [Thor 参数](../hardware/thor_sm110/L0.md) | 选定 MMA 的计算服务、依赖条件与取数需求 | 指令工作量、累加链及发出次序 |
-| [L1 模型](../model/L1.md) / [Thor 参数](../hardware/thor_sm110/L1.md) | SMEM、TMEM、寄存器、驻留、片上访问与同步约束 | 输入槽与累加槽的分配、warp 分工、读回与缓冲复用 |
-| [L2 模型](../model/L2.md) / [Thor 参数](../hardware/thor_sm110/L2.md) | 协作流水线接口、TMA、global store、缓存及外存服务 | 各阶段通路需求、访问次序、输入槽与累加槽的完成及释放事件 |
-| [L3 模型](../model/L3.md) / [Thor 参数](../hardware/thor_sm110/L3.md) | 协作阶段组合、任务调度及多 SM 共享约束 | worker 工作分配、跨输出块重叠与整卡完成事件 |
+| [L0 模型](../model/common/L0.md) / [Thor 参数](../hardware/thor_sm110/L0.md) | 选定 MMA 的计算服务、依赖条件与取数需求 | 指令工作量、累加链及发出次序 |
+| [L1 模型](../model/common/L1.md) / [Thor 参数](../hardware/thor_sm110/L1.md) | SMEM、TMEM、寄存器、驻留、片上访问与同步约束 | 输入槽与累加槽的分配、warp 分工、读回与缓冲复用 |
+| [L2 模型](../model/common/L2.md) / [Thor 参数](../hardware/thor_sm110/L2.md) | 协作流水线接口、TMA、global store、缓存及外存服务 | 各阶段通路需求、访问次序、输入槽与累加槽的完成及释放事件 |
+| [L3 模型](../model/common/L3.md) / [Thor 参数](../hardware/thor_sm110/L3.md) | 协作阶段组合、任务调度及多 SM 共享约束 | worker 工作分配、跨输出块重叠与整卡完成事件 |
 
 引用独立服务时保留其测量条件。若组合执行需要额外校准，所得参数归入 \(\theta_{\mathrm{tc5a}}\)，不能作为所有方案通用的峰值。
 

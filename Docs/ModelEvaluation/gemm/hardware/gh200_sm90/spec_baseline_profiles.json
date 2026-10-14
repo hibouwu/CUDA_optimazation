@@ -1,0 +1,18 @@
+{
+  "gh200_product": {
+    "compute_tflops": 990.0,
+    "bandwidth_gbs": 4000.0,
+    "description": "GH200 96 GB HBM3 产品稠密 FP16/BF16 Tensor Core 与 HBM3 规格",
+    "sources": ["L0.md#官方单-gpu-计算规格", "L2.md"],
+    "clock_basis": "产品算力，不另乘参考频率"
+  },
+  "c1_reference": {
+    "sm_count": 132,
+    "flops_per_sm_cycle": 4096,
+    "reference_sm_ghz": 1.98,
+    "bandwidth_gbs": 4000.0,
+    "description": "C1-01 冻结设计的参考口径，与 990 TFLOP/s 产品值不同",
+    "sources": ["../../experiments/gh200_sm90/access_rules/C1-01-selection.md", "L3.md", "L2.md"],
+    "clock_basis": "1.98 GHz 参考值，不代表有效频率或锁频"
+  }
+}

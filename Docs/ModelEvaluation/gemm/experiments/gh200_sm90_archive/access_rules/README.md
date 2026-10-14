@@ -5,3 +5,4 @@
 - `STATUS.md`：各组实现与采样进度。
 - `ACCEPTANCE.md`：2026-10-06 的验收结论，包括 R04 动态计量问题的证据。
 - `update_status.py`：更新 STATUS 章节的加锁脚本，已不再使用。
+- `PARALLEL-START-20261011.md`、`.json`：2026-10-11 两个有界目标（长 K 主线、m11）的启动准备、目标消息与输入绑定；2026-10-13 从 access_rules 移入，内容未改，只修正了指向当前 EXECUTION 的链接。
