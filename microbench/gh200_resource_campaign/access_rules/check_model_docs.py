@@ -11,10 +11,31 @@ ACCESS = EXP / "access_rules"
 MODEL = GEMM / "model"
 RULES_DIR = MODEL / "mechanism/hardware_rules"
 CATEGORIES = {"实测", "规格", "半经验", "机制-硬件", "机制-程序"}
+NUMBERED_EXPERIMENT = r"EXP-\d{2}|[RVB]\d{2}|[A-Z][A-Z0-9]*-\d{2}"
+QUESTION_DIR = re.compile(r"Q(0[1-9]|1[0-6])-[a-z0-9-]+$")
+EXP_TOP = {"README.md", "HISTORICAL-PATHS.md", "MOVED-PATHS.md"}
+ACCESS_TOP = {"README.md", "PLAN.md", "EXECUTION.md", "RESEARCH-GUIDE.md", "RULES.md"}
 
 
-def targets(path):
-    for link in re.findall(r"\]\(([^)]+)\)", path.read_text()):
+def question_dirs():
+    return sorted(path for path in EXP.iterdir() if path.is_dir() and path.name.startswith("Q"))
+
+
+def page_dirs():
+    return {EXP, ACCESS, *question_dirs()}
+
+
+def links(text, path):
+    for label, link in re.findall(r"\[([^\]]+)\]\(([^)]+)\)", text):
+        link = link.removeprefix("<").removesuffix(">")
+        if re.match(r"[a-zA-Z]+:", link):
+            continue
+        name, _, anchor = unquote(link).partition("#")
+        yield label, (path.parent / name).resolve() if name else path, anchor
+
+
+def targets(path, text=None):
+    for link in re.findall(r"\]\(([^)]+)\)", path.read_text() if text is None else text):
         link = link.removeprefix("<").removesuffix(">")
         if re.match(r"[a-zA-Z]+:", link):
             continue
@@ -33,6 +54,143 @@ def anchors(path):
         found.add(slug if count == 0 else f"{slug}-{count}")
         counts[slug] = count + 1
     return found
+
+
+def numbered_experiment_targets():
+    """逻辑编号来自现有入口与实验页，兼容副本和草稿不另计项。"""
+    frozen = set(re.findall(r"\| `([^`]+\.md)`", (EXP / "HISTORICAL-PATHS.md").read_text()))
+    pages = {path for directory in page_dirs() for path in directory.glob("*.md")
+             if path.name not in frozen and ".draft." not in path.name
+             and re.match(f"({NUMBERED_EXPERIMENT})-", path.name)}
+    # EXP-01/03仍是现有编号入口；其历史正文虽为冻结副本，逻辑实验各计一次。
+    for index in (EXP / "README.md", ACCESS / "README.md"):
+        for target, _ in targets(index):
+            if target.parent in page_dirs() and re.match(f"({NUMBERED_EXPERIMENT})-", target.name):
+                pages.add(target)
+    expected = {}
+    for path in sorted(pages):
+        name = re.match(f"({NUMBERED_EXPERIMENT})-", path.name).group(1)
+        expected.setdefault(name, set()).add((path, None))
+        if "已并入" in path.read_text().splitlines()[0]:
+            expected[name].update((target, anchor) for target, anchor in targets(path)
+                                  if target.parent in page_dirs() and anchor)
+    # SYNC-02等页内子实验沿实际编号链接与所在节定位，不要求另建实验页。
+    for path in sorted(pages):
+        section = ""
+        for line in path.read_text().splitlines():
+            heading = re.match(r"^#{1,6} +(.+)$", line)
+            if heading:
+                section = re.sub(r"[^\w\- ]", "", heading[1].lower().replace("`", "")).replace(" ", "-")
+            for label, _, _ in links(line, path):
+                for name in re.findall(f"(?<![A-Za-z0-9])({NUMBERED_EXPERIMENT})(?![A-Za-z0-9-])", label):
+                    if name not in expected:
+                        expected[name] = {(path, section)}
+    return expected
+
+
+def check_research_questions(text=None):
+    """每个编号须在16问题主表内有带实际目标的显式编号链接。"""
+    index = EXP / "README.md"
+    text = index.read_text() if text is None else text
+    _, start, section = text.partition('<a id="research-questions"></a>')
+    section, end, _ = section.partition("\n## 测量口径")
+    if not start or not end:
+        return ["Research question table missing: research-questions through 测量口径"]
+    rows = [line for line in section.splitlines()
+            if line.startswith("|") and re.search(r'<a id="question-\d{2}"', line)]
+    question_ids = re.findall(r'<a id="(question-\d{2})"', "\n".join(rows))
+    errors = []
+    if len(rows) != 16 or sorted(question_ids) != [f"question-{i:02}" for i in range(1, 17)]:
+        errors.append("Research question table must contain 16 rows with question-01 through question-16")
+    expected = numbered_experiment_targets()
+    covered = set()
+    for row in rows:
+        for label, target, anchor in links(row, index):
+            for name in re.findall(f"(?<![A-Za-z0-9])({NUMBERED_EXPERIMENT})(?![A-Za-z0-9-])", label):
+                if any(target == path and (section_anchor is None or anchor == section_anchor)
+                       for path, section_anchor in expected.get(name, ())):
+                    covered.add(name)
+    errors += [f"Numbered experiment not covered by research question table: {name}"
+               for name in sorted(expected.keys() - covered)]
+    # 实验页按主归属问题存放：Qnn 目录中的页面须出现在第 nn 行
+    row_targets = {int(re.search(r'question-(\d{2})', row)[1]): {target for _, target, _ in links(row, index)}
+                   for row in rows}
+    for directory in question_dirs():
+        match = QUESTION_DIR.match(directory.name)
+        if not match:
+            errors.append(f"Question folder name must be Qnn-slug with nn in 01-16: {directory.name}")
+            continue
+        for page in sorted(directory.glob("*.md")):
+            listed = row_targets.get(int(match[1]), set())
+            # 已并入的页随合并目标存放，主表链接合并目标即可
+            if "已并入" in page.read_text().splitlines()[0]:
+                listed_here = any(target in listed for target, anchor in targets(page) if anchor)
+            else:
+                listed_here = page.resolve() in listed
+            if not listed_here:
+                errors.append(f"Page not listed under its folder's question row: {page.relative_to(ROOT)}")
+    for directory, allowed in ((EXP, EXP_TOP | set(re.findall(r"\| `([^`]+\.md)`", (EXP / "HISTORICAL-PATHS.md").read_text()))),
+                               (ACCESS, ACCESS_TOP)):
+        errors += [f"Experiment page outside question folders: {page.relative_to(ROOT)}"
+                   for page in sorted(directory.glob("*.md")) if page.name not in allowed]
+    return errors
+
+
+def result_coverage(docs_root=None, results_root=None, exception_index=None):
+    """从 Docs 链接与可达结果 README 追踪日期轮次，例外表单独计数。"""
+    docs_root = (docs_root or ROOT / "Docs").resolve()
+    results_root = (results_root or ROOT / "results/gh200_resource_campaign/access_rules").resolve()
+    exception_index = (exception_index or ACCESS / "README.md").resolve()
+    rounds = {path.name: path for path in results_root.iterdir()
+              if path.is_dir() and re.match(r"^\d{8}-", path.name)}
+    exceptions = set()
+    index_text = exception_index.read_text()
+    before, marker, section = index_text.partition('<a id="non-experiment-results"></a>')
+    section_parts = re.split(r"(?m)^## ", section, maxsplit=1)
+    if marker:
+        table = "\n".join(line for line in section_parts[0].splitlines() if line.startswith("|"))
+        exceptions = {path.name for path, _ in targets(exception_index, table)
+                      if path.parent == results_root and path.name in rounds}
+        index_text = before + (section_parts[1] if len(section_parts) == 2 else "")
+
+    reached, direct, readmes, visited = set(), set(), [], set()
+
+    def visit(target, is_direct=False):
+        if not target.exists() or not target.is_relative_to(results_root):
+            return
+        relative = target.relative_to(results_root).parts
+        if not relative or relative[0] not in rounds:
+            return
+        name = relative[0]
+        reached.add(name)
+        if is_direct:
+            direct.add(name)
+        root_readme = rounds[name] / "README.md"
+        if root_readme.is_file() and root_readme not in visited:
+            readmes.append(root_readme)
+        linked_readme = target / "README.md" if target.is_dir() else target
+        if linked_readme.name == "README.md" and linked_readme.is_file() and linked_readme not in visited:
+            readmes.append(linked_readme)
+
+    for path in sorted(docs_root.rglob("*.md")):
+        text = index_text if path.resolve() == exception_index else path.read_text()
+        for target, _ in targets(path, text):
+            visit(target, is_direct=True)
+    while readmes:
+        path = readmes.pop()
+        if path in visited:
+            continue
+        visited.add(path)
+        for target, _ in targets(path):
+            visit(target)
+    groups = {
+        "direct": sorted(direct - exceptions),
+        "indirect": sorted(reached - direct - exceptions),
+        "non_experiment": sorted(exceptions),
+        "uncovered": sorted(rounds.keys() - reached - exceptions),
+    }
+    return {"results_root": str(results_root), "counts": {"total": len(rounds),
+            **{key: len(value) for key, value in groups.items()}}, **groups}
 
 
 def main():
@@ -60,13 +218,21 @@ def main():
                     value = row.split("|")[column].strip()
                     if value not in CATEGORIES:
                         errors.append(f"Unknown category {value}: {index}")
+    linked = {path for index in (EXP / "README.md", ACCESS / "README.md") for path, _ in targets(index)}
+    for directory in question_dirs():
+        for path in directory.glob("*.md"):
+            if path.resolve() not in linked:
+                errors.append(f"Not indexed: {path.relative_to(ROOT)}")
 
     documents = [GEMM / "GOALS.md", MODEL / "README.md", MODEL / "spec/spec_baseline.md",
                  MODEL / "mechanism/program/cutlass_program_graph.md", EXP / "README.md", ACCESS / "README.md",
                  MODEL / "semi_empirical/MODEL-CANDIDATES.md", MODEL / "semi_empirical/MAINLINE-LONG-K.md",
                  MODEL / "common/inputs.md", MODEL / "common/interfaces.md", MODEL / "mechanism/composition.md",
+                 MODEL / "mechanism/README.md",
                  GEMM / "experiments/README.md"]
     documents.extend(sorted(RULES_DIR.glob("*.md")))
+    documents.extend(sorted(path for directory in question_dirs() for path in directory.rglob("*.md")))
+    documents.append(EXP / "MOVED-PATHS.md")
 
     # 按模型分的文件夹：每份文档都要能从模型入口或硬件路径目录到达
     reachable = {path for index in (MODEL / "README.md", RULES_DIR / "README.md") for path, _ in targets(index)}
@@ -104,10 +270,14 @@ def main():
             errors.append(f"m11 status or rounded score out of sync: {name}")
 
     input_errors, input_summary = check_inputs()
-    errors += input_errors + check_composition()
+    errors += input_errors + check_composition() + check_research_questions()
+    coverage = result_coverage()
+    errors += [f"Result round not linked from Docs or reachable README and not listed as non-experiment: {name}"
+               for name in coverage["uncovered"]]
+    print("results: " + ", ".join(f"{key} {value}" for key, value in coverage["counts"].items()))
     if errors:
         raise SystemExit("\n".join(errors))
-    print(f"OK: two indexes, {len(documents)} entry pages, {len(frozen)} frozen copies, two m11 scores")
+    print(f"OK: two indexes, 16 research questions, {len(documents)} entry pages, {len(frozen)} frozen copies, two m11 scores")
     print("inputs: " + ", ".join(f"{k} {v}" for k, v in sorted(input_summary.items())))
 
 
@@ -129,7 +299,7 @@ def check_inputs():
     probe = (Path(__file__).resolve().parent / "probes/r18.cu").read_text()
     options = {o.replace("-", "_") for o in re.findall(r'key\s*==\s*"--([a-z0-9-]+)"', probe)}
     fields = (set(CI.PROBE_DEFAULTS) | {d for d, _ in CI.DERIVED} | set(CI.PROBLEM) | set(CI.PROGRAM)
-              | set(CI.BOOKKEEPING) | set(CI.ANNOTATIONS) | set(CI.SETUP_PROGRAM) | set(CI.SETUP_ECHO))
+              | set(CI.PROTOCOL_FIELDS) | set(CI.BOOKKEEPING) | set(CI.ANNOTATIONS) | set(CI.SETUP_PROGRAM) | set(CI.SETUP_ECHO))
     for name in sorted((options | fields) - documented):
         errors.append(f"Input field not documented in inputs.md: {name}")
     base = ROOT / "results/gh200_resource_campaign/access_rules"

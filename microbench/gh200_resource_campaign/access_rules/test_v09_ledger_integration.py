@@ -27,14 +27,20 @@ class LedgerIntegrationTests(unittest.TestCase):
         calibration = json.loads((root/'frozen/calibration.json').read_text())
         setups = {r['case']: r['setup'] for r in json.loads((root/'static_setup.json').read_text())}
         count = 0
+        cfg_b_count = 0
         for row in json.loads((root/'cases.json').read_text()):
             if row['set'] != 'heldout' or frozen[row['id']]['status'] != 'predicted':
                 continue
             with self.subTest(case=row['id']):
                 prediction = model.predict_components(row, setups[row['id']], calibration)
                 self.assertEqual(prediction['static_clock_work'], frozen[row['id']]['static_clock_work'])
+                if row['config'] == 'cfg_b':
+                    expected = {k: v for k, v in frozen[row['id']].items() if k != 'status'}
+                    self.assertEqual(json.dumps(prediction, sort_keys=True), json.dumps(expected, sort_keys=True))
+                    cfg_b_count += 1
             count += 1
         self.assertEqual(count, 29)
+        self.assertEqual(cfg_b_count, 12)
 
 
 if __name__ == '__main__':

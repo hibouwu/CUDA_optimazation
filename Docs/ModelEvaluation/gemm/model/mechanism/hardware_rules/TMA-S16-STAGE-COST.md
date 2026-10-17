@@ -138,7 +138,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_tma_s16_stage_co
 
 当前以 token 控制成本作为优先验证的工作假设，归档组返回阻塞和尾延迟候选。优先级来自静态证据与可操作的干预，不代表已量化的真实性概率。
 
-本题的token成本不直接迁移到CUTLASS。归档CUTLASS的 `PipelineState` 等待使用 `index()` 与 `phase()`，与S16逐槽保存/选择到达token的实现不同；GEMM的cfg_b stage4慢10.47%仍由[V09记录](../../../experiments/gh200_sm90/access_rules/V09-component-validation.md)及多CTA主线独立解释。H1成立只说明本批S16证据不再要求相应硬件成本，不证明所有TMA程序均无组状态开销。
+本题的token成本不直接迁移到CUTLASS。归档CUTLASS的 `PipelineState` 等待使用 `index()` 与 `phase()`，与S16逐槽保存/选择到达token的实现不同；GEMM的cfg_b stage4慢10.47%仍由[V09记录](../../../experiments/gh200_sm90/Q15-full-time/V09-component-validation.md)及多CTA主线独立解释。H1成立只说明本批S16证据不再要求相应硬件成本，不证明所有TMA程序均无组状态开销。
 
 ### 4.1 工作假设、归档与重新研究条件
 

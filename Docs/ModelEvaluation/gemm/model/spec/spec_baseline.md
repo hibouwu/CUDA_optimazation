@@ -16,7 +16,7 @@ Q 假定 A/B 各从 HBM 读一次、D 写一次，计算与搬运完全重叠。
 | 配置 | 计算吞吐 P | HBM 带宽 B | 用途 |
 |---|---|---|---|
 | `gh200_product`（默认） | 稠密 FP16/BF16 产品值 990 TFLOP/s | 4.0 TB/s | 产品规格参照，出处见[计算规格](../../hardware/gh200_sm90/L0.md#官方单-gpu-计算规格)与[存储规格](../../hardware/gh200_sm90/L2.md) |
-| `c1_reference` | 132×4096×1.98 GHz = 1070.53056 TFLOP/s | 4.0 TB/s | 严格复现[C1-01](../../experiments/gh200_sm90/access_rules/C1-01-selection.md)的参考频率口径；不改其冻结设计 |
+| `c1_reference` | 132×4096×1.98 GHz = 1070.53056 TFLOP/s | 4.0 TB/s | 严格复现[C1-01](../../experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md)的参考频率口径；不改其冻结设计 |
 
 两者数值不同，必须随成绩保存配置名。1.98 GHz 是参考频率，不是当前 kernel 的有效频率。规格来源与参考条件在硬件文档维护。
 

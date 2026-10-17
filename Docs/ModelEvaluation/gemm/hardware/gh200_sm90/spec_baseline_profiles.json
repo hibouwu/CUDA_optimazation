@@ -12,7 +12,7 @@
     "reference_sm_ghz": 1.98,
     "bandwidth_gbs": 4000.0,
     "description": "C1-01 冻结设计的参考口径，与 990 TFLOP/s 产品值不同",
-    "sources": ["../../experiments/gh200_sm90/access_rules/C1-01-selection.md", "L3.md", "L2.md"],
+    "sources": ["../../experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md", "L3.md", "L2.md"],
     "clock_basis": "1.98 GHz 参考值，不代表有效频率或锁频"
   }
 }

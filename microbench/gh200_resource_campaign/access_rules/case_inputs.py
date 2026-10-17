@@ -18,10 +18,12 @@ DERIVED = (('lda', 'k'), ('ldb', 'n'), ('ldd', 'n'), ('storage_m', 'm'), ('stora
            ('input_map_m', 'm'), ('input_map_n', 'n'), ('alloc_lda', 'lda'), ('alloc_ldb', 'ldb'))
 PROBLEM = ('m', 'n', 'k')
 PROGRAM = ('config', 'stages')
+# 固定调用次数实验构建的运行协议字段。
+PROTOCOL_FIELDS = ('warmup_fixed_calls',)
 BOOKKEEPING = ('id', 'set', 'kind', 'group', 'cond', 'candidate', 'original_experiment', 'purpose')
 # 历史 case 中的注记：静态信息以构建查询为准，标签与采样安排属于任务协议，均不作为模型输入。
 ANNOTATIONS = ('tile', 'cluster', 'schedule', 'grid_ctas', 'ktiles', 'scheduled_units', 'scheduler_status', 'original_m',
-               'label', 'pitch', 'input_path', 'ready_generation_bound', 'sampling_order', 'variants')
+               'label', 'pitch', 'input_path', 'ready_generation_bound', 'sampling_order', 'variants', 'repeats')
 CONFIG_STAGES = dict(cfg_a=6, cfg_a1=6, cfg_b=6, cfg_c=4, cfg_c1=4)
 INTERVENTIONS = ('work_swap55_91', 'producer_delay_ns', 'first_supply_events', 'ready_observer', 'epilogue_defer',
                  'second_prefill', 'a_row_rotation', 'release_warp_observer')
@@ -50,14 +52,14 @@ CHOICES = dict(mode=('warm', 'setup', 'check-work-swap', 'check-producer-delay',
                producer_delay_ns=(0, 512), work_swap55_91=(0, 1), first_supply_events=(0, 1), ready_observer=(0, 1),
                epilogue_defer=(0, 1, 2), second_prefill=(0, 1), a_row_rotation=(0, 1), release_warp_observer=(0, 1),
                mirror_target_slot=(0, 1), swizzle=(1, 8), evict=(0, 1), input_mode=('dyadic', 'zero', 'random'),
-               raster_order=('heuristic', 'along_m', 'along_n'), warmup_policy=('adaptive', 'common-sw1-16'),
+               raster_order=('heuristic', 'along_m', 'along_n'), warmup_policy=('adaptive', 'common-sw1-16', 'fixed-count'),
                history_mode=('off', 'single', 'series'), history_source=('original', 'same', 'mirror'))
 
 
 def resolve(row, setup=None, gpu_uuid=None):
     """返回 (有效输入, 错误列表)。错误表示记录本身不能解析或违反约束。"""
     eff, errors = dict(PROBE_DEFAULTS), []
-    unknown = set(row) - set(PROBE_DEFAULTS) - {d for d, _ in DERIVED} - set(PROBLEM) - set(PROGRAM) - set(BOOKKEEPING) - set(ANNOTATIONS)
+    unknown = set(row) - set(PROBE_DEFAULTS) - {d for d, _ in DERIVED} - set(PROBLEM) - set(PROGRAM) - set(PROTOCOL_FIELDS) - set(BOOKKEEPING) - set(ANNOTATIONS)
     if unknown:
         errors.append('undocumented fields: ' + ', '.join(sorted(unknown)))
     eff.update({key: value for key, value in row.items() if key not in ANNOTATIONS})
@@ -71,6 +73,8 @@ def resolve(row, setup=None, gpu_uuid=None):
     for key, source in DERIVED:
         if not eff.get(key):
             eff[key] = eff[source]
+    if eff['warmup_policy'] == 'fixed-count':
+        eff.setdefault('warmup_fixed_calls', 30)
     declared = row.get('stages')
     eff['stages'] = declared if declared is not None else CONFIG_STAGES.get(eff['config'])
     m, n, k = eff['m'], eff['n'], eff['k']
@@ -87,6 +91,8 @@ def resolve(row, setup=None, gpu_uuid=None):
         (eff['b_offset_bytes'] % 16 == 0 and eff['b_allocation_extra_bytes'] % 16 == 0
          and 0 <= eff['b_offset_bytes'] <= eff['b_allocation_extra_bytes'], 'B offset 16-byte aligned within extra allocation'),
         (not eff['ready_observer'] or eff['first_supply_events'], 'ready observer requires first supply endpoints'),
+        (eff['warmup_policy'] != 'fixed-count' or eff.get('warmup_fixed_calls') in (30, 31, 32, 33),
+         'fixed-count experiment requires 30..33 warmup calls'),
         (eff['history_mode'] == 'off' or eff['warmup_policy'] == 'common-sw1-16', 'history observation requires common-sw1-16'),
         (eff['history_source'] != 'original' or eff['mirror_target_slot'] == 0, 'mirror target slot requires paired sources'),
         (eff['history_source'] == 'original' or (eff['history_mode'] == 'series' and eff['swizzle'] == 1),

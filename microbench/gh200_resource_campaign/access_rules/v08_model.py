@@ -35,7 +35,12 @@ def log_swizzle(bm,bn,maxsw):
 
 def scheduled_work(config,m,n,grid,swizzle=1,raster_order='heuristic'):
     """CUTLASS 3.9.2 PersistentTileSchedulerSm90 with selected raster and max_swizzle_size."""
-    tm,tn,_=base.CONFIGS[config]['tile'];cm,cn=base.CONFIGS[config]['cluster'];gx,gy,gz=grid
+    return scheduled_work_geometry(base.CONFIGS[config]['tile'],base.CONFIGS[config]['cluster'],m,n,grid,swizzle,raster_order)
+
+
+def scheduled_work_geometry(tile,cluster_shape,m,n,grid,swizzle=1,raster_order='heuristic'):
+    """同一调度递推，几何由已核对的构建直接提供。"""
+    tm,tn,_=tile;cm,cn=cluster_shape;gx,gy,gz=grid
     if gz!=1:raise ValueError('one batch only')
     bm=cdiv(cdiv(m,tm),cm)*cm;bn=cdiv(cdiv(n,tn),cn)*cn
     lg=log_swizzle(bm,bn,swizzle);S=1<<lg

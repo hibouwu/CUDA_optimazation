@@ -18,6 +18,8 @@
 
 三类模型共用实机证据，机制模型内部再分程序图、硬件规则和组合。类别表示文档的主要用途；“供谁使用”表示依赖关系；通过与否由各次冻结评分决定。V 系列主要保存验证记录，归入实测，所验证的模型仍是半经验模型。
 
+当前可运行的cfg_b请求级系统与复现命令见[组合 §4](mechanism/composition.md#4-输出)，九方向的已完成证据和待测项见[阶段地图](mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，按机制汇总的证据与缺口见[机制分解](mechanism/README.md#3-机制分解)。
+
 ## 目录
 
 模型文档按模型分文件夹；实测证据同时约束多个模型，留在 [experiments](../experiments/README.md) 按设备与实验组织。
@@ -28,18 +30,18 @@
 | `spec/` | [规格基线计算](spec/spec_baseline.md) |
 | `semi_empirical/` | [现行半经验候选与参数绑定](semi_empirical/MODEL-CANDIDATES.md)、[长 K 残差](semi_empirical/MAINLINE-LONG-K.md) |
 | `mechanism/program/` | [CUTLASS 程序图](mechanism/program/cutlass_program_graph.md) |
-| `mechanism/hardware_rules/` | [硬件路径目录](mechanism/hardware_rules/README.md)及各路径研究页：TMA、有效频率、m11、储备路径与微架构证据审阅 |
-| `mechanism/` | [组合首版](mechanism/composition.md)：cfg_b 的模块来源与资格、连接方式、输出与完成判据 |
+| `mechanism/hardware_rules/` | [硬件路径目录](mechanism/hardware_rules/README.md)、[模块级微基准地图](mechanism/hardware_rules/MICROBENCH-ROADMAP.md)及各路径研究页：TMA、有效频率、m11、储备路径与微架构证据审阅 |
+| `mechanism/` | [机制分解](mechanism/README.md)：TMA＋WGMMA GEMM 按机制列出定价事件、证据类型、已辨识规则与缺口；[组合首版](mechanism/composition.md)：cfg_b 的模块来源与资格、连接方式、输出与完成判据 |
 
 ## 按模型阅读
 
 | 类别 | 目标与验收 | 维护入口 | 输入与产物 | 当前资格 |
 |---|---|---|---|---|
 | 规格 | [GOALS §1](../GOALS.md#1-规格基线) | [规格基线计算](spec/spec_baseline.md) | 形状、数据类型、规格 → 理想计算/搬运时间 | 可运行；产品规格与 C1 参考口径分别输出，不拟合 |
-| 半经验 | [GOALS §2](../GOALS.md#2-半经验模型) | [MODEL-CANDIDATES](semi_empirical/MODEL-CANDIDATES.md)、[长 K 残差](semi_empirical/MAINLINE-LONG-K.md) | 静态配置、协议、冻结参数 → 条件时间预测 | V09 仍为冻结比较基线；资格见 V09 评分；开发版本另列 |
-| 机制-程序 | [GOALS §3.2](../GOALS.md#32-程序图) | [CUTLASS 程序图](mechanism/program/cutlass_program_graph.md) | 源码、配置、调度 → 操作、依赖、槽代次 | 已整理源码与递推对应关系；尚无独立图导出器和完整 SASS 验收 |
-| 机制-硬件 | [GOALS §3.3](../GOALS.md#33-硬件服务规则)、[C2](../GOALS.md#35-c2-机制主张) | [硬件路径目录](mechanism/hardware_rules/README.md) | 现象、竞争假设、干预 → 支持/排除/未区分的规则 | TMA、频率为主线；m11 两次留出失败；其他路径为储备 |
-| 机制组合 | [GOALS §3.4](../GOALS.md#34-组合) | [组合首版](mechanism/composition.md)、[组合接口](common/interfaces.md#7-程序图的组织与组合)、[推进依赖](../PLAN.md#2-三类模型与程序图的接入依赖) | 程序图＋版本化服务规则 → 事件与完整时间 | 尚未形成可独立验收的组合模型；现有半经验递推不更名 |
+| 半经验 | [GOALS §2](../GOALS.md#2-半经验模型) | [MODEL-CANDIDATES](semi_empirical/MODEL-CANDIDATES.md)、[长 K 残差](semi_empirical/MAINLINE-LONG-K.md) | 静态配置、协议、冻结参数 → 条件时间预测 | V09 保留为冻结比较基线；cfg_b 频率替换版 v2 已通过 8 条独立 C3，最大时间误差 2.96%；支持范围与入口见 MODEL-CANDIDATES |
+| 机制-程序 | [GOALS §3.2](../GOALS.md#32-程序图) | [CUTLASS 程序图](mechanism/program/cutlass_program_graph.md) | 源码、配置、调度 → 操作、依赖、槽代次 | cfg_b S6/S4已有CPU图导出及历史工作映射对照；cfg_a S4/S6和cfg_c S4的cluster整图及指定历史角色端点核对已完成；其余配置待扩展 |
+| 机制-硬件 | [GOALS §3.3](../GOALS.md#33-硬件服务规则)、[C2](../GOALS.md#35-c2-机制主张) | [硬件路径目录](mechanism/hardware_rules/README.md)、[阶段队列](mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付) | 现象、竞争假设、干预 → 支持/排除/未区分的规则 | 九方向首版证据与接口已交付；TMA保留已有反例，频率沿用已交付模块；m11两次留出失败 |
+| 机制组合 | [GOALS §3.4](../GOALS.md#34-组合) | [组合首版](mechanism/composition.md)、[组合接口](common/interfaces.md#7-程序图的组织与组合)、[推进依赖](../PLAN.md#2-三类模型与程序图的接入依赖) | 程序图＋版本化服务规则 → 事件与完整时间 | cfg_b 聚合框架可运行并精确复现 V09；默认时间模块为经验替代；请求级候选接线已可运行，服务参数与 C2/C3 验收待推进 |
 | 实测 | [GOALS §4](../GOALS.md#4-实机验证) | [实机验证入口](../experiments/README.md)、[资源索引](../experiments/gh200_sm90/README.md)、[访问与验证索引](../experiments/gh200_sm90/access_rules/README.md) | 原始样本、测量协议、冻结预测 → 观测与评分 | 每项保留其采样范围、失败和历史判定 |
 
 ## 唯一维护位置
@@ -52,7 +54,9 @@
 | 当前半经验公式、版本、参数绑定 | [MODEL-CANDIDATES](semi_empirical/MODEL-CANDIDATES.md) | 数值由被绑定的冻结 JSON 维护；R/V 页保留当时版本的分析 |
 | 程序操作、槽复用和调度依赖 | [程序图](mechanism/program/cutlass_program_graph.md) | 模型和硬件研究引用图；硬件延迟另由规则提供 |
 | 当前硬件假设、备选和重启条件 | 各[硬件路径页](mechanism/hardware_rules/README.md) | R 页只链接当前解释；原观察、历史推导及反证仍在原页 |
+| 模块级覆盖、补测设计与接入位置 | [微基准地图](mechanism/hardware_rules/MICROBENCH-ROADMAP.md) | 入口链接研究地图；当前候选与测量成绩仍引用路径页和 EXP/R |
+| 每项机制的定价事件、证据类型、辨识状态与缺口 | [机制分解](mechanism/README.md) | 只写摘要；候选、成绩与数值仍在路径页和 EXP/R 页，状态变化时同步摘要 |
 | 实测值、冻结身份和逐例评分 | EXP/R/V 页链接的原始 run、manifest、score | 索引仅写摘要并指向证据；不再抄一套可修改参数表 |
 | 采样与评分方法 | [RESEARCH-GUIDE](../experiments/gh200_sm90/access_rules/RESEARCH-GUIDE.md) | 具体任务冻结自己的条件清单；旧 INTERFACE 合同只作历史证据 |
 
-新增实验时，在相应实测索引登记类别、供谁使用和状态，再从对应模型或硬件路径页链接证据。只有数值拟合改善时更新半经验候选；获得区分性证据时更新硬件假设。文档职责与链接可用 `python microbench/gh200_resource_campaign/access_rules/check_model_docs.py` 检查。
+新增实验时，实验页放进[主归属问题的目录](../experiments/gh200_sm90/README.md#research-questions)，在相应实测索引登记类别、供谁使用和状态，再从对应模型或硬件路径页链接证据。只有数值拟合改善时更新半经验候选；获得区分性证据时更新硬件假设。文档职责与链接可用 `python microbench/gh200_resource_campaign/access_rules/check_model_docs.py` 检查。

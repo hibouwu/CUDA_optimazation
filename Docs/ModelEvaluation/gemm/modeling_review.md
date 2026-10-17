@@ -2,7 +2,7 @@
 
 本文保留 2026-09-30 的通用建模审查及 2026-10-06 起补充的 GH200 阶段性记录。下文的缺口、优先级与后续事项是当时的判断，不作为当前任务列表。
 
-GH200 现已完成完整 GEMM 锚点与 V01–V08 留出验证；最新 V08 扩大范围后未达到整体误差目标，后续计划已暂停。当前结论、适用范围和实验索引见 [access_rules 入口](experiments/gh200_sm90/access_rules/README.md)，原始验证见 [V08](experiments/gh200_sm90/access_rules/V08-wider-validation.md)。
+GH200 现已完成完整 GEMM 锚点与 V01–V08 留出验证；最新 V08 扩大范围后未达到整体误差目标，后续计划已暂停。当前结论、适用范围和实验索引见 [access_rules 入口](experiments/gh200_sm90/access_rules/README.md)，原始验证见 [V08](experiments/gh200_sm90/Q15-full-time/V08-wider-validation.md)。
 
 ## 当前范围与暂缓项
 
@@ -74,9 +74,9 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 |---|---|---|
 | 高 | 硬件参数未吸收 v2 结果：[GH200 L0](hardware/gh200_sm90/L0.md) 仍用 09-30 旧复测；[L1](hardware/gh200_sm90/L1.md) 的 SMEM 仍为 EXP-02 v1 的 115.6 B/cycle（CV 12%）；S05–S12、S18 未接入 | 按资源类别引用 S05–S18 的条件参数，替换旧值 |
 | 高 | 没有 Hopper Tensor Core 方案模型；现有方案只有教学参数的 FP32 示例和 Thor 的 tc5a | 新建 TMA producer + WGMMA consumer、多 stage、persistent 的方案文件，用实测参数实例化，缺项保留符号 |
-| 已完成 | 频率规则与配置迁移 | [V03](experiments/gh200_sm90/access_rules/V03-clock-rule.md)：同卡 2.6%/5.0%；[V04](experiments/gh200_sm90/access_rules/V04-config-transfer.md)：同字节配置迁移成功，小 tile/pingpong 未通过 |
-| 已完成 | 规则化完整 kernel 预测（固定 CUTLASS 配置） | [V02](experiments/gh200_sm90/access_rules/V02-kernel-prediction.md)：11 个未测尺寸先冻结后测量，误差中位数 6.0%、最大 10.3%；主要误差为调用内频率 |
-| 已完成 | 完整 GEMM 锚点 | [R00](experiments/gh200_sm90/access_rules/R00-anchor-target.md)：cuBLASLt FP16 8192³ 715 TFLOP/s、2048³ 555；FP8 8192³ 1127；固定 CUTLASS 643 |
+| 已完成 | 频率规则与配置迁移 | [V03](experiments/gh200_sm90/Q15-full-time/V03-clock-rule.md)：同卡 2.6%/5.0%；[V04](experiments/gh200_sm90/Q15-full-time/V04-config-transfer.md)：同字节配置迁移成功，小 tile/pingpong 未通过 |
+| 已完成 | 规则化完整 kernel 预测（固定 CUTLASS 配置） | [V02](experiments/gh200_sm90/Q15-full-time/V02-kernel-prediction.md)：11 个未测尺寸先冻结后测量，误差中位数 6.0%、最大 10.3%；主要误差为调用内频率 |
+| 已完成 | 完整 GEMM 锚点 | [R00](experiments/gh200_sm90/Q05-wgmma/R00-anchor-target.md)：cuBLASLt FP16 8192³ 715 TFLOP/s、2048³ 555；FP8 8192³ 1127；固定 CUTLASS 643 |
 | 高 | 问题实例未落到 GH200：[workloads.yaml](workloads.yaml) 的输入生成指向 Thor，误差函数与容差为空 | 增加 GH200 实例，确定误差要求，FP8 实例同时规定累加提升 |
 | 中 | 单 CTA clock64 与整卡 globaltimer 缺少负载下的频率换算 | 采样时同 CTA 同时记录两种计时，或记录负载下 SM 频率 |
 | 中 | L0 的裸延迟、启动间隔和混合指令联合服务仍未知 | 见下方指令级测试 |
@@ -88,10 +88,10 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 
 | 优先级 | 测量内容 | 用途 |
 |---|---|---|
-| 已完成 | WGMMA N∈{64,128,256}、SS/RS、1/2 个 warpgroup | [R00-B](experiments/gh200_sm90/access_rules/R00-anchor-target.md)：全部 4095 FLOP/cycle；依赖时间随 N 的变化在 R01 重测中 |
-| 进行中 | WGMMA 与 FFMA、IMAD 同时执行 | 同一 warpgroup 的配对已测（[R04](experiments/gh200_sm90/access_rules/R11-mixed-issue.md#r04)）；跨 warpgroup 改用异步 WGMMA 重做中 |
+| 已完成 | WGMMA N∈{64,128,256}、SS/RS、1/2 个 warpgroup | [R00-B](experiments/gh200_sm90/Q05-wgmma/R00-anchor-target.md)：全部 4095 FLOP/cycle；依赖时间随 N 的变化在 R01 重测中 |
+| 进行中 | WGMMA 与 FFMA、IMAD 同时执行 | 同一 warpgroup 的配对已测（[R04](experiments/gh200_sm90/Q07-smem/R11-mixed-issue.md#r04)）；跨 warpgroup 改用异步 WGMMA 重做中 |
 | 高 | FP64 `mma` 的 sm_90 新形状（以 PTX ISA 核实 `m16n8k4/k8/k16`） | 解释 FP64 只达数据表一半 |
-| 已完成 | `ldmatrix` / LDS 在 4–8 warp 下的吞吐 | [R03](experiments/gh200_sm90/access_rules/R03-access-demand.md)：8 warp 时 124–127 B/cycle |
+| 已完成 | `ldmatrix` / LDS 在 4–8 warp 下的吞吐 | [R03](experiments/gh200_sm90/Q07-smem/R03-access-demand.md)：8 warp 时 124–127 B/cycle |
 | 中 | WGMMA TF32 与 FP16 累加形式 | 补齐精度覆盖 |
 | 低 | 全 ISA 延迟/吞吐表 | 不需要；GEMM 不使用的指令引用公开 Hopper 微基准文献 |
 

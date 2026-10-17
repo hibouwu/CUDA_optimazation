@@ -14,7 +14,7 @@ import numpy as np
 
 # tm, tn, cluster_m, cluster_n; fixed from V08/CUTLASS configurations.
 CONFIGS = {"cfg_a": (128, 128, 2, 1), "cfg_b": (128, 128, 1, 1),
-           "cfg_c": (256, 128, 1, 2)}
+           "cfg_c": (256, 128, 1, 2), "cfg_c1": (256, 128, 1, 1)}
 
 
 def source_sharing_delta_cycles(a, b, active_ctas, extra128_times_B_peer, kt=1):
@@ -191,7 +191,10 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         output_counts=None, source_service_costs_ns=None,
                         source_address_units=None, source_unit_service_ns=None,
                         destination_latency_ns=0., input_min_latency_ns=0.,
-                        input_path_service_ns=0.):
+                        input_path_service_ns=0., input_source_service=None,
+                        output_source_observer=None, compute_phases_ns=None,
+                        input_source_async=None, input_destination_service=None,
+                        input_source_bind_events=None, input_sync_service=None):
     """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -256,6 +259,27 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     does not delay original source issue or serve outputs; backpressure changes
     future requests only through destination/consumer/stage prerequisites.
     This abstract common queue has no hardware or per-SM attribution.
+    input_source_service replaces source admission/completion with a request
+    callback. Destination FIFO and the software graph retain their own rules;
+    the legacy shared server then serves only output requests.
+    input_source_async.issue(t,cta,index,atom,weight,demand_id,notify_ready)
+    may queue a demand and later call notify_ready(demand_id,time,served), using
+    the synchronous source metadata. destination_done(t,demand_id) runs at the
+    actual destination completion, so the source can release its held credit.
+    input_source_bind_events receives schedule(time, callback); the event loop
+    calls callback(time) at that time for source credit timers.
+    input_destination_service(t,cta,index,atom,weight) optionally supplies
+    start_ns, service_end_ns and ready_ns at destination arrival. None retains
+    the original per-CTA destination FIFO.
+    output_source_observer receives (time, CTA, output-subtile index) when
+    the modeled store source read completes, in event-time order.
+    compute_phases_ns optionally supplies compute_ns and commit_lead_ns for
+    each output index. Other service/control costs keep their declared ns.
+    input_sync_service optionally supplies full_wait(enter_ns,ready_ns,cta,group)
+    and release(time,cta,group). It prices only the full-wait return boundary;
+    existing wait1/tail-wait0 events still own input-slot release. The service
+    records persistent full/empty generation state without adding release cost.
+    Only enabled calls add per-group full_wait_windows to each CTA actor.
     """
     import heapq
 
@@ -337,7 +361,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     destination_frontiers=[0.]*cta_count;destination_busy=[0.]*cta_count
     local_intervals=[[] for _ in range(cta_count)]
     local_blocked={'producer':0.,'consumer':0.}
-    routed_inputs=share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0 or input_min_latency_ns>0 or input_path_service_ns>0
+    routed_inputs=input_source_service is not None or input_source_async is not None or input_destination_service is not None or share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0 or input_min_latency_ns>0 or input_path_service_ns>0
     prefill=None
     actors=[]
     def push(time,kind,cta,index):
@@ -353,6 +377,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             outputs=[dict(begin=None,end=None,scheduled=False,
                 prepare_begin=[None]*8,prepare_end=[None]*8,write_begin=[None]*8,write_end=[None]*8,
                 submitted=[None]*8,source_done=[None]*8) for _ in range(counts[cta])])
+        if input_sync_service is not None:actor['full_wait_windows']=[]
         actors.append(actor)
 
     def producer(cta):
@@ -379,7 +404,12 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             prefill=dict(begin_ns=begin,end_ns=end,waited_stages=stages)
             a['consumer_free']=end
         a['consumer_scheduled']=True
-        push(max(a['consumer_free'],a['ready'][i]),'mma',cta,i)
+        start=max(a['consumer_free'],a['ready'][i])
+        if input_sync_service is not None:
+            window=input_sync_service.full_wait(a['consumer_free'],a['ready'][i],cta,i)
+            a['full_wait_windows'].append(window)
+            start=window['wait_return_ns']
+        push(start,'mma',cta,i)
 
     def epilogue(cta,out):
         a=actors[cta]
@@ -408,13 +438,77 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             local_intervals[cta].append(dict(start_ns=start,end_ns=start+duration,
                 kind=kind,index=index))
 
+    def destination_admission(demand,source_ready):
+        if not (destination_latency_ns or input_min_latency_ns or input_path_service_ns):
+            return source_ready
+        path_end=demand.get('input_path_end_ns',demand['arrival_ns'])
+        arrival=max(source_ready+destination_latency_ns,path_end+input_min_latency_ns)
+        demand['destination_arrival_ns']=arrival
+        if input_min_latency_ns or input_path_service_ns:
+            demand['input_earliest_destination_ns']=path_end+input_min_latency_ns
+        return arrival
+
+    def notify_ready(demand_id,done,served):
+        nonlocal input_source_count,input_source_work,input_merged_count,input_merged_work
+        nonlocal input_source_busy,request_count
+        demand=demands[demand_id];weight=demand['work']
+        demand.update(source_id=served['source_id'],source_key=served['source_key'],
+            merged=served['merged'],source_ready_ns=done)
+        if served['merged']:
+            input_merged_count+=1;input_merged_work+=weight
+        else:
+            input_source_count+=1;input_source_work+=weight
+            request_count+=1;input_source_busy+=served['source_busy_ns']
+            if trace_requests:
+                sources.append(dict(cta=demand['cta'],kind=demand['kind'],index=demand['index'],
+                    arrival_ns=demand['arrival_ns'],work=weight,ready_ns=done,
+                    source_id=served['source_id'],source_key=served['source_key'],
+                    start_ns=served['service_start'],service_end_ns=served['service_end']))
+        push(destination_admission(demand,done),'deliver_input',demand['cta'],demand_id)
+
     def input_request(t,cta,kind,index,weight):
         nonlocal input_demand_count,input_source_count,input_merged_count,input_delivery_count
         nonlocal input_demand_work,input_source_work,input_merged_work,input_delivery_work
         nonlocal input_source_busy
         nonlocal address_unit_generations,address_unit_joins
         nonlocal input_path_frontier,input_path_busy
+        nonlocal request_count
         atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[kind]
+        # Reserve this independent front end at logical issue, before an async
+        # source can defer or reorder its readiness notification.
+        path_fields={}
+        if input_path_service_ns:
+            path_start=max(t,input_path_frontier);duration=input_path_service_ns*weight
+            path_end=path_start+duration;input_path_frontier=path_end;input_path_busy+=duration
+            path_fields=dict(input_path_start_ns=path_start,input_path_end_ns=path_end)
+        if input_source_async is not None:
+            demand_id=input_demand_count
+            input_demand_count+=1;input_demand_work+=weight
+            demands.append(dict(demand_id=demand_id,cta=cta,kind=kind,index=index,
+                arrival_ns=t,work=weight,**path_fields))
+            input_source_async.issue(t,cta,index,atom,weight,demand_id,notify_ready)
+            return
+        if input_source_service is not None:
+            served = input_source_service(t, cta, index, atom, weight)
+            source_id, done = served['source_id'], served['source_ready']
+            if served['merged']:
+                input_merged_count += 1; input_merged_work += weight
+            else:
+                input_source_count += 1; input_source_work += weight
+                request_count += 1; input_source_busy += served['source_busy_ns']
+                if trace_requests:
+                    sources.append(dict(cta=cta,kind=kind,index=index,arrival_ns=t,work=weight,
+                        ready_ns=done,source_id=source_id,source_key=served['source_key'],
+                        start_ns=served['service_start'],service_end_ns=served['service_end']))
+            demand_id = input_demand_count
+            input_demand_count += 1; input_demand_work += weight
+            demand = dict(demand_id=demand_id,source_id=source_id,source_key=served['source_key'],
+                merged=served['merged'],cta=cta,kind=kind,index=index,arrival_ns=t,
+                source_ready_ns=done,work=weight)
+            demand.update(path_fields)
+            demands.append(demand)
+            push(destination_admission(demand,done),'deliver_input',cta,demand_id)
+            return
         key=source_keys[cta][index][atom] if share_inflight_sources else None
         existing=pending.get(key) if share_inflight_sources else None
         merged=existing is not None and t<existing[2]
@@ -462,16 +556,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             demand=dict(demand_id=demand_id,source_id=source_id,source_key=key,merged=merged,
                 cta=cta,kind=kind,index=index,arrival_ns=t,source_ready_ns=done,work=weight)
         if routed_inputs:
-            path_end=t
-            if input_path_service_ns:
-                path_start=max(t,input_path_frontier);duration=input_path_service_ns*weight
-                path_end=path_start+duration;input_path_frontier=path_end;input_path_busy+=duration
-                demand.update(input_path_start_ns=path_start,input_path_end_ns=path_end)
-            destination_arrival=max(done+destination_latency_ns,path_end+input_min_latency_ns)
-            if destination_latency_ns or input_min_latency_ns or input_path_service_ns:
-                demand['destination_arrival_ns']=destination_arrival
-            if input_min_latency_ns or input_path_service_ns:
-                demand['input_earliest_destination_ns']=path_end+input_min_latency_ns
+            demand.update(path_fields)
+            destination_arrival=destination_admission(demand,done)
             demands.append(demand);push(destination_arrival,'deliver_input',cta,demand_id)
         else:
             # Preserve the original zero-destination event ordering exactly.
@@ -481,6 +567,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 demands.append(demand)
                 deliveries.append(dict(demand,start_ns=done,service_end_ns=done,ready_ns=done))
 
+    if input_source_bind_events is not None:
+        input_source_bind_events(lambda time, callback: push(time,'source_event',0,callback))
     for cta in range(cta_count):producer(cta)
     while events:
         t,_,kind,cta,i=heapq.heappop(events);a=actors[cta]
@@ -489,7 +577,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             end=max((r['end_ns'] for r in local_intervals[cta] if r['start_ns']<=t<r['end_ns']),default=t)
             if end>t:
                 local_blocked[local_role]+=end-t;push(end,kind,cta,i);continue
-        if kind in ('issue_a','issue_b0','issue_b1'):
+        if kind=='source_event':
+            i(t)
+        elif kind in ('issue_a','issue_b0','issue_b1'):
             field={'issue_a':'issued_a','issue_b0':'issued_b0','issue_b1':'issued_b1'}[kind]
             a[field][i]=t
             input_request(t,cta,kind,i,1. if kind=='issue_a' else .5)
@@ -506,18 +596,38 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 if pending_units.get(unit,(None,None))[0]==i:del pending_units[unit]
         elif kind=='deliver_input':
             demand=demands[i];weight=demand['work']
-            start=max(t,destination_frontiers[cta]);duration=destination_service_ns*weight
-            done=start+duration;destination_frontiers[cta]=done;destination_busy[cta]+=duration
+            if input_destination_service is None:
+                start=max(t,destination_frontiers[cta]);duration=destination_service_ns*weight
+                done=start+duration;destination_frontiers[cta]=done;destination_busy[cta]+=duration
+                service_end=done
+            else:
+                atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[demand['kind']]
+                delivered=input_destination_service(t,cta,demand['index'],atom,weight)
+                start,service_end,done=(delivered[k] for k in ('start_ns','service_end_ns','ready_ns'))
+                destination_busy[cta]+=service_end-start
             input_delivery_count+=1;input_delivery_work+=weight
-            if trace_requests:deliveries.append(dict(demand,start_ns=start,service_end_ns=done,ready_ns=done))
-            push(done,'input_ready',cta,demand['index'])
+            if trace_requests:deliveries.append(dict(demand,start_ns=start,service_end_ns=service_end,ready_ns=done))
+            if input_source_async is not None:
+                push(done,'input_delivered',cta,i)
+            else:
+                push(done,'input_ready',cta,demand['index'])
+                if not trace_requests:demands[i]=None
+        elif kind=='input_delivered':
+            demand=demands[i];index=demand['index']
+            a['ready_count'][index]+=1;a['ready'][index]=t
+            input_source_async.destination_done(t,i)
+            consumer(cta)
+            if not trace_requests:demands[i]=None
         elif kind=='input_ready':
             a['ready_count'][i]+=1;a['ready'][i]=t
             consumer(cta)
         elif kind=='mma':
             a['starts'][i]=t
-            E=max(t,a['service_frontier'][i-1] if i else t)+compute_ns
-            C=max(t+issue_floor_ns,E-commit_lead_ns);D=E+completion_lag_ns
+            phase = compute_phases_ns[i//kt] if compute_phases_ns is not None else None
+            duration = phase['compute_ns'] if phase is not None else compute_ns
+            lead = phase['commit_lead_ns'] if phase is not None else commit_lead_ns
+            E=max(t,a['service_frontier'][i-1] if i else t)+duration
+            C=max(t+issue_floor_ns,E-lead);D=E+completion_lag_ns
             W=C if i%kt==0 else max(C,a['completed'][i-1])+wait_overhead_ns
             for name,value in [('service_frontier',E),('commits',C),('completed',D),('wait1_return',W)]:
                 a[name][i]=value
@@ -529,6 +639,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 a['consumer_index']=i+1;a['consumer_free']=W+loop_advance_ns
                 a['consumer_scheduled']=False;consumer(cta)
         elif kind=='release':
+            if input_sync_service is not None:input_sync_service.release(t,cta,i)
             a['released'][i]=t;producer(cta)
         elif kind=='mma_return':
             a['mma_returns'][i]=t
@@ -536,6 +647,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             a['consumer_scheduled']=False;consumer(cta)
             epilogue(cta,0)
         elif kind=='main_end':
+            if input_sync_service is not None:input_sync_service.release(t,cta,(i+1)*kt-1)
             a['main_ends'][i]=t;a['released'][(i+1)*kt-1]=t
             producer(cta);epilogue(cta,i)
         elif kind=='epi_begin':
@@ -559,6 +671,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         elif kind=='store':
             out,j=divmod(i,8);e=a['outputs'][out];e['submitted'][j]=t
             done=request(t,cta,'store',i,output_weight/2,output_latency_ns);e['source_done'][j]=done
+            if output_source_observer is not None:
+                push(done,'output_source_read_done',cta,i)
             if j==7:
                 push(max(done,e['source_done'][j-1])+epilogue_tail_ns,'epi_end',cta,out)
             else:
@@ -568,6 +682,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 e['write_begin'][j+1]=begin
                 reserve_epilogue(cta,begin,epilogue_write_ns,'write',i+1)
                 push(begin+epilogue_write_ns,'epi_written',cta,i+1)
+        elif kind=='output_source_read_done':
+            output_source_observer(t,cta,i)
         elif kind=='epi_end':
             a['outputs'][i]['end']=t
             epilogue(cta,i+1);consumer(cta)
@@ -580,7 +696,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         input_merged_count=input_merged_count,input_delivery_count=input_delivery_count,
         input_demand_work=input_demand_work,input_source_work=input_source_work,
         input_merged_work=input_merged_work,input_delivery_work=input_delivery_work,
-        source_busy_ns=service_ns*input_source_work if source_service_costs_ns is None and not unit_mode else input_source_busy,
+        source_busy_ns=service_ns*input_source_work if input_source_service is None and input_source_async is None and source_service_costs_ns is None and not unit_mode else input_source_busy,
         destination_busy_ns=sum(destination_busy),destination_busy_by_cta_ns=destination_busy,
         local_epilogue_blocked_ns=local_blocked,
         local_epilogue_intervals=local_intervals if trace_requests else [],
@@ -652,10 +768,10 @@ def static_tma_requests(row, setup):
     Effective waves retain the old stage/Kt weighting, not measured concurrency.
     No general timing coefficients are assigned; cfg_b's old interface is separate.
     """
-    from v08_model import scheduled_work
+    from v08_model import scheduled_work_geometry
     if row.get('a_row_rotation',0) or setup.get('a_row_rotation',0):
         raise ValueError('ordinary static source boxes do not support A rotation')
-    if row['config'] not in CONFIGS: raise ValueError('static requests support cfg_a/b/c only')
+    if row['config'] not in CONFIGS: raise ValueError('static requests support cfg_a/b/c/c1 only')
     tm,tn,cm,cn=CONFIGS[row['config']]
     m,n,k=row['m'],row['n'],row['k']
     map_m=row.get('input_map_m',m); map_n=row.get('input_map_n',n)
@@ -671,7 +787,7 @@ def static_tma_requests(row, setup):
     if tuple(setup.get('tile',(tm,tn,64)))!=(tm,tn,64) or tuple(setup.get('cluster',(cm,cn))) not in ((cm,cn),(cm,cn,1)):
         raise ValueError('setup tile/cluster differs from the fixed R18 configuration')
     if setup['stages']<=0: raise ValueError('positive stage count required')
-    work=scheduled_work(row['config'],m,n,[gx,gy,gz],row['swizzle'],row.get('raster_order','heuristic'))
+    work=scheduled_work_geometry((tm,tn,64),(cm,cn),m,n,[gx,gy,gz],row['swizzle'],row.get('raster_order','heuristic'))
     ctas=[]
     for coords in work:
         tiles=[]

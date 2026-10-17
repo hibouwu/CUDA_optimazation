@@ -14,7 +14,7 @@
 | 规格：[规格基线](model/spec/spec_baseline.md) | max(F/P, Q/B) 的理想参照，规格与来源在硬件配置文件 | 对应 Roofline；不承诺实际耗时，暖 L2 下不是严格下界 |
 | 半经验：[V09](model/semi_empirical/MODEL-CANDIDATES.md#v09-model) | cfg_a/b/c 静态软件工作映射，first/later 主循环、输出递推、输入相关时钟、plain 时间映射 | 是当前完成新留出评分的组合候选，整体未通过。它不是通用指令级模拟器。 |
 | 半经验：[开发模块](../../../microbench/gh200_resource_campaign/access_rules/supply_model.py) | 有限槽、共享请求、源身份、cluster 依赖的纯事件模块；[输出模块](../../../microbench/gh200_resource_campaign/access_rules/output_model.py)有 rank 依赖图 | “没有任何 DAG 实现”不准确；但这些模块不能继承 V09 的成绩，也没有组成通过新留出的替代模型。 |
-| 比较：[C1-01](experiments/gh200_sm90/access_rules/C1-01-selection.md) | 八个 CUTLASS 候选上，规格、半经验、经验模型与 TileSight 在同一数据上比较 C1 与 C3 | 已登记，开发测量尚未执行，目前没有同条件成绩 |
+| 比较：[C1-01](experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md) | 八个 CUTLASS 候选上，规格、半经验、经验模型与 TileSight 在同一数据上比较 C1 与 C3 | 已登记，开发测量尚未执行，目前没有同条件成绩 |
 | 机制-程序：[CUTLASS 程序图](model/mechanism/program/cutlass_program_graph.md) | cooperative/pingpong 的操作、依赖与槽代次，已与源码和现有递推对应 | 尚无独立图导出器和整图 SASS/trace 验收 |
 | 机制-硬件：[硬件路径](model/mechanism/hardware_rules/README.md) | TMA 单 CTA（S16）与多 CTA 共享服务、有效频率、m11 等路径的候选、反例与重启条件 | m11 两次留出未通过；TMA 与频率尚无通过干预留出的规则 |
 | 机制组合 | 程序图接入版本化服务规则，见[接口](model/common/interfaces.md)与 [PLAN](PLAN.md) | 尚未形成可独立验收的组合模型 |
@@ -88,7 +88,7 @@ WaveTune 形式已作为 C1-01 的 wave_bilinear 基线；Twill 用于检查程�
 
 [Volkov](../references/papers/2016-volkov-latency-hiding/2016-volkov-latency-hiding.md) 第 III–IV 章适合检查延迟、吞吐、并发和 occupancy 的极限关系；不能从分配槽数直接推导平均在途数。[Warpspeed](../references/papers/2023-warpspeed/2023-warpspeed.md)从地址表达式估计数据量，值得借鉴其区分请求、复用与实际层级流量的方式。[Modern GPU Cores 正式稿](../references/papers/2025-modern-gpu-cores-final/2025-modern-gpu-cores-final.md) §5–7深入 SASS 控制字段、发射、RF 和片上访存，但没有为本项目建立 Hopper TMA/WGMMA 验证。
 
-本仓库普通 SMEM 的结果说明“层级更细”不等于“机制已经确定”：m11 首次随机留出 50 个受支持条件中位 4.55%、最大 34.82%；原 588 个结构化开发条件无法区分两种需求规则。测后改用“子组 bank 两两不相交才合并”的规则重新冻结，v2 留出 47 个受支持条件中位 0.44%、最大 11.60%，仍未通过，失败集中在 1 warp 独立读。[v2 结果](experiments/gh200_sm90/access_rules/R03-access-demand.md#m11-holdout-v2-result)。不能用其它架构的 bank 规则或开发集上的吻合代替留出。
+本仓库普通 SMEM 的结果说明“层级更细”不等于“机制已经确定”：m11 首次随机留出 50 个受支持条件中位 4.55%、最大 34.82%；原 588 个结构化开发条件无法区分两种需求规则。测后改用“子组 bank 两两不相交才合并”的规则重新冻结，v2 留出 47 个受支持条件中位 0.44%、最大 11.60%，仍未通过，失败集中在 1 warp 独立读。[v2 结果](experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-v2-result)。不能用其它架构的 bank 规则或开发集上的吻合代替留出。
 
 ## 哪些差异已经造成实际预测失败
 
@@ -99,7 +99,7 @@ WaveTune 形式已作为 C1-01 的 wave_bilinear 基线；Twill 用于检查程�
 | cfg_b stage6→4 | 实测慢 10.47%，当前冻结候选响应为零 | producer/consumer 递推、BufferSlots 和异步组状态能表达更多依赖 | 哪些槽释放、初态、非同质服务导致响应；现有开发事件图尚未通过组合验证 | [多 CTA TMA 共享服务](model/mechanism/hardware_rules/TMA-SHARED-SERVICE.md)与[程序图](model/mechanism/program/cutlass_program_graph.md)的槽代次；[S16](model/mechanism/hardware_rules/TMA-S16-STAGE-COST.md)只检查单 CTA 探针的控制成本 |
 | cfg_c partial/sw8 | 真正最后完成 CTA 在 10/10 次均不属于预测并列集合 | 逐 tile 调度、边界工作与尾波模拟 | 正确的关键 CTA、跨 rank 约束及入口分散；相近总时间不能代替这一检验 | [程序图](model/mechanism/program/cutlass_program_graph.md)的调度列表（含补齐 tile）接入机制组合后检验 |
 
-这些数值均来自 [V09 失败分析](experiments/gh200_sm90/access_rules/V09-component-validation.md) 和 [现行候选](model/semi_empirical/MODEL-CANDIDATES.md#v09-model)，不把后续开发修正回填为原成绩。
+这些数值均来自 [V09 失败分析](experiments/gh200_sm90/Q15-full-time/V09-component-validation.md) 和 [现行候选](model/semi_empirical/MODEL-CANDIDATES.md#v09-model)，不把后续开发修正回填为原成绩。
 
 其中 stage 和布局问题并不能只靠“画出更细 DAG”解决。已有 `shared_stage_events` 候选曾在联合窗口上得到较小残差，却被 CTA 完成分布和干预响应否定；固定边成本、固定前驱的图也不能解释全部起步干预。新结构必须同时约束局部端点、整卡分布和干预方向。[开发候选及反例](model/semi_empirical/MODEL-CANDIDATES.md)。
 
@@ -133,7 +133,7 @@ WaveTune 形式已作为 C1-01 的 wave_bilinear 基线；Twill 用于检查程�
 | [有效频率](model/mechanism/hardware_rules/FREQUENCY-MECHANISM.md) | Input-Dependent Power、H100/H200 Power Capping、Not All GPUs Are Created Equal；AccelWattch 与多域 DVFS 模型（依赖计数器） | 只用运行前输入预测调用内频率；状态规则需干预区分；新颖性按该任务列出的文献逐项核对后再主张 |
 | [S16 控制成本](model/mechanism/hardware_rules/TMA-S16-STAGE-COST.md) | Dissecting Volta/Turing 的 SASS 控制字段与寄存器依赖探针 | token 控制与组状态阻塞的判别；结果只适用于该探针 |
 | [程序图](model/mechanism/program/cutlass_program_graph.md) | TileSight 的 Program/BufferSlots 接口、Twill 的依赖与资源约束、Warp Specialization 的递推、TileLang 的降级语义 | 固定已编译 kernel 的实际 issue 顺序；不让求解器自由选择“最好”的合法排序 |
-| [C1-01](experiments/gh200_sm90/access_rules/C1-01-selection.md) | TileSight、WaveTune、tritonBLAS、Habitat、Stream-K 的波次量化 | 同一留出上的 regret 与完整时间误差，及计时噪声下限 |
+| [C1-01](experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md) | TileSight、WaveTune、tritonBLAS、Habitat、Stream-K 的波次量化 | 同一留出上的 regret 与完整时间误差，及计时噪声下限 |
 
 ## 全部论文在本项目中的位置
 

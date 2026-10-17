@@ -1,6 +1,6 @@
 # m11：普通 LDS/STS 的地址与执行组织
 
-更新：2026-10-13。**两次冻结留出均未通过，当前不接入正式组合。** 本页维护当前机制候选和重启条件；[R03](../../../experiments/gh200_sm90/access_rules/R03-access-demand.md#m11-current)维护测量与历史推导，数值参数仍以各次冻结产物为准。
+更新：2026-10-13。**两次冻结留出均未通过，当前不接入正式组合。** 本页维护当前机制候选和重启条件；[R03](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-current)维护测量与历史推导，数值参数仍以各次冻结产物为准。
 
 ## 1. 现象
 
@@ -19,8 +19,8 @@
 
 | 冻结轮次 | 受支持条件 | 中位 / 最大绝对相对误差 | 判定与权威评分 |
 |---|---:|---:|---|
-| v1，741915 | 50（另 10 个诊断） | 4.55% / 34.82% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout/score.json)、[冻结说明](../../../experiments/gh200_sm90/access_rules/R03-access-demand.md#m11-holdout-freeze) |
-| v2，742266 | 47（另 19 个诊断） | 0.44% / 11.60% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout-v2/score.json)、[冻结与结果](../../../experiments/gh200_sm90/access_rules/R03-access-demand.md#m11-holdout-v2-result) |
+| v1，741915 | 50（另 10 个诊断） | 4.55% / 34.82% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout/score.json)、[冻结说明](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-freeze) |
+| v2，742266 | 47（另 19 个诊断） | 0.44% / 11.60% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout-v2/score.json)、[冻结与结果](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-v2-result) |
 
 v1 的随机反例用于 v2 开发，v2 使用新的条件与 seed。v2 唯一超标为 8 B、1 warp、独立读的 random 布局：预测 242445、实测 217250 cycle。46/47 小于 10% 不改变整组判定；8 warp 独立读写的 19 条件 ≤1.83% 也不授予完整机制资格。
 
@@ -36,7 +36,7 @@ v1 的随机反例用于 v2 开发，v2 使用新的条件与 seed。v2 唯一�
 
 | 任务 | 结果 | 证据 |
 |---|---|---|
-| 第一轮 | 740708 的目标 LDS 被移出循环，失败保留；740961 开发得到宽广播反例，未冻结 | [R03 作业索引](../../../experiments/gh200_sm90/access_rules/R03-access-demand.md#m11-current) |
+| 第一轮 | 740708 的目标 LDS 被移出循环，失败保留；740961 开发得到宽广播反例，未冻结 | [R03 作业索引](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-current) |
 | 后续离线，GPU 0 | 全 warp max 形式满足相对门槛，但绝对周期和留布局诊断失败；非负加性形式相对门槛失败；两种形式均无候选 | [离线报告与预声明](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md) |
 | lane 排列开发 741153 | 48 条件×3 进程有效，20/20 桥接通过；14 对中 12 对不相容，两对 4 B 负对照相容。无候选，不执行条件留出 | [报告](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md) |
 
@@ -69,6 +69,6 @@ v1 的随机反例用于 v2 开发，v2 使用新的条件与 seed。v2 唯一�
 
 新的假设须明确每一阶段包含哪些 lane 和字、广播如何合并，再给上述反例写出静态预测。若仍把两点算成相同需求，就停止该形式，不先拟合。依赖控制也须解释；时间比例不能唯一确定内部 wavefront 或端口数。
 
-文档收尾后已离线检验一个静态形式：保留子组的 bank 向量，将 Σg maxb 改为 maxb Σg。它区分密集排列，但新标量仍把宽广播与密集交错算成相同输入；两点在原周期容差下无法共享预测，因此没有拟合或采用。[推导、等价约束与反例](../../../experiments/gh200_sm90/access_rules/R03-access-demand.md#m11-bank-vector)
+文档收尾后已离线检验一个静态形式：保留子组的 bank 向量，将 Σg maxb 改为 maxb Σg。它区分密集排列，但新标量仍把宽广播与密集交错算成相同输入；两点在原周期容差下无法共享预测，因此没有拟合或采用。[推导、等价约束与反例](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-bank-vector)
 
 以上“未冻结／未提交”仅指 741153 对照及紧随其后的离线阶段。其后已执行下述两次冻结留出，身份、授权与结果以 R03 对应日期记录为准；旧预算不自动延续。

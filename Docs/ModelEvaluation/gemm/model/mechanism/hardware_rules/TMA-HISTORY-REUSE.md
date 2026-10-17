@@ -29,14 +29,14 @@ S15/S16 的原 CSV 保留 `qualified=false`，不能仅据此否定后续发布�
 
 | 历史研究 | 已研究的条件与端点 | 对新研究的作用 | 不能直接合并的部分 |
 |---|---|---|---|
-| [EXP-14：1D bulk](../../../experiments/gh200_sm90/EXP-14-tma-1d.md) | 1–64 KiB；单 CTA/整卡；单槽单请求，完成等待后 CTA 会合 | 单请求尺寸响应与基础完成协议 | 包含控制、等待和同步，不是裸请求延迟；多 CTA 速率不是单 CTA 参数 |
-| [EXP-15：2D tensor](../../../experiments/gh200_sm90/EXP-15-tma-2d.md) | 连续、SW128、padding；每 CTA 轮换 32 个 global 槽；每轮单请求 | 请求形状、源行距、目的布局对照 | 与 1D bulk 的指令、shape、迭代次数不同，不能从两条曲线之差直接定价 tensor 开销 |
-| [EXP-16：stage×请求数](../../../experiments/gh200_sm90/EXP-16-tma-pipeline.md) | 16 KiB/request；S/R=1/2/4；单 CTA/整卡；完成与槽释放，无正式逐 item 全值消费 | 已覆盖软件容量和分组，不必再做同一轮 S×R 扫描 | SMEM 用量、驻留和 CTA 数随配置变化；不是硬件在途容量扫描 |
-| [R05-A 修正版/B](../../../experiments/gh200_sm90/access_rules/R05-async-lifecycle.md) | TMA 输入等待位置；B 为 stage1/2/4×轻重 FFMA 消费者，固定四个物理槽 | 控制消费工作与活动槽数，复用合法等待/发布/消费/复用链 | B 的 TMA 请求为16 KiB，cp.async 对照为2 KiB；不同载荷不作硬件路径等价比较。原 A 的 invalid_sass_schedule 数据排除，使用独立修正版 |
-| [R05-D](../../../experiments/gh200_sm90/access_rules/R13-async-retirement.md#r05-d) | 48 KiB/代、160线程、132 CTA、stage2/4；共享15 MiB源 vs 独立241 MiB源；立即释放消费者 | 已有源复访与多 CTA 供给对照，无须从零重建 | 工作集大小、复访距离与跨 CTA 共享同时变化，不能只归因于缓存层次；与 R13 的消费者及分母不同 |
-| [R13 序列与事件](../../../experiments/gh200_sm90/access_rules/R13-async-retirement.md) | 32/48 KiB×stage1/2/4×直接退休/FFMA/WGMMA；固定四槽，384线程，共享小源；ready/retire/reuse | 最接近当前需要的消费与释放证据，可复用 plain 与有资格的局部事件 | 三类事件来自不同调用，不能拼绝对时间线；部分观察扰动超限，只保留定性顺序 |
-| [R12 多路径竞争](../../../experiments/gh200_sm90/access_rules/R12-smem-path-contention.md) | 独立 SMEM 区域中的 TMA、WGMMA、STS；独立/串行/并发及阶段位置控制 | 扩展目的端共享服务的竞争问题，复用受控的角色与布局设计 | 仅单 CTA、小源、固定工作量；额外窗口不唯一证明共享端口；v1/v2 消费归约缺陷不沿用 |
-| [R10/R13 后续定位](../../../experiments/gh200_sm90/access_rules/R10-layout-cache.md) | 行距、源分配/执行方向、背景 CTA、producer延迟、首次ready | 给机制候选提供必须满足的反例与共享范围线索 | 是完整 GEMM 背景；不把局部端点当裸 TMA 事件，也不反向混入旧冻结预测 |
+| [EXP-14：1D bulk](../../../experiments/gh200_sm90/Q02-tma-request/EXP-14-tma-1d.md) | 1–64 KiB；单 CTA/整卡；单槽单请求，完成等待后 CTA 会合 | 单请求尺寸响应与基础完成协议 | 包含控制、等待和同步，不是裸请求延迟；多 CTA 速率不是单 CTA 参数 |
+| [EXP-15：2D tensor](../../../experiments/gh200_sm90/Q02-tma-request/EXP-15-tma-2d.md) | 连续、SW128、padding；每 CTA 轮换 32 个 global 槽；每轮单请求 | 请求形状、源行距、目的布局对照 | 与 1D bulk 的指令、shape、迭代次数不同，不能从两条曲线之差直接定价 tensor 开销 |
+| [EXP-16：stage×请求数](../../../experiments/gh200_sm90/Q02-tma-request/EXP-16-tma-pipeline.md) | 16 KiB/request；S/R=1/2/4；单 CTA/整卡；完成与槽释放，无正式逐 item 全值消费 | 已覆盖软件容量和分组，不必再做同一轮 S×R 扫描 | SMEM 用量、驻留和 CTA 数随配置变化；不是硬件在途容量扫描 |
+| [R05-A 修正版/B](../../../experiments/gh200_sm90/Q02-tma-request/R05-async-lifecycle.md) | TMA 输入等待位置；B 为 stage1/2/4×轻重 FFMA 消费者，固定四个物理槽 | 控制消费工作与活动槽数，复用合法等待/发布/消费/复用链 | B 的 TMA 请求为16 KiB，cp.async 对照为2 KiB；不同载荷不作硬件路径等价比较。原 A 的 invalid_sass_schedule 数据排除，使用独立修正版 |
+| [R05-D](../../../experiments/gh200_sm90/Q02-tma-request/R13-async-retirement.md#r05-d) | 48 KiB/代、160线程、132 CTA、stage2/4；共享15 MiB源 vs 独立241 MiB源；立即释放消费者 | 已有源复访与多 CTA 供给对照，无须从零重建 | 工作集大小、复访距离与跨 CTA 共享同时变化，不能只归因于缓存层次；与 R13 的消费者及分母不同 |
+| [R13 序列与事件](../../../experiments/gh200_sm90/Q02-tma-request/R13-async-retirement.md) | 32/48 KiB×stage1/2/4×直接退休/FFMA/WGMMA；固定四槽，384线程，共享小源；ready/retire/reuse | 最接近当前需要的消费与释放证据，可复用 plain 与有资格的局部事件 | 三类事件来自不同调用，不能拼绝对时间线；部分观察扰动超限，只保留定性顺序 |
+| [R12 多路径竞争](../../../experiments/gh200_sm90/Q07-smem/R12-smem-path-contention.md) | 独立 SMEM 区域中的 TMA、WGMMA、STS；独立/串行/并发及阶段位置控制 | 扩展目的端共享服务的竞争问题，复用受控的角色与布局设计 | 仅单 CTA、小源、固定工作量；额外窗口不唯一证明共享端口；v1/v2 消费归约缺陷不沿用 |
+| [R10/R13 后续定位](../../../experiments/gh200_sm90/Q03-source-service/R10-layout-cache.md) | 行距、源分配/执行方向、背景 CTA、producer延迟、首次ready | 给机制候选提供必须满足的反例与共享范围线索 | 是完整 GEMM 背景；不把局部端点当裸 TMA 事件，也不反向混入旧冻结预测 |
 
 R05-C/E 属于输出源复用与 SMEM→global 写回，EXP-17 属于 cluster/DSM/多播，保留为后续独立方向；它们可约束组合研究，但不混入当前输入路径服务价格。
 
@@ -46,7 +46,7 @@ R05-C/E 属于输出源复用与 SMEM→global 写回，EXP-17 属于 cluster/DS
 2. **消费者会改变完整序列率。** R13 的stage4、32 KiB输入，直接退休与WGMMA条件报告约83.077与58.046 B/SM-covered-cycle；48 KiB下约85.031与45.337。不能挑一个数作为所有程序的每SM供给上限。
 3. **源复用对照已有，但归因仍混合。** R05-D 的共享小源与独立大源约55.45与15.26 B/cycle/CTA；两者同时改变多个源条件，未证明“纯L2”和“纯HBM”服务。
 4. **观察软件返回不足以命名硬件完成。** R13 的reuse窗口从producer成功acquire之后开始，到下次A请求前结束，不包含先前empty等待。早期事件是分调用观察，不能组合出一条实测完整时间线。
-5. **后续ready定位已有反例价值。** job739653的释放边界观察排除了本协议下“ready不变、仅consumer晚返回”的解释；请求排队、数据服务及完成可见性仍未分开。该批观察也有局部扰动，不转成裸延迟参数。[事件边界与原报告](../../../experiments/gh200_sm90/access_rules/R13-async-retirement.md#ready-observer)
+5. **后续ready定位已有反例价值。** job739653的释放边界观察排除了本协议下“ready不变、仅consumer晚返回”的解释；请求排队、数据服务及完成可见性仍未分开。该批观察也有局部扰动，不转成裸延迟参数。[事件边界与原报告](../../../experiments/gh200_sm90/Q02-tma-request/R13-async-retirement.md#ready-observer)
 
 ## 合并方式与研究扩展
 

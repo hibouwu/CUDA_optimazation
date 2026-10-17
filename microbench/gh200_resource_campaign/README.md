@@ -26,7 +26,7 @@ bash microbench/gh200_resource_campaign/runners/run_s15_once.sh --help
 python3 -B microbench/gh200_resource_campaign/report_tma_tensor_2d.py --help
 ```
 
-该入口原任务为剩余12配置，当前S15完整68配置已发布，参见[结果说明](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-15-tma-2d.md)。不因历史入口仍存在就重新提交已完成测量。
+该入口原任务为剩余12配置，当前S15完整68配置已发布，参见[结果说明](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/Q02-tma-request/EXP-15-tma-2d.md)。不因历史入口仍存在就重新提交已完成测量。
 
 ## v2 总控
 

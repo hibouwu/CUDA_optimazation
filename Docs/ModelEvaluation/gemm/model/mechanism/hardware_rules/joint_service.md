@@ -1,6 +1,6 @@
 # 发射与 SMEM 多路径联合服务
 
-状态：机制储备；R11/R12 是条件联合窗口，尚无经过独立干预留出的可迁移硬件规则。数据分别来自[R11](../../../experiments/gh200_sm90/access_rules/R11-mixed-issue.md)和[R12](../../../experiments/gh200_sm90/access_rules/R12-smem-path-contention.md)。
+状态：阶段9已交付完整合同的条件联合服务；R11/R12尚无经过独立干预留出的可迁移硬件规则。数据分别来自[R11](../../../experiments/gh200_sm90/Q07-smem/R11-mixed-issue.md)和[R12](../../../experiments/gh200_sm90/Q07-smem/R12-smem-path-contention.md)，本轮回放与接入见[SM-01](../../../experiments/gh200_sm90/Q08-register-residency/SM-01-replay.md)。
 
 ## 1. 现象
 
@@ -34,3 +34,7 @@ CVT动作包含输入更新、转换和数值摘要，它的工作量和消费�
 - 本实验使用单CTA、64 KiB反复读取源，属于可复用小工作集条件。没有HBM流量、物理队列深度或物理端口识别证据。
 
 若目标 GEMM 的 payload、角色、布局或并发规模离开这些条件，重新检验迁移；数值权威仍在 R11/R12，不能从两个单路峰值推出联合服务参数。
+
+可执行入口为`sm_joint_service.joint_service(contract, ready_times_ns, frequency_ghz)`。合同保留pair、organization、工作、角色、消费者、同步、SASS、原始身份及完整覆盖边界；外部开始取所有前驱的最大值，结束为`begin+cycles/frequency_ghz`，频率对应原SM clock64域。被覆盖的旧节点由调用方整体替换。36个正式合同及调用例子保存在[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-SM-01-replay-001/joint/contracts.json)，其中R11的12项逐值回放，R12的24项复用阶段6重算及已知CV差异。当前cfg_b没有匹配合同，计算与输出仍沿原独立连接。
+
+最小迁移对照为cfg_b下一输出WGMMA与前一输出STS.64的相位配对，保持实际三条输入TMA、两源缓冲、两个math WG和寄存器帧；计算完成、wait返回与源槽释放端点沿[计算短链](COMPUTE-SERVICE.md)取得。已有R12使用四条2D TMA、64条WGMMA/unit及STS.128，完整窗口保留在原程序条件下。

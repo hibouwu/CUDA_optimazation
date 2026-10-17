@@ -145,7 +145,7 @@ def cooperative_output_source_layout(config, output_tiles):
     """
     if type(output_tiles) is not int or output_tiles<1:
         raise ValueError('positive integer output tile count required')
-    dimensions={'cfg_a':(128,128),'cfg_c':(256,128),'r14_baseline':(128,256)}
+    dimensions={'cfg_a':(128,128),'cfg_c':(256,128),'cfg_c1':(256,128),'r14_baseline':(128,256)}
     if config not in dimensions:raise ValueError('unsupported cooperative output layout')
     tile_m,tile_n=dimensions[config];epi_m_count=tile_m//128;epi_n_count=tile_n//32
     chunks=epi_m_count*epi_n_count
@@ -211,7 +211,7 @@ def cooperative_output_source_dependencies(config, output_tiles):
 
 def cooperative_output_valid_subtiles(config, logical_m, logical_n, tile_coord, output_index=0):
     """Logical FP32 output coverage in source-buffer order, not physical traffic."""
-    if config not in ('cfg_a','cfg_c'):raise ValueError('fixed cooperative a/c output geometry required')
+    if config not in ('cfg_a','cfg_c','cfg_c1'):raise ValueError('fixed cooperative a/c/c1 output geometry required')
     if (type(logical_m) is not int or type(logical_n) is not int or min(logical_m,logical_n)<=0
         or type(output_index) is not int or output_index<0):
         raise ValueError('positive integer logical shape and nonnegative output index required')

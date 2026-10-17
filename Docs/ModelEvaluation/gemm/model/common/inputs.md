@@ -1,6 +1,6 @@
 # 共同输入
 
-更新：2026-10-13。规格基线、半经验模型、机制模型与实测使用同一份问题描述，各自只读取所需字段。本页定义 GH200 CUTLASS GEMM case 的字段含义、单位、缺省与推导、来源和读取方。默认值和可离线判断的值域与组合约束照搬 [r18 probe](../../../../../microbench/gh200_resource_campaign/access_rules/probes/r18.cu) 的参数解析，解析由 [case_inputs.py](../../../../../microbench/gh200_resource_campaign/access_rules/case_inputs.py) 实现；依赖实验构建或设备的约束（非零干预需要对应构建、`check_output` 需要特定 mode 等）由 probe 在运行时检查，这里不离线判定。
+更新：2026-10-15。规格基线、半经验模型、机制模型与实测使用同一份问题描述，各自只读取所需字段。本页定义 GH200 CUTLASS GEMM case 的字段含义、单位、缺省与推导、来源和读取方。默认值和可离线判断的值域与组合约束来自 [r18 probe](../../../../../microbench/gh200_resource_campaign/access_rules/probes/r18.cu) 及表中对应的实验构建，解析由 [case_inputs.py](../../../../../microbench/gh200_resource_campaign/access_rules/case_inputs.py) 实现；依赖实验构建或设备的约束（非零干预需要对应构建、`check_output` 需要特定 mode 等）由 probe 在运行时检查，这里不离线判定。
 
 ## 解析规则
 
@@ -59,11 +59,12 @@
 | 字段 | 含义 | 缺省 |
 |---|---|---|
 | `mode` | 运行模式；`warm` 为测量，`setup` 为构建查询 | warm |
-| `warmup_policy` | adaptive：最多 30 次预热，至少 8 次后最后 5 次的 CV ≤2% 即停，否则报错；common-sw1-16：固定 16 次 swizzle 1 预热 | adaptive |
+| `warmup_policy` | adaptive：最多 30 次预热，至少 8 次后最后 5 次的 CV ≤2% 即停，否则报错；common-sw1-16：固定 16 次 swizzle 1 预热；fixed-count：按声明次数预热 | adaptive |
+| `warmup_fixed_calls` | fixed-count实验构建的预热调用次数，单位为次；当前30–33；[构建与协议](../../../../../results/gh200_resource_campaign/access_rules/20261015-d226-fixed-history-discrimination-001/README.md)读取 | fixed-count为30 |
 | `history_mode`、`history_source`、`mirror_target_slot` | 调用历史观察（R09 用） | off、original、0 |
 | `evict` | 每次调用前在计时窗口外运行驱逐 kernel | 0 |
 | 计时窗口 | cudaEvent 只包住一次 `Gemm::run`；驱逐、trace 清零与同步在窗口外；预热后测一次 | probe 固定 |
-| 进程与重复 | 每个 case 的 plain、dual 进程数与顺序随机化 | 任务声明，例如 V09 各 10 个进程，C1-01 为 plain 3 个、dual 1 个 |
+| 进程与重复 | 每个 case 的 plain、dual 进程数与顺序随机化 | 任务声明，例如 V09 各 10 个进程，C1-01见[当前采样协议](../../experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md#恢复前要定的事) |
 
 ## 6. 实验干预
 
@@ -78,7 +79,7 @@
 
 ## 8. 历史注记
 
-`tile`、`cluster`、`schedule`、`grid_ctas`、`ktiles`、`scheduled_units`、`scheduler_status`、`original_m` 是 V05 等早期 case 预先写入的静态信息，取值以构建查询为准；`label`、`pitch`、`input_path`、`ready_generation_bound`、`sampling_order`、`variants` 是分组标签与采样安排，属于任务协议。
+`tile`、`cluster`、`schedule`、`grid_ctas`、`ktiles`、`scheduled_units`、`scheduler_status`、`original_m` 是 V05 等早期 case 预先写入的静态信息，取值以构建查询为准；`label`、`pitch`、`input_path`、`ready_generation_bound`、`sampling_order`、`variants`、`repeats`（每variant的计划进程数）是分组标签与采样安排，属于任务协议。
 
 ## 9. 读取方
 
@@ -96,4 +97,4 @@
 
 [文档检查](../../../../../microbench/gh200_resource_campaign/access_rules/check_model_docs.py)核对三件事：probe 的每个命令行参数和 `case_inputs.py` 的每个字段都在本页登记；受检清单内的 GEMM case 全部可解析并满足上述约束；各读取方的输入是否齐备单独计数。受检清单为 `results/gh200_resource_campaign/access_rules/` 下的 `*/cases.json`、`*/*/cases.json`、`*/*-cases.json`、`*/*/*-cases.json`；文件损坏、混有非 GEMM 行或 `static_setup.json` 损坏时报错，其他格式的 JSON 按非目标格式排除并计数。
 
-2026-10-14 的本地结果：84 个 GEMM case 文件、7664 行（含 C1 设计清单及其上传包副本），其中 824 行带 setup；另有 94 个非目标格式文件被排除。记录全部可解析；规格基线与 C1 模型的输入在全部 7664 行齐备，V09 的输入在 824 行齐备，程序图在 824 行齐备。
+2026-10-15 的本地结果：148 个 GEMM case 文件、14236 行（含 C1 设计清单及其上传包副本），其中 943 行带 setup；另有 96 个非目标格式文件被排除。记录全部可解析；规格基线与 C1 模型的输入在全部 14236 行齐备，V09 的输入在 943 行齐备，程序图在 943 行齐备。
