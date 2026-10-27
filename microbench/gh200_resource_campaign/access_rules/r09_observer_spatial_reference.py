@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--base',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args = parser.parse_args()
-    root = args.base.resolve()/'20261010-R09-R13-R18-failure-controls'
+    root = args.base.resolve()/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
     common.verify(root)
     rows = json.loads((root/'cases.json').read_text())
     row = next(r for r in rows if r['id']=='r13_stage_k4096_s6')

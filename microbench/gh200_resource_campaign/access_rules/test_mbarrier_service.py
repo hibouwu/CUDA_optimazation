@@ -108,6 +108,43 @@ class CompositionTests(unittest.TestCase):
         self.assertGreater(after['g4.A.issue'], before['g4.A.issue'])
         self.assertGreater(report['consumer_span_ns'], baseline['consumer_span_ns'])
 
+    def test_empty_completion_blocks_reuse_but_not_consumer_continuation(self):
+        import supply_model
+        for stages, outputs in ((4, 1), (6, 1), (4, 2), (6, 2)):
+            with self.subTest(stages=stages, outputs=outputs):
+                program = cfg_b_program.build_program(
+                    dict(config='cfg_b', m=128, n=128*outputs, k=13*64, stages=stages),
+                    dict(grid=[1, 1, 1], stages=stages))
+                parameters = dict(service_ns=0., read_latency_ns=0., compute_ns=64.,
+                    commit_lead_ns=32., loop_advance_ns=6., input_release_delay_ns=200.,
+                    epilogue_prepare_ns=3., epilogue_write_ns=4.)
+                prefix = 17.
+                report = request_model.simulate(program, parameters, producer_prefix_ns=prefix,
+                    input_sync_service=ConditionSyncService(stages, 0., 0.), detailed_ctas=(0,))
+                keys, counts = request_model.request_inputs(program)
+                raw = supply_model.shared_stage_events(13, stages, 1, output_counts=counts,
+                    source_keys=keys, trace_requests=True,
+                    input_sync_service=ConditionSyncService(stages, 0., 0.), **parameters)
+                actor = raw['ctas'][0]
+                detail = report['details'][0]
+                times = detail['node_times_ns']
+                graph = cfg_b_program.expand_cta(program, 0, separate_empty_completion=True)
+                for group in detail['groups']:
+                    g = group['group']
+                    self.assertEqual(times[f'g{g}.release_emit'], actor['release_emitted'][g]+prefix)
+                    self.assertEqual(times[f'g{g}.release'], actor['released'][g]+prefix)
+                    self.assertEqual(times[f'g{g}.release']-times[f'g{g}.release_emit'], 200.)
+                    self.assertEqual(times[f'g{g}.compute_batch'], actor['starts'][g]+prefix)
+                    if g >= stages:
+                        self.assertGreaterEqual(times[f'g{g}.A.issue'], times[f'g{g-stages}.release'])
+                self.assertLess(times['g2.compute_batch'], times['g0.release'])
+                for j in range(outputs):
+                    last = (j+1)*13-1
+                    self.assertEqual(times[f'j{j}.main_end'], times[f'g{last}.release_emit'])
+                    self.assertLess(times[f'j{j}.main_end'], times[f'g{last}.release'])
+                for node, predecessors in graph['nodes'].items():
+                    self.assertTrue(all(times[node] >= times[p] for p in predecessors))
+
     def test_prefix_keeps_first_consumer_entry_at_common_origin(self):
         program = self.program(13, 4)
         parameters = dict(service_ns=0., read_latency_ns=0., compute_ns=7., commit_lead_ns=2.)

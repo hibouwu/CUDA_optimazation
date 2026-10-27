@@ -43,3 +43,7 @@ python -B microbench/gh200_resource_campaign/report_compute_v2.py \
   results/gh200_resource_campaign/20261001-resource-suite-v2/legacy_fma/formal-v3-b \
   --replay <audit_replay.py 输出> --output <新目录>
 ```
+
+## a044 复测（2026-10-23～26）
+
+930 次调用全部通过原审计，93 个条件各 10 个稳定样本。63 个单 CTA 条件的 FLOP/cycle 中位数与旧值逐位相同；27 个全 GPU 条件的 GFLOP/s 变化为 −0.6095%～−0.0509%；3 个零工作控制的 294/218/296 cycle 不变。见[FMA 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-fma-report.md)。

@@ -141,7 +141,8 @@ def result_coverage(docs_root=None, results_root=None, exception_index=None):
     docs_root = (docs_root or ROOT / "Docs").resolve()
     results_root = (results_root or ROOT / "results/gh200_resource_campaign/access_rules").resolve()
     exception_index = (exception_index or ACCESS / "README.md").resolve()
-    rounds = {path.name: path for path in results_root.iterdir()
+    # 结果目录按 问题/合并实验/原轮次 存放
+    rounds = {path.name: path for path in results_root.glob("*/*/*")
               if path.is_dir() and re.match(r"^\d{8}-", path.name)}
     exceptions = set()
     index_text = exception_index.read_text()
@@ -150,7 +151,7 @@ def result_coverage(docs_root=None, results_root=None, exception_index=None):
     if marker:
         table = "\n".join(line for line in section_parts[0].splitlines() if line.startswith("|"))
         exceptions = {path.name for path, _ in targets(exception_index, table)
-                      if path.parent == results_root and path.name in rounds}
+                      if path.parent.parent.parent == results_root and path.name in rounds}
         index_text = before + (section_parts[1] if len(section_parts) == 2 else "")
 
     reached, direct, readmes, visited = set(), set(), [], set()
@@ -159,9 +160,19 @@ def result_coverage(docs_root=None, results_root=None, exception_index=None):
         if not target.exists() or not target.is_relative_to(results_root):
             return
         relative = target.relative_to(results_root).parts
-        if not relative or relative[0] not in rounds:
+        # 根目录与合并实验目录的 README 是轮次索引，按其中的链接继续追踪
+        index = None
+        if relative in ((), ("README.md",)):
+            index = results_root / "README.md"
+        elif len(relative) == 2 or (len(relative) == 3 and relative[2] == "README.md"):
+            index = results_root / relative[0] / relative[1] / "README.md"
+        if index is not None:
+            if index.is_file() and index not in visited:
+                readmes.append(index)
             return
-        name = relative[0]
+        if len(relative) < 3 or relative[2] not in rounds:
+            return
+        name = relative[2]
         reached.add(name)
         if is_direct:
             direct.add(name)
@@ -258,8 +269,8 @@ def main():
     # Raw runs are local artifacts; a source-only checkout can check navigation
     # only when these linked artifacts have been restored.
     m11 = (RULES_DIR / "M11-SMEM.md").read_text()
-    for name, median_key, max_key in (("20261012-m11-holdout", "median_abs", "max_abs"),
-                                      ("20261012-m11-holdout-v2", "median_abs_error", "max_abs_error")):
+    for name, median_key, max_key in (("Q07-smem/m11-lds-sts/20261012-m11-holdout", "median_abs", "max_abs"),
+                                      ("Q07-smem/m11-lds-sts/20261012-m11-holdout-v2", "median_abs_error", "max_abs_error")):
         score = ROOT / "results/gh200_resource_campaign/access_rules" / name / "score.json"
         if not score.exists():
             errors.append(f"Cannot verify local frozen score: {score}")
@@ -281,7 +292,7 @@ def main():
     print("inputs: " + ", ".join(f"{k} {v}" for k, v in sorted(input_summary.items())))
 
 
-CASE_PATTERNS = ("*/cases.json", "*/*/cases.json", "*/*-cases.json", "*/*/*-cases.json")
+CASE_PATTERNS = ("*/*/*/cases.json", "*/*/*/*/cases.json", "*/*/*/*-cases.json", "*/*/*/*/*-cases.json")
 
 
 def check_inputs():

@@ -131,7 +131,7 @@ def cases(groups=64):
 
 def simulate(p, candidate, *, service, latency, issue, destination, consumer, trace=False, control=None,
              resident_service=None, cache_capacity_bytes=60*1024*1024, resident_latency=None,
-             source_partitions=1, source_service=None, memory_observer=None):
+             source_partitions=1, source_service=None, memory_observer=None, source_async=None):
     """统一抽象时间单位；价格由调用方提供。源服务完成后才进入每 CTA 目的 FIFO。"""
     if candidate not in CANDIDATES:
         raise ValueError('unknown candidate')
@@ -149,7 +149,7 @@ def simulate(p, candidate, *, service, latency, issue, destination, consumer, tr
     sharing = candidate in ('shared_source_fifo','two_tier_shared_fifo','banked_resident_fifo')
     partitioned = resident and candidate=='banked_resident_fifo'
     queue, sequence = [], itertools.count()
-    source = source_service or TensorSourceService(candidate, p['ctas'], p['source_union_bytes'], service=service,
+    source = source_async or source_service or TensorSourceService(candidate, p['ctas'], p['source_union_bytes'], service=service,
         latency=latency, resident_service=resident_service, resident_latency=resident_latency,
         cache_capacity_bytes=cache_capacity_bytes, source_partitions=source_partitions)
     destination_frontiers = [0.] * p['ctas']
@@ -160,6 +160,13 @@ def simulate(p, candidate, *, service, latency, issue, destination, consumer, tr
 
     def push(t, kind, cta, index):
         heapq.heappush(queue, (t, next(sequence), kind, cta, index))
+
+    def source_ready(index, t, served):
+        demands[index].update(served, source_ready=t)
+        push(t, 'deliver', demands[index]['cta'], index)
+
+    if source_async is not None:
+        source.bind_scheduler(lambda t, callback: push(t, 'source_callback', 0, callback))
 
     control = control or {}
     wait_floor = control.get('wait_floor', 0.)
@@ -187,6 +194,9 @@ def simulate(p, candidate, *, service, latency, issue, destination, consumer, tr
         push(offsets[cta], 'advance', cta, 'initial')
     while queue:
         t, _, kind, cta, index = heapq.heappop(queue)
+        if kind == 'source_callback':
+            index(t)
+            continue
         a = actors[cta]
         if kind == 'advance':
             advance(t, cta, index)
@@ -197,14 +207,18 @@ def simulate(p, candidate, *, service, latency, issue, destination, consumer, tr
             source_index = (g+cta*p['source_phase_stride']) % p['source_ring']
             key = (cta if p['source_protocol'] == 'independent' else 0, source_index, name)
             weights = partition_weights(p,cta,source_index,name,source_partitions) if partitioned else None
-            served = source.submit(t, cta, key, weight, weights)
             demand = dict(cta=cta, group=g, atom=name, bytes=size,
                 slot=g % 4, generation=g//4, phase=(g//4) % 2,
                 destination_offset=(g % 4)*32768+(0, 16384, 24576)[atom],
                 source_key=key, issue=t)
-            demand.update(served)
             demands.append(demand)
-            push(served['source_ready'], 'deliver', cta, len(demands)-1)
+            demand_id = len(demands)-1
+            if source_async is None:
+                served = source.submit(t, cta, key, weight, weights)
+                demand.update(served)
+                push(served['source_ready'], 'deliver', cta, demand_id)
+            else:
+                source.issue(t, cta, g, atom, weight, demand_id, source_ready)
             if atom == 0:
                 a['issued'][g] = t
             issue_step = control.get('prefill_issue' if g < p['active_groups'] else 'refill_issue', issue*3)/3
@@ -219,11 +233,18 @@ def simulate(p, candidate, *, service, latency, issue, destination, consumer, tr
             memory_observer(t, cta, index, 'issue_record')
         elif kind == 'deliver':
             r = demands[index]
-            start = max(t, destination_frontiers[cta])
-            done = start+destination*r['bytes']/16384
-            destination_frontiers[cta] = done
+            if source_async is None:
+                start = max(t, destination_frontiers[cta])
+                done = start+destination*r['bytes']/16384
+                destination_frontiers[cta] = done
+            else:
+                delivered = source.destination_service(t, cta, r['group'], ('A', 'B0', 'B1').index(r['atom']), r['bytes']/16384)
+                start, done = delivered['start_ns'], delivered['ready_ns']
+                push(done, 'destination_done', cta, index)
             r.update(destination_start=start, ready=done)
             push(done, 'ready', cta, r['group'])
+        elif kind == 'destination_done':
+            source.destination_done(t, index)
         elif kind == 'ready':
             a['ready_counts'][index] += 1
             if a['ready_counts'][index] == 3:
@@ -243,7 +264,7 @@ def simulate(p, candidate, *, service, latency, issue, destination, consumer, tr
     if any(a['finished'] is None for a in actors):
         raise RuntimeError('probe program did not drain')
     durations = [a['finished'] for a in actors]
-    result = dict(candidate=source_service.version if source_service else candidate,
+    result = dict(candidate=source.version if source_service is not None or source_async is not None else candidate,
         endpoint='common origin to final group release' if 'initial_offsets_ns' in p else 'controller start to final group release',
         time=max(durations), cta_times=durations, cta_span=max(durations)-min(durations),
         input_requests=len(demands), input_bytes=sum(r['bytes'] for r in demands),

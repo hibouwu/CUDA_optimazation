@@ -12,7 +12,7 @@
   "generator_sha256": "a6f0426ba8e8f36a1e9124db302608a85c18c11d49f3ac7ad9b254058c94cdab",
   "predictor_sha256": "9184da36d14483539504c24e67c9ab162f6775789097394ea237bf9eca0b4c2d",
   "calibration": {
-    "archive": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-async-v01-r04/v01-formal",
+    "archive": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261007-async-v01-r04/v01-formal",
     "predictions_sha256": "1702642749f3b53c6743b139e55d4cdb91beca6b226ca0b78fd35e748051c9e6",
     "layout_summary_sha256": "f174becadbabbeac9a11340eb869be901774e6b92865c3c40e45d0fe8543fc0a",
     "known_medians": {

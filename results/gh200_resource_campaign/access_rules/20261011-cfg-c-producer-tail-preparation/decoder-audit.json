@@ -1,9 +1,0 @@
-{
-  "files": {
-    "decode_cfg_c_producer_tail.py": "34c490003b683e931075e70dc348d50c34fc54d6118a599af0880846670957dc",
-    "test_cfg_c_producer_tail_packet.py": "c66d365239b2e80e0e4a1c0f4983a45817e044df315ddeec72666e7c50a78cdc"
-  },
-  "synthetic_tests": 7,
-  "device_records_tested": 0,
-  "observation_qualified": false
-}

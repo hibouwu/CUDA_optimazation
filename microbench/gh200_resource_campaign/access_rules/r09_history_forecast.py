@@ -65,12 +65,12 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
     out.mkdir(parents=True,exist_ok=False)
-    archive=base/'20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3'
+    archive=base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3'
     sources=[archive/'series-replay.json',archive/'mirror-replay.json']
-    old_series=base/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-history-series.json'
+    old_series=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-history-series.json'
     provenance={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [*sources,old_series]}
     availability_sources=[]
-    for run in ('20261010-R09-history-series','20261010-R09-mirror-history'):
+    for run in ('Q09-frequency/R07-R09-inkernel-clock/20261010-R09-history-series','Q09-frequency/R07-R09-inkernel-clock/20261010-R09-mirror-history'):
         source=base/run/'source/probes/r18.cu';manifest=base/run/'source_hashes.json'
         digest=hashlib.sha256(source.read_bytes()).hexdigest()
         if json.loads(manifest.read_text())['source/probes/r18.cu']!=digest:

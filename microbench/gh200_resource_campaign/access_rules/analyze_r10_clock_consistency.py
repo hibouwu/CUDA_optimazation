@@ -18,10 +18,10 @@ def analyze(root,output):
     def read(path):
         inputs[str(path.resolve())]=hashlib.sha256(path.read_bytes()).hexdigest()
         return json.loads(path.read_text())
-    old_path=root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json'
+    old_path=root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json'
     old=read(old_path)
     data={};checks=0
-    for run_name in ('20261010-R10-raster-pitch','20261010-R10-source-pressure'):
+    for run_name in ('Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch','Q03-source-service/R10-layout-cache/20261010-R10-source-pressure'):
         run=root/run_name
         rows=read(run/'cases.json')
         setups={v['case']:v['setup'] for v in read(run/'static_setup.json')}

@@ -39,8 +39,8 @@ def analyze(root, output):
         inputs[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
         return json.loads(path.read_text())
 
-    data = root / '20261010-R10-producer-delay'
-    accepted_path = root / '20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json'
+    data = root / 'Q03-source-service/R10-layout-cache/20261010-R10-producer-delay'
+    accepted_path = root / 'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json'
     accepted = read_json(accepted_path)
     if inputs[str(accepted_path)] != ACCEPTED_REPORT_SHA:
         raise ValueError('accepted producer-delay report changed')

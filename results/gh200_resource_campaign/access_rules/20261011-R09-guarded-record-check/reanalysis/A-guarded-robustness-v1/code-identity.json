@@ -1,8 +1,0 @@
-{
-  "base_commit": "2f3c10621038ccc76b320ec887d2b963f271d68e",
-  "source": "microbench/gh200_resource_campaign/access_rules/r09_guarded_clock_robustness.py",
-  "source_sha256": "c70120e059a65ec200a413cf3943c199a0a3c8b75b622bd6693608cd26bdc7b6",
-  "tests": 88,
-  "status": "Committed A-only pure math helper/tests and R09 original experiment update",
-  "commit": "37b10506f88ba5a22e5c01e47d0b9c233f503d7c"
-}

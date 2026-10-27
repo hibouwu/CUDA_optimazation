@@ -116,7 +116,7 @@ def constant_rate_slack(windows):
 
 
 def stage_endpoint_contract(base,out):
-    root = base/'20261010-R09-R13-R18-failure-controls'
+    root = base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
     common.verify(root)
     processes,provenance = [],{}
     for row in read(root/'cases.json'):
@@ -259,7 +259,7 @@ def history_splits(report):
 
 def conditional_controls(base, report):
     """Frozen r2 transfer diagnostics on the other GPU, never validation."""
-    cal = read(base/'20261009-V09-freeze-job738972-r2/frozen/calibration.json')
+    cal = read(base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/calibration.json')
     root = Path(report['run'])
     rows = {r['id']:r for r in read(root/'cases.json')}
     setups = {s['case']:s['setup'] for s in read(root/'static_setup.json')}
@@ -301,7 +301,7 @@ def archived_v09(base, provenance):
     consumes the prior replay's derived component errors rather than rerunning
     the complete shared V09 analyzer or refitting any model.
     """
-    root = base/'20261009-V09-heldout-job739011'
+    root = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     path = root/'reanalysis/failure-decomposition-v1/A-clock-failure.json'
     data = read(path)
     provenance[str(path)] = sha(path)
@@ -363,20 +363,20 @@ def main():
         stage_endpoint_contract(base,out)
         return
     provenance = {}
-    common_report = r09.common_history_diagnostics(base/'20261010-R09-common-history',out)
-    controls = r09.control_diagnostics(base/'20261010-R09-R13-R18-failure-controls',out)
+    common_report = r09.common_history_diagnostics(base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-common-history',out)
+    controls = r09.control_diagnostics(base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls',out)
     for report in (common_report,controls):
         root = Path(report['run'])
         for path,digest in report['input_sha256'].items():
             provenance[str(root/path)] = digest
-    series = replay_histories(base/'20261010-R09-history-series',provenance)
-    mirror = replay_histories(base/'20261010-R09-mirror-history',provenance)
+    series = replay_histories(base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-history-series',provenance)
+    mirror = replay_histories(base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-mirror-history',provenance)
     floors = history_floors(common_report,series,mirror)
     splits = history_splits(series)+history_splits(mirror)
     transferred = conditional_controls(base,controls)
     v09 = archived_v09(base,provenance)
     # Existing phase-clock evidence keeps its original endpoint support.
-    stage_path = base/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-stage-clock.json'
+    stage_path = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-stage-clock.json'
     stages = read(stage_path)
     provenance[str(stage_path)] = sha(stage_path)
     for p in stages['processes']:
@@ -384,7 +384,7 @@ def main():
         if sha(path)!=p['source_sha256']:
             raise ValueError('stage evidence raw identity changed')
         provenance[str(path)] = p['source_sha256']
-    cal_path = base/'20261009-V09-freeze-job738972-r2/frozen/calibration.json'
+    cal_path = base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/calibration.json'
     provenance[str(cal_path)] = sha(cal_path)
     result = dict(scope='R09 time-input contract development; no parameter fit, GPU work, or new heldout score.',
         analysis_sha256=sha(Path(__file__)),source_work='Unchanged frozen-r2 static_clock_work: nominal Q/S over all 132 SMs; B owns future revisions.',

@@ -39,7 +39,7 @@ def main():
     parser.add_argument('--base',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args();base=args.base.resolve()
-    root=base/'20261010-R09-R13-R18-failure-controls'
+    root=base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
     processes=[];provenance={}
     for row in json.loads((root/'cases.json').read_text()):
         if row['id'] not in ('r13_stage_k4096_s4','r13_stage_k4096_s6'):continue
@@ -50,7 +50,7 @@ def main():
             processes.append(dict(case=row['id'],trial=rec['trial'],stage=row.get('stages',6),
                                   evidence='development repeated stage process',**audit(observed['ctas'])))
             provenance[str(root/rec['raw'])]=rec['raw_sha256']
-    smoke=base/'20261011-R09-prefix-host-check-r5/returned'
+    smoke=base/'Q09-frequency/R07-R09-inkernel-clock/20261011-R09-prefix-host-check-r5/returned'
     raw=smoke/'dual.jsonl.gz'
     observed=replay_historical_smoke(smoke,'dual')
     digest=observed['raw_sha256']

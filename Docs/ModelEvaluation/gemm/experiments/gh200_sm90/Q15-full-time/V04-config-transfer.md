@@ -87,7 +87,7 @@ e = 预测/实测 − 1。“cycle e”是冻结的 C 与关键 CTA 实测 cycle
 
 结构项全部预测正确：22 个点的轮数、每个 CTA 的 tile 数分布、关键 CTA 个数，以及 cfg_a/cfg_c 中由 cluster 补齐造成的多一轮（a pad_crosses_wave 实际 132 个 tile、补齐后 144；c pad_crosses_wave 实际 130、补齐后 140）都与预测一致，10 个进程之间也相同。
 
-![预测、误差拆分与频率](../../../../../../results/gh200_resource_campaign/access_rules/20261007-v04-transfer/plots/v04_transfer.png)
+![预测、误差拆分与频率](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261007-v04-transfer/plots/v04_transfer.png)
 
 ## 误差归因
 
@@ -140,7 +140,7 @@ e = 预测/实测 − 1。“cycle e”是冻结的 C 与关键 CTA 实测 cycle
 
 ## 数据与复现
 
-- 结果目录：[20261007-v04-transfer](../../../../../../results/gh200_resource_campaign/access_rules/20261007-v04-transfer/)，包括 [cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/20261007-v04-transfer/cases.csv)、[summary.json](../../../../../../results/gh200_resource_campaign/access_rules/20261007-v04-transfer/summary.json)、[图](../../../../../../results/gh200_resource_campaign/access_rules/20261007-v04-transfer/plots/v04_transfer.png)、`samples/<case>/main-NN/`（原始 stdout，含每个 CTA 的打点，gzip 压缩）、`samples.jsonl`、`build/`（编译命令、ptxas 日志、SASS、`sass_check.json`、`resources.json`、二进制哈希）、`source/`（探针、覆盖头文件、冻结预测副本、预测器、分析器）、`environment.json`、`nvidia-smi-*.txt`、`build.sh`、`sample.sh`，以及作业输出 `build.out`、`sample.out`。
+- 结果目录：[20261007-v04-transfer](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261007-v04-transfer/)，包括 [cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261007-v04-transfer/cases.csv)、[summary.json](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261007-v04-transfer/summary.json)、[图](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261007-v04-transfer/plots/v04_transfer.png)、`samples/<case>/main-NN/`（原始 stdout，含每个 CTA 的打点，gzip 压缩）、`samples.jsonl`、`build/`（编译命令、ptxas 日志、SASS、`sass_check.json`、`resources.json`、二进制哈希）、`source/`（探针、覆盖头文件、冻结预测副本、预测器、分析器）、`environment.json`、`nvidia-smi-*.txt`、`build.sh`、`sample.sh`，以及作业输出 `build.out`、`sample.out`。
 - 代码：[v04_predict.py](../../../../../../microbench/gh200_resource_campaign/access_rules/v04_predict.py)、[v04_run.py](../../../../../../microbench/gh200_resource_campaign/access_rules/v04_run.py)、[v04_analyze.py](../../../../../../microbench/gh200_resource_campaign/access_rules/v04_analyze.py)、[probes/v04_probe.cu](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/v04_probe.cu)（由 v02_probe.cu 改写，用 `-DV04_CFG=0/1/2` 选择配置）。冻结预测：[configs/v04-predictions.json](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/v04-predictions.json)。
 
 ```bash

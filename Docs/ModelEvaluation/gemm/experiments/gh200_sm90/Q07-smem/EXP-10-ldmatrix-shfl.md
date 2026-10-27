@@ -34,3 +34,7 @@
 ## 数据
 
 [samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s10-main-execution/runtime-r2/analysis-v2/samples.csv)、[parameters.json](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s10-main-execution/runtime-r2/analysis-v2/parameters.json)、[shfl 图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s10-main-execution/runtime-r2/analysis-v2/shuffle.png)。原始 run：`implementation/s10-main-execution/runtime-r2/`。
+
+## a044 复测（2026-10-23～26）
+
+220 次调用全部通过原审计，22 个条件稳定，新旧中位数逐位相同。见[矩阵搬运与 warp 交换报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-matrix-exchange-report.md)。

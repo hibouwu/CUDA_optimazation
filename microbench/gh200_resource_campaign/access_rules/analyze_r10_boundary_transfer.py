@@ -17,7 +17,7 @@ def analyze(root,output):
     def sha(path):
         value=hashlib.sha256(path.read_bytes()).hexdigest();inputs[str(path.resolve())]=value;return value
     def read(path):sha(path);return json.loads(path.read_text())
-    old=root/'20261007-R10-job735876-v4';new=root/'20261010-R10-raster-pitch'
+    old=root/'Q03-source-service/R10-layout-cache/20261007-R10-job735876-v4';new=root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch'
     accepted_path=new/'reanalysis/B-20261011-request-work-audit-v3/B-request-work-audit.json'
     accepted=read(accepted_path)
     if inputs[str(accepted_path)]!='63d701d1f4b12d33a1389ad76257d58748bdf3917bb9169d84daacfa6f704842':

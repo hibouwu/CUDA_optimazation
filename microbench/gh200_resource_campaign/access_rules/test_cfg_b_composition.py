@@ -34,6 +34,10 @@ class ProgramTests(unittest.TestCase):
         self.assertEqual(nodes['g4.release'], ['j0.wait0'])
         self.assertIn('g0.compute_complete', nodes['g1.wait1'])
         self.assertIn('g4.compute_complete', nodes['j0.wait0'])
+        self.assertEqual(nodes['g0.full_query'], ['j0.math_permit'])
+        self.assertEqual(nodes['g1.full_query'], ['g0.commit'])
+        self.assertEqual(nodes['g2.full_query'], ['g0.release'])
+        self.assertEqual(nodes['g2.consumer_wait'], ['g2.full_ready', 'g2.full_query'])
         self.assertEqual(graph['observations'][0]['nodes'],
             ['g0.consumer_wait', 'j0.main_end', 'j0.epilogue_permit', 'j0.store_tail'])
 
@@ -83,7 +87,7 @@ class FrozenCompositionTests(unittest.TestCase):
         from pathlib import Path
         import cfg_b_predict
         base = Path('results/gh200_resource_campaign/access_rules')
-        for run in ('20261015-cfg-b-time-heldout-001', '20261015-cfg-b-time-heldout-002'):
+        for run in ('Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-001', 'Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002'):
             root = base/run
             with self.subTest(run=run):
                 result = cfg_b_predict.predict_cases(

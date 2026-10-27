@@ -25,8 +25,8 @@ def verify(base, result_root, output):
     attribution=read(result_root/'attribution-v1/attribution.json')
     prices=read(result_root/'form1-v2/parameters.json')
     report=read(result_root/'form1-v2/comparison.json')
-    calibration=read(base/'20261009-V09-freeze-job738972-r2/frozen/calibration.json')
-    frozen=read(base/'20261009-V09-freeze-job738972-r2/frozen/predictions.json')['predictions']
+    calibration=read(base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/calibration.json')
+    frozen=read(base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/predictions.json')['predictions']
     checkpoint=result_root/'checkpoint-v1/README.md'
     assert sha(checkpoint)==report['checkpoint_sha256']==prices['checkpoint_sha256']
     for artifact in (attribution,report):
@@ -122,7 +122,7 @@ def verify(base, result_root, output):
     independent=[f for f in features if f['shape']!=[6144,8192]]
     assert len(independent)==33 and all(f['spill_fraction']==0 for f in independent)
     ends=[]
-    for run in ('20261009-R09-input-clock-calibration-job738376','20261009-R09-equal-work-job738459'):
+    for run in ('Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376','Q09-frequency/R07-R09-inkernel-clock/20261009-R09-equal-work-job738459'):
         for row in read(base/run/'cases.json'):
             unique=2*row['k']*(row['m']+row['n'])
             if unique>capacity:

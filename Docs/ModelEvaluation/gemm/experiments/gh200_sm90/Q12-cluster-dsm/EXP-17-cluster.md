@@ -45,3 +45,7 @@
 ## 数据
 
 [results.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s17-main-execution/actual-report-v1/results.csv)、[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s17-main-execution/actual-report-v1/samples.csv)、[单 cluster 图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s17-main-execution/actual-report-v1/one_cluster.png)。脚本：[families/s17](../../../../../../microbench/gh200_resource_campaign/families/s17/README.md)。
+
+## a044 复测（2026-10-23～26）
+
+a044（GPU-7473147b，管理员设置 1980 MHz）尚未复测本家族：它属于后 6 个资源家族，需要先解决节点输出空间与回传带宽问题。剩余排期见[重测说明](../Q10-time-mapping/A044-REMEASUREMENT.md)。

@@ -5,6 +5,7 @@ import unittest
 import cfg_b_composition as aggregate
 import cfg_b_program
 import cfg_b_request_model as model
+from test_cfg_b_request_model import without_full_query_report
 
 
 class SmProgramTests(unittest.TestCase):
@@ -18,10 +19,14 @@ class SmProgramTests(unittest.TestCase):
         self.assertEqual(actual,expected)
 
     def test_six_programs_preserve_previous_complete_results(self):
-        source = aggregate.DEFAULT_ARCHIVE.parent/'20261017-L1-01-replay-001/source'
+        source = aggregate.DEFAULT_ARCHIVE.parents[2]/'Q13-l1-lsu/L1-01-minimal/20261017-L1-01-replay-001/source'
         spec = importlib.util.spec_from_file_location('l1_stage_request_model',source/'cfg_b_request_model.py')
         prior = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(prior)
+        graph_spec = importlib.util.spec_from_file_location('l1_stage_program',source/'cfg_b_program.py')
+        prior_program = importlib.util.module_from_spec(graph_spec)
+        graph_spec.loader.exec_module(prior_program)
+        prior.cfg_b_program = prior_program
         parameters = dict(service_ns=2.,read_latency_ns=10.,compute_ns=7.,commit_lead_ns=2.,
             output_latency_ns=19.,epilogue_prepare_ns=3.,epilogue_write_ns=4.)
         for ktiles in (4,13,32):
@@ -32,7 +37,8 @@ class SmProgramTests(unittest.TestCase):
                         dict(grid=[4,1,1],stages=stages))
                     kwargs = dict(producer_prefix_ns=50.,detailed_ctas=range(4))
                     baseline = model.simulate(program,parameters,**kwargs)
-                    self.assertEqual(baseline,prior.simulate(program,parameters,**kwargs))
+                    self.assertEqual(without_full_query_report(baseline),
+                                     without_full_query_report(prior.simulate(program,parameters,**kwargs)))
                     reported = model.simulate(program,parameters,sm_activity=True,**kwargs)
                     capacity = reported['modules'].pop('sm_activity')['capacity']
                     self.assertEqual(capacity['capacity_ctas_per_sm'],1)

@@ -4,6 +4,61 @@ import unittest
 
 from output_model import cfg_a_rank_dependencies, cfg_a_output_source_guarantees, cfg_a_empty_arrival_routes, cfg_a_empty_reuse_interval, dependency_bounds, dependency_order
 from analyze_r18 import rank_dependency_anchors, validate_rank_setup
+from supply_model import shared_stage_events
+
+
+class OutputCopyMaskTests(unittest.TestCase):
+    def parameters(self, **changes):
+        result=dict(service_ns=4.,read_latency_ns=7.,compute_ns=10.,
+            output_latency_ns=9.,output_weight=2.,epilogue_prepare_ns=2.,
+            epilogue_write_ns=3.,epilogue_control_ns=1.,epilogue_tail_ns=5.,
+            trace_requests=True,local_epilogue_exclusion='both')
+        result.update(changes)
+        return result
+
+    def test_default_and_all_enabled_are_identical(self):
+        baseline=shared_stage_events(8,4,3,**self.parameters())
+        for mask in (None,[True]*3):
+            with self.subTest(mask=mask):
+                actual=shared_stage_events(8,4,3,output_tma_enabled=mask,**self.parameters())
+                self.assertEqual(actual,baseline)
+
+    def test_disabling_instant_copies_preserves_all_sts_and_control_times(self):
+        parameters=self.parameters(service_ns=0.,output_latency_ns=0.)
+        baseline=shared_stage_events(8,4,3,**parameters)
+        masked=shared_stage_events(8,4,3,output_tma_enabled=[True,False,False],**parameters)
+        self.assertEqual(masked['ctas'],baseline['ctas'])
+        self.assertEqual(masked['local_epilogue_intervals'],baseline['local_epilogue_intervals'])
+        self.assertEqual(masked['makespan_ns'],baseline['makespan_ns'])
+
+    def test_only_cta_zero_copies_charge_server_and_notify_observer(self):
+        observed=[]
+        result=shared_stage_events(8,4,3,output_tma_enabled=[True,False,False],
+            output_source_observer=lambda t,c,j:observed.append((t,c,j)),**self.parameters())
+        copies=[r for r in result['requests'] if r['kind']=='store']
+        self.assertEqual(len(copies),16)
+        self.assertEqual({r['cta'] for r in copies},{0})
+        self.assertEqual({r['index'] for r in copies},set(range(16)))
+        self.assertEqual(sorted(observed),sorted((r['ready_ns'],0,r['index']) for r in copies))
+        self.assertEqual(result['request_count'],len(result['requests']))
+        self.assertEqual(result['request_count'],3*2*8*3+16)
+        self.assertEqual(result['shared_busy_ns'],
+                         sum(r['service_end_ns']-r['start_ns'] for r in result['requests']))
+        self.assertEqual(result['shared_busy_ns']-result['source_busy_ns'],16*4.)
+        self.assertEqual(result['output_tma_enabled'],[True,False,False])
+        for actor in result['ctas'][1:]:
+            for output in actor['outputs']:
+                begin=output['begin']
+                self.assertEqual(output['prepare_begin'],[begin]+[begin+5+6*j for j in range(7)])
+                self.assertEqual(output['write_begin'],[begin+2]+[begin+8+6*j for j in range(7)])
+                self.assertEqual(output['submitted'],[begin+8+6*j for j in range(7)]+[begin+48])
+                self.assertEqual(output['source_done'],output['submitted'])
+                self.assertEqual(output['end'],begin+53)
+
+    def test_mask_shape_and_boolean_values_match_ctas(self):
+        for mask in ([True],[True,False,1]):
+            with self.subTest(mask=mask),self.assertRaisesRegex(ValueError,'one boolean per CTA'):
+                shared_stage_events(8,4,3,output_tma_enabled=mask,**self.parameters())
 
 
 class RankDependencyTests(unittest.TestCase):

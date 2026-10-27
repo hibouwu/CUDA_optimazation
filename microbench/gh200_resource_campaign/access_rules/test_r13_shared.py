@@ -7,6 +7,65 @@ from supply_model import admission_stage_events, shared_stage_events
 
 
 class SharedStageTests(unittest.TestCase):
+    def test_sync_issue_return_only_delays_producer_successors(self):
+        import copy
+
+        results={}
+        for mode in ('legacy_no_return','late_ready_immediate_return','same_ready_delayed_return'):
+            def source(t,cta,index,atom,weight):
+                served=dict(source_id=index*3+atom,source_key=(cta,index,atom),merged=False,
+                    source_ready=100.,source_busy_ns=0.,service_start=t,service_end=t)
+                if mode!='legacy_no_return':
+                    returned=10. if mode=='same_ready_delayed_return' and index==0 and atom==0 else \
+                        20. if mode=='same_ready_delayed_return' and index==0 and atom==2 else t
+                    served['issue_return_ns']=returned
+                return served
+
+            results[mode]=shared_stage_events(2,2,1,output_counts=[1],trace_requests=True,
+                input_source_service=source,**self.parameters(destination_service_ns=0.))
+
+        legacy=results['legacy_no_return'];immediate=results['late_ready_immediate_return']
+        delayed=results['same_ready_delayed_return']
+        stripped=copy.deepcopy(immediate)
+        for collection in ('input_demands','deliveries'):
+            for row in stripped[collection]:row.pop('issue_return_ns',None)
+        self.assertEqual(stripped,legacy)
+        for collection in ('input_demands','deliveries'):
+            self.assertTrue(all('issue_return_ns' not in row for row in legacy[collection]))
+        self.assertEqual(legacy['ctas'][0]['issued_a'],[0.,5.])
+        self.assertEqual(legacy['ctas'][0]['issued_b0'],[1.,6.])
+        self.assertEqual(legacy['ctas'][0]['issued_b1'],[2.,7.])
+        self.assertEqual(delayed['ctas'][0]['issued_a'],[0.,23.])
+        self.assertEqual(delayed['ctas'][0]['issued_b0'],[11.,24.])
+        self.assertEqual(delayed['ctas'][0]['issued_b1'],[12.,25.])
+        self.assertEqual(delayed['ctas'][0]['issued_b'][0],12.)
+        b1=next(row for row in delayed['input_demands'] if row['index']==0 and row['kind']=='issue_b1')
+        self.assertEqual(b1['issue_return_ns'],20.)
+        self.assertEqual([row['source_ready_ns'] for row in delayed['input_demands']],
+                         [row['source_ready_ns'] for row in legacy['input_demands']])
+        self.assertEqual([row['ready_ns'] for row in delayed['deliveries']],
+                         [row['ready_ns'] for row in legacy['deliveries']])
+        self.assertEqual(delayed['ctas'][0]['ready'],[100.,100.])
+        self.synthetic_issue_return_check=dict(
+            cases={mode:dict(issued_a=result['ctas'][0]['issued_a'],
+                issued_b0=result['ctas'][0]['issued_b0'],issued_b1=result['ctas'][0]['issued_b1'],
+                issued_b=result['ctas'][0]['issued_b'],ready=result['ctas'][0]['ready'],
+                delivery_ready=[row['ready_ns'] for row in result['deliveries']])
+                for mode,result in results.items()},default_fields_preserved=True,
+            immediate_return_matches_legacy_after_optional_metadata_removal=True,
+            first_A_delayed_return_ns=10.,first_B1_delayed_return_ns=20.,
+            issued_b_is_issue_time_not_return=True,source_and_destination_ready_preserved=True)
+
+    def test_output_completion_lag_prices_completed_minus_service_frontier(self):
+        phases = [dict(compute_ns=256.,commit_lead_ns=128.,completion_lag_ns=47.5),
+                  dict(compute_ns=512.,commit_lead_ns=256.),
+                  dict(compute_ns=128.,commit_lead_ns=64.,completion_lag_ns=23.75)]
+        result = shared_stage_events(4,4,2,output_counts=[3,2],compute_phases_ns=phases,
+            **self.parameters(completion_lag_ns=8.))
+        for actor in result['ctas']:
+            for i,(completed,frontier) in enumerate(zip(actor['completed'],actor['service_frontier'])):
+                self.assertEqual(completed-frontier,(47.5,8.,23.75)[i//4])
+
     def test_local_exclusion_preserves_work_and_blocks_only_its_own_intervals(self):
         params=self.parameters(epilogue_prepare_ns=71.,epilogue_write_ns=83.,
             service_ns=0.,read_latency_ns=31.,output_latency_ns=43.)

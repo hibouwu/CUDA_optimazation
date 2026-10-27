@@ -43,7 +43,7 @@ def audit(base, root):
         assert sha(folder/name)==result['cpu_binary_sha256']
         assert sha(folder/f'{name}.sass')==result['cpu_sass_sha256']
         assert result['native_gemm_instruction_sequence_equal'] and result['resource_identity_equal']
-    frozen=base/'20261009-V09-freeze-job738972-r2/frozen'
+    frozen=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen'
     assert sha(frozen/'predictions.json')==config['baseline_frozen_prediction_sha256']
     assert sha(frozen/'manifest.json')==config['baseline_frozen_manifest_sha256']
     ledger=[json.loads(line) for line in (root/'process-ledger.jsonl').read_text().splitlines()]

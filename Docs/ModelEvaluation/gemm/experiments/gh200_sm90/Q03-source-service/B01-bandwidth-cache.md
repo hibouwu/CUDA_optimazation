@@ -42,7 +42,7 @@ SMEM读区和写区独立，写入值不依赖读值；每lane每轮8次16 B读�
 
 大工作集TMA每CTA128线程、thread0发起，8192个不同16 KiB槽，一轮遍历`8192×16384=134,217,728 B`，超过62,914,560 B的L2。每次仅一个请求在途；输入等mbarrier acquire，输出commit后wait_group0，两者再CTA会合。输入保存最后代际全部8192半字；输出保存全部67,108,864半字，每次启动改变输出代际，避免旧暖机写入冒充正式完成。短检查用3槽识别代际，正式工作量经SASS循环/请求核对。
 
-这些是新编译帧的条件服务；不能和另一张卡的旧S15小源相除，导出纯缓存惩罚或物理HBM带宽。[微基准归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-B01-job737122-v4/)、[独立规则](../../../../../../results/gh200_resource_campaign/access_rules/20261008-B01-job737122-v4/reanalysis/local-independent/rules.json)。v2的SASS检查误把UTMACMDFLUSH计成tensor请求；v3的8-warp启动缺少64 KiB SMEM opt-in；均保留为诊断，不进入正式表。
+这些是新编译帧的条件服务；不能和另一张卡的旧S15小源相除，导出纯缓存惩罚或物理HBM带宽。[微基准归档](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/B01-bandwidth-cache/20261008-B01-job737122-v4/)、[独立规则](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/B01-bandwidth-cache/20261008-B01-job737122-v4/reanalysis/local-independent/rules.json)。v2的SASS检查误把UTMACMDFLUSH计成tensor请求；v3的8-warp启动缺少64 KiB SMEM opt-in；均保留为诊断，不进入正式表。
 
 ## CUTLASS缓存准备的四条件
 
@@ -55,9 +55,9 @@ cfg_a、4096×4096×2048、同一二进制、cluster2×1、6 stage；1024个物�
 
 40个进程的163,840个抽样输出值全部正确，CV为0.40–0.98%。两种swizzle没有呈现统一的大幅“冷缓存惩罚”，负差也保留。有效工作为`2×4096×4096×2048=68,719,476,736 FLOP`，swizzle1重复输入对应约667.13 TFLOP/s；未把驱逐写入计为GEMM FLOP或放进GEMM计时分母。
 
-[缓存准备归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-B01-cache-job737122-v1/)、[独立核对](../../../../../../results/gh200_resource_campaign/access_rules/20261008-B01-cache-job737122-v1/reanalysis/local-independent/rules.json)。工作集大小和请求量不证明实际缓存命中或物理流量。
+[缓存准备归档](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/B01-bandwidth-cache/20261008-B01-cache-job737122-v1/)、[独立核对](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/B01-bandwidth-cache/20261008-B01-cache-job737122-v1/reanalysis/local-independent/rules.json)。工作集大小和请求量不证明实际缓存命中或物理流量。
 
-![新增带宽与缓存条件](../../../../../../results/gh200_resource_campaign/access_rules/20261008-B01-job737122-v4/reanalysis/local-independent/b01-services.png)
+![新增带宽与缓存条件](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/B01-bandwidth-cache/20261008-B01-job737122-v4/reanalysis/local-independent/b01-services.png)
 
 误差条为进程标准差；前两图为单CTA请求B/SM-cycle，右图为完整GEMM微秒，不互相换算。
 

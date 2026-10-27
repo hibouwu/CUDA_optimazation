@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SUITE = Path('results/gh200_resource_campaign/20261001-resource-suite-v2')
 S14 = SUITE / 'parallel/tma_cluster/analysis/s14-formal-733392-qualified'
 S16 = SUITE / 'implementation/s16-main-execution/published-v1'
-R05 = Path('results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2')
+R05 = Path('results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-formal-v2')
 
 
 def load_conditions():

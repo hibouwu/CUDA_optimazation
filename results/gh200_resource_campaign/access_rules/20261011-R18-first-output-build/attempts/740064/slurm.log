@@ -1,2 +1,0 @@
-JOB=740064 NODE=romeo-a057 RUN_TMP=/tmp/gh200-r18-first-build-ZqspBV34
-srun: error: romeo-a057: task 0: Exited with exit code 2

@@ -19,8 +19,8 @@
 
 | 冻结轮次 | 受支持条件 | 中位 / 最大绝对相对误差 | 判定与权威评分 |
 |---|---:|---:|---|
-| v1，741915 | 50（另 10 个诊断） | 4.55% / 34.82% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout/score.json)、[冻结说明](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-freeze) |
-| v2，742266 | 47（另 19 个诊断） | 0.44% / 11.60% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout-v2/score.json)、[冻结与结果](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-v2-result) |
+| v1，741915 | 50（另 10 个诊断） | 4.55% / 34.82% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout/score.json)、[冻结说明](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-freeze) |
+| v2，742266 | 47（另 19 个诊断） | 0.44% / 11.60% | 未通过；[原始评分](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout-v2/score.json)、[冻结与结果](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-holdout-v2-result) |
 
 v1 的随机反例用于 v2 开发，v2 使用新的条件与 seed。v2 唯一超标为 8 B、1 warp、独立读的 random 布局：预测 242445、实测 217250 cycle。46/47 小于 10% 不改变整组判定；8 warp 独立读写的 19 条件 ≤1.83% 也不授予完整机制资格。
 
@@ -37,12 +37,12 @@ v1 的随机反例用于 v2 开发，v2 使用新的条件与 seed。v2 唯一�
 | 任务 | 结果 | 证据 |
 |---|---|---|
 | 第一轮 | 740708 的目标 LDS 被移出循环，失败保留；740961 开发得到宽广播反例，未冻结 | [R03 作业索引](../../../experiments/gh200_sm90/Q07-smem/R03-access-demand.md#m11-current) |
-| 后续离线，GPU 0 | 全 warp max 形式满足相对门槛，但绝对周期和留布局诊断失败；非负加性形式相对门槛失败；两种形式均无候选 | [离线报告与预声明](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md) |
-| lane 排列开发 741153 | 48 条件×3 进程有效，20/20 桥接通过；14 对中 12 对不相容，两对 4 B 负对照相容。无候选，不执行条件留出 | [报告](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md) |
+| 后续离线，GPU 0 | 全 warp max 形式满足相对门槛，但绝对周期和留布局诊断失败；非负加性形式相对门槛失败；两种形式均无候选 | [离线报告与预声明](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-demand-offline-v1/README.md) |
+| lane 排列开发 741153 | 48 条件×3 进程有效，20/20 桥接通过；14 对中 12 对不相容，两对 4 B 负对照相容。无候选，不执行条件留出 | [报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/README.md) |
 
 ## 历史：原任务的测量和验证要求
 
-第一轮修订后的截止为 2026-10-12 巴黎时间 18:00，累计上限 3 个提交，失败 740708 计入。历史实际使用 2 次；新的 lane 对照按[单独的测量安排](#measurement-20261012)计数，不能混用预算。旧启动、失败和授权记录保留在[原记录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-parallel-bounded-preparation/smem-amendment-20261012.json)。两项任务都已结束。
+第一轮修订后的截止为 2026-10-12 巴黎时间 18:00，累计上限 3 个提交，失败 740708 计入。历史实际使用 2 次；新的 lane 对照按[单独的测量安排](#measurement-20261012)计数，不能混用预算。旧启动、失败和授权记录保留在[原记录](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-parallel-bounded-preparation/smem-amendment-20261012.json)。两项任务都已结束。
 
 - CPU 上先用 CUDA 12.9.41 检查最终 SASS：循环内目标 LDS/STS 的数量、宽度、依赖、计时消费者和资源须正确，无 spill；正确性在计时外检查，同址写不得引入未定义竞争。
 - 校准和留出用同一 GPU UUID、同一协议，记录实际 SMID。原 stride 和广播数值只作条件对照，不能当跨卡常数。
@@ -57,15 +57,15 @@ v1 的随机反例用于 v2 开发，v2 使用新的条件与 seed。v2 唯一�
 
 ## 2026-10-12 lane 对照与条件留出：已结束
 
-开发安排为原 GPU-009a8880 / romeo-a048、与 740961 相同二进制和协议，48 条件×3 进程；完整 warp 的 bank 地址集合与返回字节不变，只改变重复地址在 lane 子组内／跨组的排列，含 4 B 负对照和依赖控制。[原 48 条件提案](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/minimal-measurement-plan.json)
+开发安排为原 GPU-009a8880 / romeo-a048、与 740961 相同二进制和协议，48 条件×3 进程；完整 warp 的 bank 地址集合与返回字节不变，只改变重复地址在 lane 子组内／跨组的排列，含 4 B 负对照和依赖控制。[原 48 条件提案](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-demand-offline-v1/minimal-measurement-plan.json)
 
 预算为开发 1 次、满足原相对／绝对周期联合门槛时独立留出最多 1 次。留出须在同一 GPU UUID 上，先冻结模型、参数、协议、指标、全部新布局及预测和 SHA，覆盖新的部分广播布局与受支持真实 CUTLASS 序列；范围外 STSM 如实列缺口。旧 66 条未测条件按声明范围处理，不能冒充已完成验证。正常采样故障原可恢复一次，其余超预算需另经批准。
 
-实际 741153 用时 1 分 35 秒，48/144 有效、20/20 桥接通过、全部 SMID 124，失败和恢复为 0；14 对中 12 对反证共同标量描述。无合格候选、不冻结、不提交条件留出。已用提交 1/2；剩余条件留出预算不转为开发。旧方案、原门槛和失败记录只读，本轮不扩展矩阵、多 CTA、跨卡或下一机制，也不自动开始 V10。[执行记录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)
+实际 741153 用时 1 分 35 秒，48/144 有效、20/20 桥接通过、全部 SMID 124，失败和恢复为 0；14 对中 12 对反证共同标量描述。无合格候选、不冻结、不提交条件留出。已用提交 1/2；剩余条件留出预算不转为开发。旧方案、原门槛和失败记录只读，本轮不扩展矩阵、多 CTA、跨卡或下一机制，也不自动开始 V10。[执行记录](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)
 
 ## 历史：首次冻结前的离线推导
 
-原模型已经按访问宽度划分 128 B lane 子组，并在组内统计冲突。8 B 密集对照连原子组需求都相同，时间仍差 47.381%；16 B 密集对照相差 84.640%。重新使用原子组冲突数不会解决这两个反例。[原模型](../../../../../../microbench/gh200_resource_campaign/access_rules/r03_lds_sts_model.py)与[密集布局反例](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)可直接复核。
+原模型已经按访问宽度划分 128 B lane 子组，并在组内统计冲突。8 B 密集对照连原子组需求都相同，时间仍差 47.381%；16 B 密集对照相差 84.640%。重新使用原子组冲突数不会解决这两个反例。[原模型](../../../../../../microbench/gh200_resource_campaign/access_rules/r03_lds_sts_model.py)与[密集布局反例](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)可直接复核。
 
 新的假设须明确每一阶段包含哪些 lane 和字、广播如何合并，再给上述反例写出静态预测。若仍把两点算成相同需求，就停止该形式，不先拟合。依赖控制也须解释；时间比例不能唯一确定内部 wavefront 或端口数。
 

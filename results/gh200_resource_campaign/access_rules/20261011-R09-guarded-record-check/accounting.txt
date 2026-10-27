@@ -1,3 +1,0 @@
-740071|COMPLETED|00:00:04|billing=4,cpu=4,gres/gpu=1,mem=16G,node=1
-740071.extern|COMPLETED|00:00:04|billing=4,cpu=4,gres/gpu=1,mem=16G,node=1
-740071.0|COMPLETED|00:00:03|cpu=4,gres/gpu=1,mem=16G,node=1

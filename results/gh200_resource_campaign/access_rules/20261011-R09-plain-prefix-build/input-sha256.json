@@ -1,8 +1,0 @@
-{
-  "input.tar.gz": "faeb76bb490ddaf9bf8e7e622093463fba28bce6158b0622a7a04d41df6a6215",
-  "microbench/gh200_resource_campaign/access_rules/probes/r18.cu": "931fe7beb6b05defed8a7f22e1ce1a8ff679ab7d788ede54e94fa4925c86484d",
-  "microbench/gh200_resource_campaign/access_rules/probes/r09_plain_prefix.cu": "3fb8b6e1a50a2467e6d00b3f9adcffea242b30302c95bdd4431ea96d7fcb2fc0",
-  "microbench/gh200_resource_campaign/access_rules/probes/r09_plain_prefix.h": "c92b3b798339580ba126fa6fa56191831f9944d1c4220ff519191f63446c9cab",
-  "microbench/gh200_resource_campaign/access_rules/probes/gaps_common.hpp": "39de1941f270594d1575869bb39526303d67f601a04b0ab5e7de6ecb6e41ffa5",
-  "microbench/gh200_resource_campaign/access_rules/probes/r00_common.hpp": "8b1a6fff063d33606ea139cbe0923d8a74a1c0c5dc17fe9802f0d35d7a603c5c"
-}

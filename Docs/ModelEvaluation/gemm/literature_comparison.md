@@ -40,7 +40,7 @@ p 区分首个和后续输出 tile。q 为 cfg_a/b/c 的 512/512/1024 cycle/Ktil
 
 **结构差距就在这条 L 公式里：** TMA 发出、目的槽就绪、WGMMA commit/wait、槽释放和不同请求之间的仲裁，在正式 V09 路径中还没有全部逐事件展开。部分影响被吸收进 b、θ 和预填权重。因而改变 stage、布局或背景 CTA 后，即使数学工作量不变，原价格也可能不再适用。
 
-2026-10-13 用当前代码和原冻结参数重放 29 个受支持条件，plain 时间、频率以及关键 CTA 集合与冻结结果完全一致。原拒绝条件保持拒绝；未重跑支持性线性规划，也未重拟合或采样。由原评分逐行重算：绝对相对误差**中位 4.11%、均值 6.00%、最大 35.46%**。均值是补算值，不能把原先的中位数称为 MAPE。[V09 原始评分](../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/score.json)保持不变。
+2026-10-13 用当前代码和原冻结参数重放 29 个受支持条件，plain 时间、频率以及关键 CTA 集合与冻结结果完全一致。原拒绝条件保持拒绝；未重跑支持性线性规划，也未重拟合或采样。由原评分逐行重算：绝对相对误差**中位 4.11%、均值 6.00%、最大 35.46%**。均值是补算值，不能把原先的中位数称为 MAPE。[V09 原始评分](../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/score.json)保持不变。
 
 ## 最接近的论文与可直接借鉴的部分
 
@@ -54,7 +54,7 @@ p 区分首个和后续输出 tile。q 为 cfg_a/b/c 的 512/512/1024 cycle/Ktil
 
 还要区分论文和本地代码快照。[归档接口](../references/repositories/tilesight/tilesight/modeling/program/contract.py)已有 `Actor`、`Carry`、`BufferSlots` 的 acquire/release，以及 alias/ring 存储组；[分析入口](../references/repositories/tilesight/tilesight/modeling/program/analysis.py)已有 resource/recurrence/credit II 和完成事件输出。**不能把论文的短公式当作该源码全部能力的上限，也不能把源码新增能力自动视为已被论文实验验证。**
 
-我们已在 C1-01 的 480 个条件×8 个候选上运行公开 TileSight（commit 75428c4，H200 microbench profile，只把 HBM 带宽与 L2 容量改为 GH200 规格），[预测与映射说明](../../../results/gh200_resource_campaign/access_rules/20261013-C1-baselines/tilesight/README.md)。它不能表达 pingpong，stage 6/4/3 的预测相同，cluster 只进入派发顺序与多播近似；这些预测尚未与实测比较。
+我们已在 C1-01 的 480 个条件×8 个候选上运行公开 TileSight（commit 75428c4，H200 microbench profile，只把 HBM 带宽与 L2 容量改为 GH200 规格），[预测与映射说明](../../../results/gh200_resource_campaign/access_rules/Q16-config-selection/C1-01-selection/20261013-C1-baselines/tilesight/README.md)。它不能表达 pingpong，stage 6/4/3 的预测相同，cluster 只进入派发顺序与多播近似；这些预测尚未与实测比较。
 
 最短借鉴路径是复用其程序描述、缓存访问身份和结果接口，保留本仓库自己的 GH200 服务条件与拒绝规则。对“固定已编译 kernel 的预测”，还必须保留实际 issue 顺序；若求解器可以自由选择最好的合法排序，得到的可能是优化方案或理想包络，而非这个既定实现的运行时间。
 

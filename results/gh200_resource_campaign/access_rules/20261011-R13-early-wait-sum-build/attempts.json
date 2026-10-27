@@ -1,6 +1,0 @@
-{
-  "attempt1": "Preparation stopped before editing active header because the initial consumer-struct anchor was not unique. Partial source preserved at run root.",
-  "prepare2": "CPU-only job740238 CUDA12.9 failed: separate overlay and host-local v06_trace definitions. Original logs and return archive retained.",
-  "local_compile": "CUDA13 default GCC16 unsupported; GCC15 installed without cc1plus. Neither binary compiled; no unsupported compiler override used.",
-  "prepare3": "CPU-only CUDA12.9 job740240 completed both stage4/6 binaries; canonical trace header fixed duplicate definition. No GPU allocated or executed."
-}

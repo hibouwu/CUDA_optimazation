@@ -64,8 +64,12 @@
 |---|---:|---:|---:|---:|
 | 整卡完整窗口 ns | 950714 | 1314624 | 966899 | 898909 |
 
-144 B 比 128 B 慢 38%。行距 160 B（行起点 32 B 对齐）和 256 B 都不慢，所以本页 padding 写回下降的原因是 144 B 行距只按 16 B 对齐，而不是行间有空隙。[R05 B/C/D/E 报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/report.md)。
+144 B 比 128 B 慢 38%。行距 160 B（行起点 32 B 对齐）和 256 B 都不慢，所以本页 padding 写回下降的原因是 144 B 行距只按 16 B 对齐，而不是行间有空隙。[R05 B/C/D/E 报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-formal-v2/report.md)。
 
 ## 数据
 
 [results.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/results.csv)（68 点）、[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/samples.csv)、[条件参数](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/qualified-parameters.json)、[单 CTA 图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/one_cta.png)。
+
+## a044 复测（2026-10-23～26）
+
+首块作业 780806 计划 292 次调用，运行 9 分钟后节点 `/tmp` 写满，未能回传。管理员移出的副本中有 152 次完整调用，都是 validate-only 数值短检查；2026-10-26 在集群上逐包核验：归档 SHA、全部成员 SHA 与 receipt 一致（压缩 9.55 GB，原始 37.9 GB）。原数值 oracle 尚未在这些数据上运行，计时条件尚未采集。第 153 次调用中断，只留下 1.55 GB 不完整的裸数组。见[存储中断记录](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/storage-incident-20261023/README.md)。

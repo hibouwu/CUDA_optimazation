@@ -17,9 +17,9 @@ import sys
 
 
 BASE = Path("gh200_resource_campaign/access_rules")
-V1 = BASE / "20261012-m11-holdout"
-V2 = BASE / "20261012-m11-holdout-v2"
-LANE = BASE / "20261012-m11-lane-contrast/run-20261012T110219Z"
+V1 = BASE / "Q07-smem/m11-lds-sts/20261012-m11-holdout"
+V2 = BASE / "Q07-smem/m11-lds-sts/20261012-m11-holdout-v2"
+LANE = BASE / "Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z"
 GPU = "GPU-009a8880-f309-a55d-d256-748fb9adad74"
 MANIFEST_SHA = {
     1: "f117c1d2c356e34091f59b24e0c65916ad24cf7a702997a846751880d1c0aa20",

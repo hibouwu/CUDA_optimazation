@@ -46,7 +46,7 @@ class AdoptionChecks(unittest.TestCase):
 
 class FirstResidualChecks(unittest.TestCase):
     def setUp(self):
-        root=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2'
+        root=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
         if not root.exists():
             self.skipTest('local frozen V09 archive required')
         self.calibration=json.loads((root/'frozen/calibration.json').read_text())

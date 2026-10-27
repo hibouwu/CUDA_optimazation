@@ -17,17 +17,17 @@
 
 ## 实际复核
 
-原始归档只读，CPU重算和检查输出在[本轮验收目录](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/)。
+原始归档只读，CPU重算和检查输出在[本轮验收目录](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/)。
 
-- 8个新交付归档共4651份源文件身份和9个二进制哈希匹配；[identity-check.json](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/identity-check.json)记录具体输入。
+- 8个新交付归档共4651份源文件身份和9个二进制哈希匹配；[identity-check.json](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/identity-check.json)记录具体输入。
 - R01逐值复核196个进程/402080输出，R06为51个进程/21914496输出；包括短检查与控制。其他组也在新输出目录完整重算，原始报告未覆盖。
-- 另按问题定义重算工作和时钟包络，不调用runner工作量函数；[独立计量记录](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/independent-work-time-check.json)区分目标、控制、短检查与失效旧A。
-- [R01/R06回边检查](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/R01-R06-loop-check.json)确认22个specialization目标在迭代循环内；[R03回边检查](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/R03-loop-check.json)确认6核每迭代确有8条目标访存。
+- 另按问题定义重算工作和时钟包络，不调用runner工作量函数；[独立计量记录](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/independent-work-time-check.json)区分目标、控制、短检查与失效旧A。
+- [R01/R06回边检查](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/R01-R06-loop-check.json)确认22个specialization目标在迭代循环内；[R03回边检查](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/R03-loop-check.json)确认6核每迭代确有8条目标访存。
 - R04两版本复用LDS部分的8核全SASS相同，但这种相同不能证明原动态计量正确。原数据与复用证据保留，新增CFG结果使该部分暂停使用。
 
 ## R04阻断证据与修复范围
 
-受审源为`20261006-A-job735062/r04-formal-v3/build/r04.sass`，完整SHA和片段见[动态计量发现](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/R04-dynamic-work-findings.txt)。
+受审源为`20261006-A-job735062/r04-formal-v3/build/r04.sass`，完整SHA和片段见[动态计量发现](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/R04-dynamic-work-findings.txt)。
 
 | 函数 | 机器码事实 | 对声明工作量的影响 |
 |---|---|---|
@@ -42,7 +42,7 @@ C7520来自divergent-path的compiler WG.AR；V01另有C7517用于安全寄存器
 
 ## R00非阻断修复与条件匹配
 
-[独立B审查](../../../../../../results/gh200_resource_campaign/access_rules/acceptance-20261006/R00-independent-B.md)接受30点。主对话已修复公开分析器的容差分支变量覆盖，并以容差内非逐字节相等的合成输出回归检查count和工作率；原R00数据未触发该分支，无需重测。
+[独立B审查](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/R00-independent-B.md)接受30点。主对话已修复公开分析器的容差分支变量覆盖，并以容差内非逐字节相等的合成输出回归检查count和工作率；原R00数据未触发该分支，无需重测。
 
 R00缓存点原来是逐case打乱，并非相邻配对，故不作严格配对因果推断。公开入口今后保持同尺寸/精度缓存准备点相邻，原样本不改写。
 

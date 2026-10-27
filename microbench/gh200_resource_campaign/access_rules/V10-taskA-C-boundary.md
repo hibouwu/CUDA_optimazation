@@ -22,7 +22,7 @@ R18 738707 的 cfg_a 仅有 M832×N4096，738865 的 cfg_c 仅有 M1536×N2624�
 
 交付目录：
 
-`/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-V10-taskA/C-boundary-v1`
+`/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-V10-taskA/C-boundary-v1`
 
 - `interface-contract.json`：拟合前声明。
 - `model-snapshot/`、`model-snapshot.json`：6 个公共模块的只读副本和 SHA。
@@ -38,8 +38,8 @@ R18 738707 的 cfg_a 仅有 M832×N4096，738865 的 cfg_c 仅有 M1536×N2624�
 重放时输出目录须尚不存在：
 
 ```sh
-python3 -B /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-V10-taskA/C-boundary-v1/analyze_r18_v10_cluster_residual.py \
-  --bundle /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-V10-taskA/C-boundary-v1 \
+python3 -B /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-V10-taskA/C-boundary-v1/analyze_r18_v10_cluster_residual.py \
+  --bundle /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-V10-taskA/C-boundary-v1 \
   --output /tmp/C-boundary-taskA-replay-new
 ```
 

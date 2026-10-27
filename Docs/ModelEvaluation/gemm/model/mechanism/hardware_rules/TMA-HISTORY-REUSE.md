@@ -13,7 +13,7 @@
 | EXP-16 / S16 | 16 | 160 | 同上；输入另保留 2 个 S4R4 容量拒绝条件，不计入有效条件 |
 | 合计 | 62 | 620 | 只统计这三个家族的输入方向，不包含 R05/R12/R13，也不代表一个可混合拟合的数据集 |
 
-S15/S16 的算术重算实际覆盖两方向共 100 个有效条件、1000 个 samples.csv 行；发布文件及审查链接共 13 项 SHA 检查通过。S14 是发布摘要间核对。具体路径与检查范围见 [本次核对结果](../../../../../../results/gh200_resource_campaign/access_rules/20261013-tma-history-reuse/audit.json)。samples.csv 重算不等于原始二进制数据重验。
+S15/S16 的算术重算实际覆盖两方向共 100 个有效条件、1000 个 samples.csv 行；发布文件及审查链接共 13 项 SHA 检查通过。S14 是发布摘要间核对。具体路径与检查范围见 [本次核对结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-history-reuse/audit.json)。samples.csv 重算不等于原始二进制数据重验。
 
 S15/S16 的原 CSV 保留 `qualified=false`，不能仅据此否定后续发布，也不能直接改成 true。S15 由 [发布桥接](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/publication-bridge.json)绑定合格参数；S16 由 [最终状态](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/publication-final-state.json)绑定独立桥接审查与 32 个两方向条件。它们的资格均为限定条件下的运输服务，不是物理 HBM 带宽、内部队列深度或通用机制资格。
 

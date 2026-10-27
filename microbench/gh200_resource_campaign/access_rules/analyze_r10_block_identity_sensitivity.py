@@ -30,7 +30,7 @@ def analyze(root, output):
         inputs[str(path)] = value
         return value
 
-    previous = root / '20261010-R10-producer-delay/reanalysis/B-20261011-paired-estimands-v1'
+    previous = root / 'Q03-source-service/R10-layout-cache/20261010-R10-producer-delay/reanalysis/B-20261011-paired-estimands-v1'
     report_path = previous / 'B-paired-estimands.json'
     if sha(report_path) != '5acf156511a9a77b05cf23840a654e2e7704a4d48d498121db681a23fead27ed':
         raise ValueError('accepted joint-estimand report changed')

@@ -12,8 +12,8 @@ from analyze_r18 import replay
 from supply_model import cfg_a_source_bindings,cfg_c_source_bindings,cfg_c_source_port_graph
 
 
-RUNS=('20261009-R13-R15-R18-composition-job738496',
-    '20261009-R18-first-fill-job738865','20261009-V09-heldout-job739011')
+RUNS=('Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496',
+    'Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738865','Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011')
 
 
 def analyze(root,c_model_path,output):
@@ -33,7 +33,7 @@ def analyze(root,c_model_path,output):
     sha(c_model_path)
     spec=importlib.util.spec_from_file_location('cfg_c_C_local_output',c_model_path)
     c_model=importlib.util.module_from_spec(spec);spec.loader.exec_module(c_model)
-    old_binding_path=root/'20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v3/B-cfg-a-source-bindings.json.gz'
+    old_binding_path=root/'Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v3/B-cfg-a-source-bindings.json.gz'
     sha(old_binding_path)
     previous=json.loads(gzip.open(old_binding_path,'rt').read());current=[]
     for old in previous:

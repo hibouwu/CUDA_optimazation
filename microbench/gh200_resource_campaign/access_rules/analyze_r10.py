@@ -607,7 +607,7 @@ def raster_pitch_diagnostics(root, output):
             windows=len(features[0]),feature_sha256=[hashlib.sha256(json.dumps(f,sort_keys=True).encode()).hexdigest() for f in features],
             interpretation='Coordinate sequences differ, but the current seven-column service input and per-CTA counts are identical. '
                 'Refitting these same fields cannot distinguish the observed order response at this pitch.')
-    references={};previous=root.parent/'20261010-R13-stage-events'
+    references={};previous=root.parents[2]/'Q02-tma-request/R13-async-retirement/20261010-R13-stage-events'
     for row in rows.values():
         if row['set']!='reference':continue
         series={}
@@ -792,14 +792,14 @@ def source_organization_diagnostics(root, output):
         scope='Match mi, A/B peer counts, ordinal, active count and prior logical-wave membership exactly. '
             'B panel identities/addresses and future work differ. This tests count-only source rules, not arbitrary address/history rules.')
 
-    old_base=root.parent/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1'
+    old_base=root.parents[2]/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1'
     old_path=old_base/'B-summary.json';old=read(old_path)
     old_csv=old_base/'B-paired-windows.csv';old_positions=list(csv.DictReader(old_csv.open()))
     historical=[]
     for folder,names in [
-        ('20261009-R10-b-coverage-job738203',('cfg_b_bcurve_p32','cfg_b_bcurve_p64')),
-        ('20261009-V09-heldout-job739011',('v09d_cfg_b_G5_B32','v09d_cfg_b_G5_B80','v09d_cfg_b_G5_B112'))]:
-        run=root.parent/folder;rows={r['id']:r for r in read(run/'cases.json')}
+        ('Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203',('cfg_b_bcurve_p32','cfg_b_bcurve_p64')),
+        ('Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011',('v09d_cfg_b_G5_B32','v09d_cfg_b_G5_B80','v09d_cfg_b_G5_B112'))]:
+        run=root.parents[2]/folder;rows={r['id']:r for r in read(run/'cases.json')}
         setups={r['case']:r['setup'] for r in read(run/'static_setup.json')}
         for name in names:
             row,setup=rows[name],setups[name]
@@ -955,7 +955,7 @@ def source_pressure_diagnostics(root, output):
     differences={label:{key:span(r[key] for r in interaction if r['comparison']==label) for key in interaction[0] if key not in ('comparison','trial')}
                  for label in sorted({r['comparison'] for r in interaction})}
     references={}
-    previous=root.parent/'20261010-R10-raster-pitch'
+    previous=root.parents[2]/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch'
     if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
         raise ValueError('same-card reference identity changed')
     for row in rows.values():
@@ -1240,10 +1240,10 @@ def shared_source_window_diagnostics(root, output):
         [[Fraction(x) for x in row] for row in region['exact_constraints']])})
     inputs=[];hashes={};gpu=None
     for folder,pairs in [
-        ('20261010-R10-raster-pitch',[('739571 AlongM','r10_raster_along_m_p0','r10_raster_along_m_p32'),
+        ('Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch',[('739571 AlongM','r10_raster_along_m_p0','r10_raster_along_m_p32'),
                                      ('739571 AlongN','r10_raster_along_n_p0','r10_raster_along_n_p32')]),
-        ('20261010-R10-source-pressure',[('739585 persistent132','r10_source_persistent132_p0','r10_source_persistent132_p32')])]:
-        run=root.parent/folder
+        ('Q03-source-service/R10-layout-cache/20261010-R10-source-pressure',[('739585 persistent132','r10_source_persistent132_p0','r10_source_persistent132_p32')])]:
+        run=root.parents[2]/folder
         rows={r['id']:r for r in json.loads((run/'cases.json').read_text())}
         setups={r['case']:r['setup'] for r in json.loads((run/'static_setup.json').read_text())}
         for cohort,base_name,variant_name in pairs:
@@ -1645,7 +1645,7 @@ def base_shift_diagnostics(root, output):
         interactions.append(dict(cta=cta,j=j,T=first['T'],mi=first['mi'],ni=first['ni'],
             **{field:span(r[field] for r in values) for field in fields if field in first}))
     references={}
-    previous=root.parent/'20261010-R10-source-pressure'
+    previous=root.parents[2]/'Q03-source-service/R10-layout-cache/20261010-R10-source-pressure'
     if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
         raise ValueError('base-shift reference is on another GPU')
     for row in rows.values():
@@ -1933,7 +1933,7 @@ def work_swap_diagnostics(root, output):
     address_summary=dict(virtual_origins=sorted({p['address_metadata']['b_buffer_ptr'] for p in processes}),
         per_trial=address_origins,same_origin_trials=[r['trial'] for r in address_origins if len(set(r['origins'].values()))==1],
         distinct_CTA_to_SM_maps=len({tuple((r['cta'],r['sm']) for r in p['cta_sm']) for p in processes}))
-    references={};previous=root.parent/'20261010-R10-base-shift'
+    references={};previous=root.parents[2]/'Q03-source-service/R10-layout-cache/20261010-R10-base-shift'
     if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
         raise ValueError('work-swap references are on another card')
     for row in rows.values():
@@ -2153,7 +2153,7 @@ def producer_delay_diagnostics(root, output):
                 **{k+'_delta':b[k]-a[k] for k in ('P0_ns','end_to_prod_ns','S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns','P0_cycles','S_cycles','S_plus_L_cycles','entry_to_MAIN_END_cycles')}))
         values=[p for p in gate_processes if p['pitch_bytes']==pitch]
         gate_summaries.append(dict(pitch_bytes=pitch,**{k:span(p[k] for p in values) for k in values[0] if k not in ('trial','pitch_bytes')}))
-    references={};previous=root.parent/'20261010-R10-work-swap'
+    references={};previous=root.parents[2]/'Q01-scheduling/work-placement/20261010-R10-work-swap'
     if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
         raise ValueError('producer-delay reference changed card')
     for row in rows.values():

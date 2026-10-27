@@ -48,7 +48,7 @@ V07 递推，加三处：末 tile epilogue 单独取值；补齐 tile 主循环�
 
 ## 冻结
 
-[`v08-predictions.json`](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/frozen/v08-predictions.json)：SHA256 `4c850ffe0c4f35725b41d2caaa24d87cbb252d49c251f65f410ca94aff83688c`，冻结 2026-10-08 12:01:54（巴黎），只读；首个留出进程晚 8.8 s。冻结文件绑定 summary、cases、setup、二进制清单和拟合代码哈希。拟合代码在校准数据出来后加入了补齐 tile 比值和列数边界形式，均只用校准数据，且在冻结前完成。
+[`v08-predictions.json`](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08-job737322-v1/frozen/v08-predictions.json)：SHA256 `4c850ffe0c4f35725b41d2caaa24d87cbb252d49c251f65f410ca94aff83688c`，冻结 2026-10-08 12:01:54（巴黎），只读；首个留出进程晚 8.8 s。冻结文件绑定 summary、cases、setup、二进制清单和拟合代码哈希。拟合代码在校准数据出来后加入了补齐 tile 比值和列数边界形式，均只用校准数据，且在冻结前完成。
 
 ## 留出结果
 
@@ -107,7 +107,7 @@ e = 预测 / plain 实测 − 1；周期误差对 stamped 最大 CTA；频率误
 
 ## 后续对照：三种机制分开（同一作业）
 
-V08 留出评分后，在同一张卡上加测 84 个条件（每个 plain/stamped/ends 各 10 进程），只用于解释，不回填 V08 判定。[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)。2026-10-08 起，这些机制证据按维护位置放在对应 R 页：
+V08 留出评分后，在同一张卡上加测 84 个条件（每个 plain/stamped/ends 各 10 进程），只用于解释，不回填 V08 判定。[结果](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)。2026-10-08 起，这些机制证据按维护位置放在对应 R 页：
 
 - **行距与 K/N 尺寸尾部。** 尺寸尾部本身和 D 行距几乎无影响；A、B 行距不是 128 B 倍数时 cfg_b 明显变慢，cfg_a 次之，cfg_c 不变。逐项表见 [R10](../Q03-source-service/R10-layout-cache.md#v08-stride)。
 - **每 SM 操作数供给。** 需求为 48、64、32 B/cycle/SM 时，未对齐行距和大足迹都降低可交付供给，cfg_b 最先受限；无计数器时不能把放大倍数与供给上限分开定值。见 [R13](../Q02-tma-request/R13-async-retirement.md#v08-supply)。
@@ -122,13 +122,13 @@ V08 留出评分后，在同一张卡上加测 84 个条件（每个 plain/stamp
 
 ## 数据与复现
 
-[结果目录](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/)：`cases.json`、`static_setup.json`、`samples/`、`derived/summary.json`、`derived/calibration.json`、`frozen/`、`reanalysis/validation-v1/validation.json`、`logs/`、`source/`（采样用源码快照）、`source-fit/`（冻结时的拟合代码）。代码：`run_v08.py`、`v08_model.py`、`v08_fit.py`、`analyze_v08.py`；探针 `probes/r18.cu` 加 `-DV08_ENDS`。
+[结果目录](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08-job737322-v1/)：`cases.json`、`static_setup.json`、`samples/`、`derived/summary.json`、`derived/calibration.json`、`frozen/`、`reanalysis/validation-v1/validation.json`、`logs/`、`source/`（采样用源码快照）、`source-fit/`（冻结时的拟合代码）。代码：`run_v08.py`、`v08_model.py`、`v08_fit.py`、`analyze_v08.py`；探针 `probes/r18.cu` 加 `-DV08_ENDS`。
 
 ```bash
-RUN=results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1
+RUN=results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08-job737322-v1
 python3 $RUN/source-fit/v08_fit.py summarize --run $RUN      # 校准、对照汇总（重写 derived/summary.json，应与冻结时的 summary_sha256 一致）
 python3 $RUN/source-fit/v08_fit.py fit --run $RUN            # 校准拟合与留一选择
 python3 $RUN/source-fit/analyze_v08.py --run $RUN --predictions $RUN/frozen/v08-predictions.json --output <新目录>
 ```
 
-后续对照：[`20261008-V08F-job737322-v1`](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/)，入口 `run_v08_followup.py prepare`，节点上用 `run_v08.py setup / sample --set ctrl`，分析 `analyze_v08_followup.py --run <目录> --output <新目录>`。
+后续对照：[`20261008-V08F-job737322-v1`](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/)，入口 `run_v08_followup.py prepare`，节点上用 `run_v08.py setup / sample --set ctrl`，分析 `analyze_v08_followup.py --run <目录> --output <新目录>`。

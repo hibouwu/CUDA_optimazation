@@ -49,7 +49,7 @@ def analyze(root,c_model_path,output):
         return digest
     def read(path):
         sha(path);return json.loads(path.read_text())
-    base=root/'20261009-R13-R15-R18-composition-job738496/reanalysis'
+    base=root/'Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis'
     previous=base/'B-20261011-cfg-c-source-ports-v1'
     prior=read(previous/'B-cfg-c-source-ports.json')
     rechecked=0

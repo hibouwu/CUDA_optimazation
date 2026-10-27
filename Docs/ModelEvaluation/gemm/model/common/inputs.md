@@ -21,19 +21,22 @@
 | `alloc_lda`、`alloc_ldb` | 分配行距 | 元素 | `lda`、`ldb`；不小于物理行距 | 实测 |
 | `b_offset_bytes`、`b_allocation_extra_bytes` | B 基址偏移与额外分配 | 字节 | 0、0；16 B 对齐，偏移不超过额外分配 | 半经验（供给）、实测 |
 
-精度、布局与 α/β 由构建固定：FP16 输入、FP32 累加与输出，α=1、β=0，A 行主序（K-major），B 行主序（N-major）；计算定义见[问题定义](../../problem.md)。
+普通构建的精度、布局与 α/β 固定为：FP16 输入、FP32 累加与输出，α=1、β=0，A 行主序（K-major），B 行主序（N-major）；计算定义见[问题定义](../../problem.md)。
 
 ## 2. 程序
 
 | 字段 | 含义 | 缺省／推导与约束 | 读取方 |
 |---|---|---|---|
 | `config` | probe 配置：cfg_a、cfg_b、cfg_c、cfg_a1、cfg_c1，对应编译宏 V06_CFG=0–4 | 必填 | 半经验、机制、实测 |
-| `stages` | 主循环 stage 数 | cfg_a、cfg_a1、cfg_b 为 6，cfg_c、cfg_c1 为 4；显式值对应 `R18_STAGE_COUNT` 构建，须与 setup 一致 | 半经验、机制、实测 |
+| `stages` | 构建中分配的主循环 stage 数 | cfg_a、cfg_a1、cfg_b 为 6，cfg_c、cfg_c1 为 4；显式值对应 `R18_STAGE_COUNT` 构建，须与 setup 一致 | 半经验、机制、实测 |
 | `swizzle` | 调度器 max_swizzle_size | 1；只允许 1、8 | 半经验、机制 |
 | `raster_order` | 调度的光栅方向 | heuristic；另有 along_m、along_n | 半经验、机制 |
 | `sm_count` | 请求的调度 SM 数 | 0 表示全部；模型读取 setup 的 `scheduler_sm_count` | 实测 |
 | setup：`grid`、`tile`、`cluster`、`epilogue_tile`、`threads`、`smem`、`smem_epilogue`、`max_active_ctas_per_sm`、`scheduler_sm_count`、`gpu_uuid` | `--mode setup` 的构建查询结果，解析后传给读取方 | 以 setup 为准 | 半经验、机制 |
 | setup：`requested_sm_count` | setup 回显的请求 SM 数，用于核对 case 的 `sm_count` | 须与 case 一致 | 实测 |
+| setup：`active_stages`、`wgmma_repeats`、`epilogue_alpha` | 同一 S6 二进制的活动槽数、同一 commit 内的 WGMMA 遍数及输出缩放 | [746824](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/README.md)回显活动 4／6 槽、1／3 遍及 α=1／FP32(1/3)；普通构建缺省为 `stages`、1、1 | 机制程序图、请求级组合、实测 |
+| setup：`fold_a_source`、`store_target_ctas` | 正式调用的 A 源折叠开关与执行 global 输出 TMA 的 CTA 阈值 | 缺省为 0、全部 CTA；[等值源实验](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-004/README.md)的 G3 S6 dyadic 分支将 A 的 m17–21 改为 m0–4，输出阈值为1。本地STS与提交／等待保留 | 机制程序图、请求级组合、实测 |
+| setup：`private_source`、`allocated_a_elements`、`allocated_b_elements` | 正式调用的逐CTA等值A/B副本开关，以及每份完整分配的元素数 | 开关缺省0；每CTA源偏移为CTA编号×每份元素数×2 B，未回显元素数时按存储行数与分配行距推导；[实际副本实验](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-private-source-001/README.md) | 机制程序图、请求级组合、实测 |
 | 构建身份 | 二进制与 SASS 哈希、编译命令、CUDA 与 CUTLASS 版本 | 构建记录：`binary_hashes.json`、`sass_hashes.json`、`commands.json` | 实测 |
 | 变体 | plain、wide、stamped、dual 的编译选项与观察端点 | 由任务声明 | 实测 |
 
@@ -60,8 +63,10 @@
 |---|---|---|
 | `mode` | 运行模式；`warm` 为测量，`setup` 为构建查询 | warm |
 | `warmup_policy` | adaptive：最多 30 次预热，至少 8 次后最后 5 次的 CV ≤2% 即停，否则报错；common-sw1-16：固定 16 次 swizzle 1 预热；fixed-count：按声明次数预热 | adaptive |
-| `warmup_fixed_calls` | fixed-count实验构建的预热调用次数，单位为次；当前30–33；[构建与协议](../../../../../results/gh200_resource_campaign/access_rules/20261015-d226-fixed-history-discrimination-001/README.md)读取 | fixed-count为30 |
+| `warmup_fixed_calls` | fixed-count实验构建的预热调用次数，单位为次；当前30–33；[构建与协议](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-candidates/20261015-d226-fixed-history-discrimination-001/README.md)读取 | fixed-count为30 |
 | `history_mode`、`history_source`、`mirror_target_slot` | 调用历史观察（R09 用） | off、original、0 |
+| setup：`warmup_fold_a_source`、`warmup_store_ctas` | 源折叠实验前缀调用使用的程序分支，与正式调用共用源状态 | 0、全部 CTA；调用数由组合协议 `calls` 给出，最后一次为正式调用 |
+| setup：`warmup_private_source` | 前缀调用使用原源或逐CTA副本 | 缺省与正式`private_source`相同；最后一次为正式调用 |
 | `evict` | 每次调用前在计时窗口外运行驱逐 kernel | 0 |
 | 计时窗口 | cudaEvent 只包住一次 `Gemm::run`；驱逐、trace 清零与同步在窗口外；预热后测一次 | probe 固定 |
 | 进程与重复 | 每个 case 的 plain、dual 进程数与顺序随机化 | 任务声明，例如 V09 各 10 个进程，C1-01见[当前采样协议](../../experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md#恢复前要定的事) |
@@ -74,7 +79,7 @@
 
 | 字段 | 含义 |
 |---|---|
-| `id`、`set`、`kind`、`group`、`cond`、`candidate`、`original_experiment`、`purpose` | case 身份、开发／留出集合、类别、选配置分组、C1 候选名与来源说明 |
+| `id`、`set`、`kind`、`group`、`cond`、`candidate`、`original_experiment`、`original_reference`、`purpose` | case 身份、开发／留出集合、类别、选配置分组、C1 候选名与来源说明 |
 | 预测要求 | 由任务冻结：输出理想时间、plain 完整时间、dual 包络、有效频率或事件；C1 候选集合；支持域与拒绝规则 |
 
 ## 8. 历史注记
@@ -90,7 +95,7 @@
 | 规格基线 | `m`、`n`、`k` 与规格配置名 |
 | 半经验 V09 | `config`、`m`、`n`、`k`、`lda`、`ldb`、`swizzle`、`raster_order`、`input_mode`、`zero_m`、`zero_n`、`input_map_m`、`input_map_n`、`storage_n`、`b_offset_bytes`、`stages`，以及 setup 的 `grid`、`stages`；卡身份 `gpu_uuid` 优先取 setup，缺失时取同一 run 目录下 `environment.json` 的 GPU UUID，两处都没有则输入不齐备 |
 | C1-01 模型 | `m`、`n`、`k`、`input_mode`、`config`、`stages` |
-| 机制程序图 | `config`、`m`、`n`、`k`、`swizzle`、`raster_order`、`stages`，以及 setup 的 `grid`、`stages` |
+| 机制程序图 | `config`、`m`、`n`、`k`、`swizzle`、`raster_order`、`stages`，以及 setup 的 `grid`、`stages`；同版计算量干预另读 setup 的 `active_stages`、`wgmma_repeats`、`epilogue_alpha` |
 | 实测 | 全部字段与身份 |
 
 ## 检查

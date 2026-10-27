@@ -24,7 +24,7 @@ class AblationUnits(unittest.TestCase):
         self.assertAlmostEqual(predicted['plain_us'],3+cycles/2000)
 
     def test_shared_clock_features_match_frozen_v09(self):
-        root=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2'
+        root=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
         if not root.exists():self.skipTest('local V09 archive required')
         cal=ablation.read(root/'frozen/calibration.json');frozen=ablation.read(root/'frozen/predictions.json')['predictions']
         setups={s['case']:s['setup'] for s in ablation.read(root/'static_setup.json')}

@@ -608,7 +608,7 @@ def failure_diagnostics(base, output, calls_factory):
     from analyze_r13_sm import select_attempts
 
     base, output = Path(base), Path(output)
-    training_path = base/'20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json'
+    training_path = base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json'
     training = clock.read_json(training_path)
     points = training['points']['all21_training']
     if len(points) != 21 or any(p['k'] != 1024 for p in points):
@@ -619,12 +619,12 @@ def failure_diagnostics(base, output, calls_factory):
         return {name: failure_stats(source_frequency(p, p['observed_window_us'], model)['frequency_ghz']/p['observed_ghz']-1
                                    for p in points) for name, model in [('original', full), ('without_source', reduced)]}
     fit_comparison = dict(training=compare(points, training['model']))
-    equal_path = base/'20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/equal-work-clock.json'
+    equal_path = base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/equal-work-clock.json'
     equal = clock.read_json(equal_path)['clock_cases']
     fit_comparison['equal_work_K4096'] = compare([p for p in equal if p['k'] == 4096], training['model'])
     fit_comparison['equal_work_by_config'] = {cfg: compare([p for p in equal if p['k'] == 4096 and p['config'] == cfg], training['model'])
                                             for cfg in ('cfg_a','cfg_b','cfg_c')}
-    root = base/'20261009-V09-heldout-job739011'
+    root = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     processes, plain, numeric, frozen_cases = [], {}, {}, {}
     for call in calls_factory(base):
         row, setup, rec = call['row'], call['setup'], call['record']
@@ -1027,7 +1027,7 @@ def common_history_diagnostics(root, output):
             a,b = records['adaptive',sw,trial],records['common-sw1-16',sw,trial]
             policy_pairs.append(dict(swizzle=sw,trial=trial,
                 **{key+'_common_over_adaptive':b[key]/a[key]-1 for key in fields}))
-    reference_path = root.parent/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json'
+    reference_path = root.parents[2]/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json'
     reference = clock.read_json(reference_path)
     inputs[str(reference_path)] = clock.sha256(reference_path)
     reference_keys = dict(frequency_ghz='frequency_change',max_cta_cycles='max_cta_cycles_change',
@@ -1689,13 +1689,13 @@ def response_development(base, output):
     import v09_model
 
     base, output = Path(base), Path(output)
-    paths = dict(training=base/'20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json',
-        equal_work=base/'20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/equal-work-clock.json',
-        v09_calls=base/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-clock-failure.json',
-        new_controls=base/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-controls.json')
+    paths = dict(training=base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json',
+        equal_work=base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/equal-work-clock.json',
+        v09_calls=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-clock-failure.json',
+        new_controls=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-controls.json')
     data = {k:clock.read_json(p) for k,p in paths.items()}
     training = [dict(p,output_mean_kib=static_output_kib(p)) for p in data['training']['points']['all21_training']]
-    equal_root = base/'20261009-R09-equal-work-job738459'
+    equal_root = base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-equal-work-job738459'
     equal_rows = {r['id']:r for r in clock.read_json(equal_root/'cases.json')}
     cross_k = [dict(p,output_mean_kib=static_output_kib(equal_rows[p['case']]))
                for p in data['equal_work']['clock_cases'] if p['k']==4096]
@@ -1716,7 +1716,7 @@ def response_development(base, output):
         for name in ('cases.json','static_setup.json','environment.json'):
             paths[str(run/name)] = run/name
         return [dict(p,revisit_mean_kib=(features[p['case']]['unique_source_mean_KiB'] if features[p['case']] else None)) for p in points]
-    training = attach_revisit(training,base/'20261009-R09-input-clock-calibration-job738376')
+    training = attach_revisit(training,base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376')
     cross_k = attach_revisit(cross_k,equal_root)
     if any(p['revisit_mean_kib'] is None for p in training+cross_k):
         raise ValueError('U must support every original21 and added9 training point; no training rows may be silently omitted')
@@ -1755,8 +1755,8 @@ def response_development(base, output):
     datasets = dict(training21=training,crossK4096=cross_k,
                     same_card_wideK1024=[dict(p,output_mean_kib=static_output_kib(p))
                                         for p in data['training']['points']['old_cfg_ac_long']])
-    datasets['same_card_wideK1024'] = attach_revisit(datasets['same_card_wideK1024'],base/'20261009-R09-wide-input-job738197')
-    target = base/'20261009-V09-heldout-job739011'
+    datasets['same_card_wideK1024'] = attach_revisit(datasets['same_card_wideK1024'],base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-wide-input-job738197')
+    target = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     rows = {r['id']:r for r in clock.read_json(target/'cases.json')}
     setups = {s['case']:s['setup'] for s in clock.read_json(target/'static_setup.json')}
     v09points = []
@@ -1828,7 +1828,7 @@ def response_development(base, output):
                 observed_high_over_low=observed,
                 predicted_high_over_low={name:frequency(points[1],pair[1]['window_us'],model)/frequency(points[0],pair[0]['window_us'],model)
                     for name,model in models.items()}))
-    older_root = base/'20261009-R09-clock-input-job738110'
+    older_root = base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-clock-input-job738110'
     older_summary = clock.read_json(older_root/'analysis/summary.json')
     older_rows = {r['id']:r for r in clock.read_json(older_root/'cases.json')}
     older_setups = {s['case']:s['setup'] for s in clock.read_json(older_root/'static_setup.json')}
@@ -1847,7 +1847,7 @@ def response_development(base, output):
                             ('old_long',older_root,('cases.json','static_setup.json','environment.json','analysis/summary.json'))]:
         for name in names:
             paths[label+'/'+name] = root/name
-    swizzle_path = base/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json'
+    swizzle_path = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json'
     swizzle = clock.read_json(swizzle_path)
     paths['swizzle_diagnostic'] = swizzle_path
     sw_root = Path(swizzle['run'])

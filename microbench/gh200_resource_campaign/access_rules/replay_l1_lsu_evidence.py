@@ -17,8 +17,8 @@ import sys
 
 ACCESS = Path("gh200_resource_campaign/access_rules")
 SUITE = Path("gh200_resource_campaign/20261001-resource-suite-v2")
-R01 = ACCESS / "20261006-r01r06-unrolled/r01"
-HBM = ACCESS / "20261017-HBM-01-replay-001"
+R01 = ACCESS / "Q08-register-residency/R01-R06-readiness/20261006-r01r06-unrolled/r01"
+HBM = ACCESS / "Q03-source-service/HBM-01-backend/20261017-HBM-01-replay-001"
 GLOBAL = SUITE / "global_duplex/formal-b3-v1"
 S18 = SUITE / "parallel/compute_onchip/s18-integration-v2/operations-v1"
 LOCAL = S18 / "deployment/repo/results" / SUITE / "auxiliary/formal-v2"

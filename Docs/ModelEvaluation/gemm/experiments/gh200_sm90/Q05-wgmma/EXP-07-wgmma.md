@@ -39,3 +39,9 @@
 ## 数据
 
 [cases.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-wgmma-formal-v3-b-r2/cases.csv)（85 点）、[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-wgmma-formal-v3-b-r2/samples.csv)、[固定长度拟合](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-wgmma-formal-v3-b-r2/fixed_length_fits.json)、[全部图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-wgmma-formal-v3-b-r2/index.md)、[SASS 审查](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/legacy_wgmma/formal-v3-b/build/sass_audit.json)。原始 run：`legacy_wgmma/formal-v3-b`。
+
+## a044 复测（2026-10-23～26）
+
+850 次调用全部通过原审计。59 个单 CTA 条件中 58 项 FLOP/cycle 中位数逐位相同，另一项变化 −0.000000745%；23 个全 GPU 条件的 GFLOP/s 变化为 −0.307%～+4.006%，内核窗口 cycle/ns 为 1.8014～1.8308 GHz。每周期服务重现，按秒吞吐随实际时钟变化。见[WGMMA 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-wgmma-report.md)。
+
+NCU：驻留计算链执行 256 次 warpgroup WGMMA，GMMA 管线记 1,024 条 warp 指令（每组 4 个 warp）。见[计算链 NCU](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/ncu-compute-report.md)。

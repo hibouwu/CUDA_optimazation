@@ -1,5 +1,0 @@
-In file included from /usr/local/cuda-13.0/bin/../targets/x86_64-linux/include/cuda_runtime.h:82,
-                 from <command-line>:
-/usr/local/cuda-13.0/bin/../targets/x86_64-linux/include/crt/host_config.h:137:2: error: #error -- unsupported GNU version! gcc versions later than 15 are not supported! The nvcc flag '-allow-unsupported-compiler' can be used to override this version check; however, using an unsupported host compiler may cause compilation failure or incorrect run time execution. Use at your own risk.
-  137 | #error -- unsupported GNU version! gcc versions later than 15 are not supported! The nvcc flag '-allow-unsupported-compiler' can be used to override this version check; however, using an unsupported host compiler may cause compilation failure or incorrect run time execution. Use at your own risk.
-      |  ^~~~~

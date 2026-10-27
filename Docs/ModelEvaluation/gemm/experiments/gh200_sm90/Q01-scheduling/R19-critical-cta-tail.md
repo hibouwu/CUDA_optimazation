@@ -27,7 +27,7 @@ cfg_b固定128×128×64 pingpong、cluster1×1、6 stage，FP16输入、FP32累�
 
 多波4096²为32×32=1024个tile，两种swizzle都分成100个CTA做8个、32个做7个，`100×8+32×7=1024`。短K为51.008/51.120 μs，差0.22%，小于各自约1%的进程波动；没有稳定收益。长K swizzle8比1快`1−344.912/364.624=5.41%`，此时才是在相同tile数分布下比较条件服务。
 
-![完整时间、CTA时长和入口分散](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/r19-service.png)
+![完整时间、CTA时长和入口分散](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R19-critical-cta-tail/20261008-R19-job737122-v1/reanalysis/local-independent/r19-service.png)
 
 误差条为独立进程标准差。三个面板的时间边界与单位不同，不直接相减。
 
@@ -43,7 +43,7 @@ cfg_b固定128×128×64 pingpong、cluster1×1、6 stage，FP16输入、FP32累�
 
 ## 证据与复现
 
-[归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/)、[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/rules.json)、[逐进程关键CTA](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/tails.json)。四个预热失败的原始stdout和记录全部保留，分析中的`rejected_processes`说明预热未收敛的尝试为何未完成数值检查；有效慢样本未删除。
+[归档](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R19-critical-cta-tail/20261008-R19-job737122-v1/)、[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R19-critical-cta-tail/20261008-R19-job737122-v1/reanalysis/local-independent/rules.json)、[逐进程关键CTA](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R19-critical-cta-tail/20261008-R19-job737122-v1/reanalysis/local-independent/tails.json)。四个预热失败的原始stdout和记录全部保留，分析中的`rejected_processes`说明预热未收敛的尝试为何未完成数值检查；有效慢样本未删除。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/run_r19.py prepare --output <新目录> --cutlass-root <CUTLASS3.9.2>
@@ -92,11 +92,11 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r18.py --input <
 
 输出并发另见 [R15 的同调用估计及其限制](../Q06-handoff-output/R15-output-service.md#v08-输出窗口离线复核2026-10-09)，补齐路径与工作量分开见 [R18](R18-cluster-boundary.md#按轮次与-cta-工作量重算2026-10-09)。这三项事后分析没有改变模型公共接口或 V08 预测。
 
-[逐进程端点及并列集合](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/B-20261009-output-issuer-v2/critical.json)还保存每 CTA 相对入口/退出与本地周期，复核时无需从进程间中位数反推一个不存在的调用：
+[逐进程端点及并列集合](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08-job737322-v1/reanalysis/B-20261009-output-issuer-v2/critical.json)还保存每 CTA 相对入口/退出与本地周期，复核时无需从进程间中位数反推一个不存在的调用：
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-output \
-  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08-job737322-v1 \
   --output <该run下新的reanalysis目录>
 ```
 
@@ -110,7 +110,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 ## V09：入口替换不能修复关键 CTA
 
-2026-10-11的[八小时有界主线归因](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/README.md)补查cfg_a G6：十进程实际最后者全部在原36个精确并列最大者中，且预测器在选择代表前已经对全CTA时长取max，所以只换代表编号不能改变频率、包络或plain预测。实测包络比最长CTA自身窗口只多64ns，中位代表退出遗憾325.408μs不能再次作为总时间补偿。代入每进程观测C/N后，实际最后者的later L残差中位500.850μs，同工作量cohort的later L残差中位131.039μs；这是原observer的条件诊断，不是纯物理服务周期。固定后续K迭代成本与同协议时钟组合仍使cfg_a G6时间误差恶化，达到必要测量终点；未改原冻结成绩或观察/关键CTA资格。
+2026-10-11的[八小时有界主线归因](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-long-k-event-bounded/README.md)补查cfg_a G6：十进程实际最后者全部在原36个精确并列最大者中，且预测器在选择代表前已经对全CTA时长取max，所以只换代表编号不能改变频率、包络或plain预测。实测包络比最长CTA自身窗口只多64ns，中位代表退出遗憾325.408μs不能再次作为总时间补偿。代入每进程观测C/N后，实际最后者的later L残差中位500.850μs，同工作量cohort的later L残差中位131.039μs；这是原observer的条件诊断，不是纯物理服务周期。固定后续K迭代成本与同协议时钟组合仍使cfg_a G6时间误差恶化，达到必要测量终点；未改原冻结成绩或观察/关键CTA资格。
 
 分别把实际入口偏移加到冻结 CTA 内部时长上、或用实际内部时长并把所有入口设为零。两项只作诊断，不进入预测，也不扩充冻结候选。最后完成者按 `argmax(end_ns)` 的并列集合定义，最长本地窗口另按 `argmax(end_ns−entry_ns)` 和 `argmax(end_c−entry_c)` 保存。
 
@@ -125,11 +125,11 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。冻结代表 CTA 的本地时长比真正最后者短14.60%；同次执行中，代表的 sum L 中位41.008 μs，实际最后者49.200 μs，差异集中在主循环。P1 同样出现 real tile 最后完成：实际最后者的 sum L 为43.312 μs，冻结代表为38.672 μs。P2 的最后者 sum L 约182.048 μs，模型对该 CTA 低估12.712 μs；输出只低估0.496 μs。应修正局部与共享服务的条件响应，不能通过扩大并列集合或加统一入口修正掩盖问题。
 
-同形状P1 map补测在新a058卡上提供了直接干预：map960的十次最后完成者全部处理real tile，集中在CTA22/38，首tile为M坐标6，与partial的M坐标7同cluster。输入map扩到1024后，这些完整伙伴的first L配对中位缩短约4.144 μs，最后完成者不再集中在22/38；观测包络中位48.704→44.624 μs，入口分散160→128 ns。map960最后者的sum L中位42.832 μs，map1024为38.560 μs。这支持输入边界cluster影响内部排序，不能把“最后者是real”解释为边界无关，也不需要新增入口补偿。该新卡配对没有重评旧V09候选命中率。[新配对逐进程最后者](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json)。
+同形状P1 map补测在新a058卡上提供了直接干预：map960的十次最后完成者全部处理real tile，集中在CTA22/38，首tile为M坐标6，与partial的M坐标7同cluster。输入map扩到1024后，这些完整伙伴的first L配对中位缩短约4.144 μs，最后完成者不再集中在22/38；观测包络中位48.704→44.624 μs，入口分散160→128 ns。map960最后者的sum L中位42.832 μs，map1024为38.560 μs。这支持输入边界cluster影响内部排序，不能把“最后者是real”解释为边界无关，也不需要新增入口补偿。该新卡配对没有重评旧V09候选命中率。[新配对逐进程最后者](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json)。
 
-静态候选还需区分“解释空间位置”和“完成时间预测”。仅用row/setup构造`首tile所在cluster有fill、CTA具有最大工作数、当前tile自身无fill`，P1得到CTA集合`{6,14,22,30,38}`；旧V09与新卡map960各10次最后者都属于这个完整伙伴类别。自身fill或本操作数mask无法把这些CTA与内部real区分。这里没有使用实测时间构造特征，也没有替换冻结候选集合；集合内排序仍需可辨识的服务价格。P2的首轮全部为内部cluster，该特征没有任何候选，旧cfg_c又缺later配对，不能用A的首轮规律修补P2。[静态类别及逐进程归属](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-candidate.json)。
+静态候选还需区分“解释空间位置”和“完成时间预测”。仅用row/setup构造`首tile所在cluster有fill、CTA具有最大工作数、当前tile自身无fill`，P1得到CTA集合`{6,14,22,30,38}`；旧V09与新卡map960各10次最后者都属于这个完整伙伴类别。自身fill或本操作数mask无法把这些CTA与内部real区分。这里没有使用实测时间构造特征，也没有替换冻结候选集合；集合内排序仍需可辨识的服务价格。P2的首轮全部为内部cluster，该特征没有任何候选，旧cfg_c又缺later配对，不能用A的首轮规律修补P2。[静态类别及逐进程归属](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-candidate.json)。
 
-[C-processes](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-processes.json)保存逐进程并列集合、逐CTA坐标、SMID、入口与退出及同CTA分解；[C-summary](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-summary.json)覆盖29个有数值预测条件的290个dual进程。被拒绝的cfg_c G2没有冻结CTA预测，不计算替换评分。这些是V09开发诊断，不改其留出成绩。
+[C-processes](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-processes.json)保存逐进程并列集合、逐CTA坐标、SMID、入口与退出及同CTA分解；[C-summary](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-summary.json)覆盖29个有数值预测条件的290个dual进程。被拒绝的cfg_c G2没有冻结CTA预测，不计算替换评分。这些是V09开发诊断，不改其留出成绩。
 
 
 ### P2的伙伴关联不能替代正确的cluster定位
@@ -138,9 +138,9 @@ A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。�
 
 更关键的是，P2十次进程中，实际最后CTA及其唯一静态cluster伙伴都不属于冻结的7个候选。常见实际pair为CTA56/122，也有9/75、35/101、11/77；这些身份直接由同调用端点和静态scheduler核对。问题发生在cluster之间的服务排序，不能通过把每个冻结候选再加上伙伴来解决。这里没有扩充或替换冻结候选集合。
 
-因此保留两个不同结论：cluster内部时间轨迹高度相关；哪一个cluster最后完成仍没有预测好。前者不能当作后者已解决的证据。[逐进程实际最后cluster及与冻结集合的交集](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
+因此保留两个不同结论：cluster内部时间轨迹高度相关；哪一个cluster最后完成仍没有预测好。前者不能当作后者已解决的证据。[逐进程实际最后cluster及与冻结集合的交集](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
 
-2026-10-11的[独立端点重放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/README.md)再次保持冻结集合原样。A16的132候选命中10/10，代表共同退出缺口14.641%；P1的38候选命中10/10、代表缺口9.459%；P2的7候选命中0/10，最佳冻结候选距实际最后者的绝对缺口中位4640ns。仅替换实测入口的诊断在三者均命中0/10，而替换同CTA内部时长均命中10/10。这里的共同退出缺口与前述14.60%的CTA局部时长差采用不同分母，不互相替代。
+2026-10-11的[独立端点重放](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/README.md)再次保持冻结集合原样。A16的132候选命中10/10，代表共同退出缺口14.641%；P1的38候选命中10/10、代表缺口9.459%；P2的7候选命中0/10，最佳冻结候选距实际最后者的绝对缺口中位4640ns。仅替换实测入口的诊断在三者均命中0/10，而替换同CTA内部时长均命中10/10。这里的共同退出缺口与前述14.60%的CTA局部时长差采用不同分母，不互相替代。
 
 739095的新逐CTA配对还表明，P1同一静态受影响类别内部的响应从约0.1μs到4.6μs不等，详见[R18](R18-cluster-boundary.md#两-rank-的显式依赖与剩余可辨识范围2026-10-11)。类别能够覆盖响应位置，但不足以预测类别内部排序；下一观察覆盖全部五个静态cluster，不按实际最后者选点，也不扩大任何V09冻结候选。
 

@@ -31,10 +31,10 @@ def write(path,value):path.write_text(json.dumps(value,indent=2,allow_nan=False)
 
 def calibration_cases(base):
     """50 source calibration conditions plus the R15 single-output high scale."""
-    names=['20261009-R13-R15-R18-composition-job738496','20261009-R10-b-coverage-job738203',
-           '20261009-R18-input-map-job738296','20261009-R18-input-map-n-job738307',
-           '20261009-R18-first-fill-job738707','20261009-R18-first-fill-job738865',
-           '20261009-R15-dual-roles-job738397']
+    names=['Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496','Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203',
+           'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-job738296','Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-n-job738307',
+           'Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738707','Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738865',
+           'Q06-handoff-output/R15-output-service/20261009-R15-dual-roles-job738397']
     cases=[];rows={};provenance={}
     for name in names:
         root=base/name;setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
@@ -156,8 +156,8 @@ def failure_calls(base):
     Roles are retained by the existing decoder so local cycle/ns comparisons can
     use the same consumer endpoints. Observations are for diagnosis only.
     """
-    frozen=base/'20261009-V09-freeze-job738972-r2'
-    target=base/'20261009-V09-heldout-job739011'
+    frozen=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
+    target=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     from run_v09 import verify_approved
     approved=verify_approved(frozen,
         'f4df39e00cf1d2ab61947c911e699bd5bea4e533609d93f726de43077515d81e',
@@ -178,7 +178,7 @@ def failure_calls(base):
 
 def reference_comparison(base,controls,out):
     """Compare relevant call/supply references; a new card is not old calibration."""
-    old=base/'20261009-V09-heldout-job739011'
+    old=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     rows=[r for r in read(controls/'cases.json') if r['set']=='reference']
     previous={r['id']:r for r in read(old/'cases.json')}
     comparisons=[]
@@ -391,8 +391,8 @@ def main():
                 args.ready_release.resolve() if args.ready_release else None,args.stage_admission)
         return
     out.mkdir(parents=True,exist_ok=False)
-    frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'
-    cal=read(frozen/'frozen/calibration.json');old=read(base/'20261008-V08-job737322-v1/derived/calibration.json')
+    frozen=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2';target=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
+    cal=read(frozen/'frozen/calibration.json');old=read(base/'Q15-full-time/V01-V08-validation/20261008-V08-job737322-v1/derived/calibration.json')
     cases,cal_rows,provenance=calibration_cases(base)
     assert len(cases)==51 and not any(k.startswith('v09d_') for k in cal_rows)
     params,notes=fit_v08_forms(cases,cal_rows,old['selection'])

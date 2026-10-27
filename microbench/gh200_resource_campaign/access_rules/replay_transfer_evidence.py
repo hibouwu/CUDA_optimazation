@@ -15,7 +15,7 @@ import tarfile
 
 
 SUITE = Path("gh200_resource_campaign/20261001-resource-suite-v2")
-TENSOR = Path("gh200_resource_campaign/access_rules/20261014-tma-tensor-discrimination-001")
+TENSOR = Path("gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-discrimination-001")
 S16 = SUITE / "implementation/s16-main-execution/published-v1"
 ASYNC = SUITE / "async_copy/formal-b3-v2"
 ASYNC_REPORT = SUITE / "analysis/async-copy-formal-b3-v2"

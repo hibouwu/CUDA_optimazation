@@ -1,6 +1,0 @@
-{
-  "tests_passed": 6,
-  "decoder_sha256": "4a002672dcc887612d69401e93b0abbd88fcba9359f9c62a5086437687285c5f",
-  "test_source_sha256": "93a314381698db1bd26ac3f0fb6e390d3ec90b31456fd06c04bdceef4ae0a184",
-  "source_tests_alone_are_not_hardware_qualification": true
-}

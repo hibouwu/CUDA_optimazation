@@ -952,7 +952,7 @@ def old_boundary_pairs(base):
     summaries=[];provenance={}
     fixed=('config','m','n','k','lda','ldb','ldd','storage_m','storage_n','alloc_lda','alloc_ldb',
            'zero_m','zero_n','swizzle','sm_count','input_mode','seed')
-    for name in ('20261009-R18-first-fill-job738707','20261009-R18-first-fill-job738865'):
+    for name in ('Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738707','Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738865'):
         root=base/name;rows=json.loads((root/'cases.json').read_text());cache={}
         for row in rows:
             selected,_,_=select_attempts(root,row['id'],('dual','plain'))
@@ -995,7 +995,7 @@ def failure_diagnostics(base,output,calls_factory):
     for call in calls_factory(base):
         row=call['row'];obs=call['observed'];pred=call['prediction'];rec=call['record']
         if not pred.get('cta_duration_ns'):continue
-        source=call.get('source',str(Path(base)/'20261009-V09-heldout-job739011'/rec['raw']))
+        source=call.get('source',str(Path(base)/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'/rec['raw']))
         value=critical_replacements(obs['ctas'],pred)
         value.update(case=row['id'],trial=call['trial'],source=source,raw_sha256=rec['raw_sha256'])
         if row['id'] not in selected:value.pop('ctas')
@@ -1145,9 +1145,9 @@ def boundary_candidate_analysis(base,output):
     import numpy as np
     from analyze_r13_sm import select_attempts
     base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
-    names=['20261009-R18-first-fill-job738707','20261009-R18-first-fill-job738865',
-           '20261009-R18-input-map-job738296','20261009-R18-input-map-n-job738307',
-           '20261010-R09-R13-R18-failure-controls']
+    names=['Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738707','Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738865',
+           'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-job738296','Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-n-job738307',
+           'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls']
     kinds=('own','mask_max','mask_sum','cluster_max','cluster_sum','cluster_any')
     windows=[];static_cases={};provenance={};call_cache={}
     def read(path):return json.loads(path.read_text())
@@ -1245,7 +1245,7 @@ def boundary_candidate_analysis(base,output):
                     coefficients_by_k=by_k))
         fits.append(group)
     # Static feature ranges of V09 are diagnostics only; no timing response enters the fit.
-    root=base/'20261009-V09-freeze-job738972-r2';setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
+    root=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2';setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
     for row in read(root/'cases.json'):
         if row['id'] in ('v09d_cfg_a_P1_partial_first_and_later','v09d_cfg_c_P2_partial_later_sw8'):
             static_cases[row['id']]=dict(row=row,setup=setups[row['id']],features=static_boundary_features(row,setups[row['id']]))
@@ -1275,7 +1275,7 @@ def boundary_candidate_analysis(base,output):
         signature=[f['cta'] for f in first]
         if case in call_cache:calls=call_cache[case]
         else:
-            data=base/'20261009-V09-heldout-job739011'
+            data=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
             selected,_,_=select_attempts(data,case,('dual',))
             calls={}
             for item in selected:
@@ -1527,7 +1527,7 @@ def fill_discrimination(root,output):
         analyzer_sha256=common.sha(Path(__file__)),feature_model_sha256=common.sha(Path(feature_model.__file__)),
         scope='Fixed map832 static affected cohort across all maps, map1024 paired baseline. Logical output geometry is separate from input fill. Per-process strata precede fitting. Interior subtraction is a diagnostic baseline assumption; raw deltas retained. Four map points identify conditional contrasts, not a universal price. No old-card coefficient used.')
     result['conditional_approximations']=[fill_price_diagnostics(result,root),
-        fill_price_diagnostics(result,root.parent/'20261010-R09-R13-R18-failure-controls')]
+        fill_price_diagnostics(result,root.parents[2]/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls')]
     common.write_json(output/'C-fill-discrimination.json',result)
     with gzip.open(output/'C-fill-discrimination-windows.csv.gz','wt',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=list(windows[0]));writer.writeheader();writer.writerows(windows)
@@ -1544,7 +1544,7 @@ def first_cluster_development(base,output):
     import v09_model as predictor
     from analyze_r13_sm import select_attempts
     base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
-    frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'
+    frozen=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2';target=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     read=lambda path:json.loads(path.read_text())
     calibration=read(frozen/'frozen/calibration.json')
     with gzip.open(frozen/'inputs/supply-training.json.gz','rt') as stream:training=json.load(stream)
@@ -1686,7 +1686,7 @@ def boundary_endpoint_distribution(base,output):
     from analyze_r13_sm import select_attempts
     base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
     summaries=[];process_rows=[];provenance={};sources={}
-    for name in ('20261010-R18-cluster-fill-discrimination','20261010-R09-R13-R18-failure-controls'):
+    for name in ('Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination','Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'):
         root=base/name;rows=[r for r in json.loads((root/'cases.json').read_text()) if r['id'].startswith(('r18_cluster_fill_map','r18_partial_map'))]
         rows.sort(key=lambda r:r['input_map_m']);baseline=rows[-1];reference=rows[0]
         setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
@@ -1755,7 +1755,7 @@ def boundary_cluster_coupling(base,output):
     import csv
     from analyze_r13_sm import select_attempts
     base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
-    roots=('20261010-R18-cluster-fill-discrimination','20261010-R09-R13-R18-failure-controls','20261009-V09-heldout-job739011')
+    roots=('Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination','Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls','Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011')
     all_pairs=[];provenance={}
     for name in roots:
         root=base/name;all_rows=json.loads((root/'cases.json').read_text())
@@ -1830,14 +1830,14 @@ def boundary_cluster_coupling(base,output):
         summary.append(r)
     # Retain actual-last partner rows separately for P2 without constructing new prediction candidates.
     critical=[p for p in all_pairs if p['case']=='v09d_cfg_c_P2_partial_later_sw8' and p['relation']=='partner' and p['contains_actual_last']]
-    frozen_path=base/'20261009-V09-heldout-job739011/frozen/predictions.json'
+    frozen_path=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/frozen/predictions.json'
     predicted=json.loads(frozen_path.read_text())['predictions']['v09d_cfg_c_P2_partial_later_sw8']['critical_candidates']
     last_clusters=[]
     for trial in range(10):
         pairs=sorted({(p['cta_a'],p['cta_b']) for p in critical if p['trial']==trial and p['role']==1 and p['j']==0})
         last_clusters.append(dict(trial=trial,actual_last_clusters=pairs,
             intersects_frozen_candidates=any(set(pair)&set(predicted) for pair in pairs)))
-    source_root=base/'20261010-R18-cluster-fill-discrimination/source'
+    source_root=base/'Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination/source'
     evidence={}
     for relative,markers in [
         ('cutlass/include/cutlass/gemm/collective/builders/sm90_common.inl',
@@ -1949,8 +1949,8 @@ def analyze_rank_dependencies(base,output):
     from output_model import cfg_a_rank_dependencies,dependency_bounds
     base,output=Path(base),Path(output)
     if output.exists():raise ValueError('output must be a new directory')
-    run_names=('20261010-R09-R13-R18-failure-controls',
-               '20261010-R18-cluster-fill-discrimination','20261009-V09-heldout-job739011')
+    run_names=('Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls',
+               'Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination','Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011')
     frozen_path=base/run_names[-1]/'frozen/predictions.json'
     predictions=json.loads(frozen_path.read_text())['predictions']
     v09_cases={'v09d_cfg_a_G3_base','v09d_cfg_a_G3_A16',

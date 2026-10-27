@@ -68,10 +68,10 @@ def development(base, output):
     def load(path):
         return json.loads(path.read_text())
 
-    source_run = base / '20261009-R10-b-coverage-job738203'
+    source_run = base / 'Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203'
     supply_path = source_run / 'reanalysis/A-20261009-valid-fill-v4/summary.json'
     events_path = source_run / 'reanalysis/A-20261009-cta-composition-v3/summary.json'
-    clock_path = base / '20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json'
+    clock_path = base / 'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json'
     fitted_supply, fitted_events, fitted_clock = map(load, (supply_path, events_path, clock_path))
     if fitted_clock['environment']['gpu'] != fitted_events['gpu'] or fitted_supply['gpu'] != fitted_events['gpu']:
         raise ValueError('component calibration GPU identities differ')
@@ -79,8 +79,8 @@ def development(base, output):
                        supply_ns=fitted_supply['fits']['ns']['parameters'],
                        fixed_event_extra_ns=fitted_events['fixed_event_extra_ns'],
                        clock=fitted_clock['model'])
-    roots = [source_run, base/'20261009-R18-input-map-job738296',
-             base/'20261009-R18-input-map-n-job738307']
+    roots = [source_run, base/'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-job738296',
+             base/'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-n-job738307']
     reports = []
     hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest()
               for p in (supply_path, events_path, clock_path)}

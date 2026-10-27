@@ -1,6 +1,0 @@
-{
-  "report_sha256": "9d77eeb9cab7bf44a2ec53be4ac797b9e45bf2313831666ad5920d2f7c88a2fa",
-  "strongest_bound_independent_decimal_recurrence": "4.18785309569301706297182987247815623091809704764194695000000000000000000000000000000000002E-11",
-  "exact_fraction_match_tolerance": "1e-90",
-  "qualification": false
-}

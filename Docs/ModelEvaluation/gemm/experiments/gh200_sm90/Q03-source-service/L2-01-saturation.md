@@ -28,35 +28,35 @@ GPU本地`cudaMalloc`分配，普通global地址空间，读用`.cg.v4.u32`，�
 
 源码：[l2_saturation.cu](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/l2_saturation.cu)。入口：[l2_saturation.py](../../../../../../microbench/gh200_resource_campaign/access_rules/l2_saturation.py)。`prepare`生成条件、总工作量及种子；`compile`保存构建和SASS；`run`才执行GPU测量。
 
-准备阶段已生成[准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-preparation-001/plan.json)，包含probe、runner、候选数值内核及其SHA。原编译与开发入口如下，实际实机结果见本节后续执行目录：
+准备阶段已生成[准备包](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-preparation-001/plan.json)，包含probe、runner、候选数值内核及其SHA。原编译与开发入口如下，实际实机结果见本节后续执行目录：
 
 ```bash
-python results/gh200_resource_campaign/access_rules/20261017-L2-01-preparation-001/source/l2_saturation.py compile \
-  --output results/gh200_resource_campaign/access_rules/20261017-L2-01-preparation-001 --nvcc nvcc
-python results/gh200_resource_campaign/access_rules/20261017-L2-01-preparation-001/source/l2_saturation.py run \
-  --output results/gh200_resource_campaign/access_rules/20261017-L2-01-preparation-001 --split dev
+python results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-preparation-001/source/l2_saturation.py compile \
+  --output results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-preparation-001 --nvcc nvcc
+python results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-preparation-001/source/l2_saturation.py run \
+  --output results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-preparation-001 --split dev
 ```
 
-两项先导在开发批之前用相同probe单独保存命令与输出；留出另需`--split heldout --dev-freeze <开发冻结身份>`。本地CUDA13与GCC16／glibc有兼容冲突，本地临时头覆盖只用于[静态审查](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-preparation-001/local-static-review/gh200-l2-saturation-audit.json)；正式目标使用受支持工具链重新构建并核对自己的SASS。
+两项先导在开发批之前用相同probe单独保存命令与输出；留出另需`--split heldout --dev-freeze <开发冻结身份>`。本地CUDA13与GCC16／glibc有兼容冲突，本地临时头覆盖只用于[静态审查](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-preparation-001/local-static-review/gh200-l2-saturation-audit.json)；正式目标使用受支持工具链重新构建并核对自己的SASS。
 
 旧S13的源码、18条件、审核器及冻结结果保持原样。新批次保存自身源码／二进制／SASS身份、设备与资源、逐进程命令和原始JSON，性能资格由本轮检查决定。
 
-本次[执行目录](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-execution-002/dev/summary.json)与[判定结果](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/service.json)分别保存GPU观测和CPU分析；实际分析[命令](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/execution/command.json)及[收据](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/execution/receipt.json)已归档。用保存的入口复核开发证据时，输出到新目录：
+本次[执行目录](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-execution-002/dev/summary.json)与[判定结果](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/service.json)分别保存GPU观测和CPU分析；实际分析[命令](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/execution/command.json)及[收据](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/execution/receipt.json)已归档。用保存的入口复核开发证据时，输出到新目录：
 
 ```bash
-python results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/l2_fit.py fit \
-  --input results/gh200_resource_campaign/access_rules/20261017-L2-01-execution-002 \
-  --sass-review results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/target-review.json \
+python results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/l2_fit.py fit \
+  --input results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-execution-002 \
+  --sass-review results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/target-review.json \
   --output /tmp/l2-01-fit-replay
 ```
 
-此入口只做CPU证据回放与六形式判定，不执行GPU；输出目录须尚不存在。准备阶段11项CPU检查保留，新增有限拟合／冻结／评分入口后共[20项CPU检查](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/cpu-validation/stderr)通过，[检查命令](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/cpu-validation/command.json)已保存。
+此入口只做CPU证据回放与六形式判定，不执行GPU；输出目录须尚不存在。准备阶段11项CPU检查保留，新增有限拟合／冻结／评分入口后共[20项CPU检查](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/cpu-validation/stderr)通过，[检查命令](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/cpu-validation/command.json)已保存。
 
 ## 4. 当前结果与下一步
 
 两个先导通过；开发16条件／48独立进程完整，全部暖机收敛、实际活动窗口重叠、数值与性能资格通过。目标CUDA12.9.41的九个模板均通过SASS宽度／数量及零local审核。J仍按软件独立流解释，实际生成代码与资源保存在本批构建身份中。
 
-[无损回传核对](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-execution-002/transport-verified.json)验证318个文件、231098176 B原始内容的全部SHA；GPU执行返回码0。原始计时、逐线程checksum及完整写出均保留，内存路径与第1节计时边界不变。
+[无损回传核对](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-execution-002/transport-verified.json)验证318个文件、231098176 B原始内容的全部SHA；GPU执行返回码0。原始计时、逐线程checksum及完整写出均保留，内存路径与第1节计时边界不变。
 
 读窗口的三个进程中位数如下，单位µs；它们包含该访问体的加载、地址计算、消费和排空。
 
@@ -70,3 +70,9 @@ python results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/l2_fi
 J1→4的逻辑吞吐改善约2.1倍，J4→8近平台；固定J时逻辑吞吐随S近似线性增加，共享服务平台尚未单独辨识。S32／J4三个窗口为353856–354592 ns，S32／J8为355328–355552 ns；J8的中位窗口增加约0.253%，且两组三进程范围不重叠，触发预置的稳定单调反例规则。
 
 六形式全部记为`refuted_stable_monotonic_reversal`，`selected=null`。参数与误差未拟合，未生成`dev-freeze.json`，四个留出条件／12进程未采。本轮按原候选与停止规则收口，不扩点或开展新模型搜索；具体单调供给函数未通过，物理原因仍未区分。写／混合四个选点与原窗口单列保存；没有从读结果推算其服务参数，也没有将整窗率接入cfg_b源价格。后续按已授权顺序推进计算A，独立C2/C3验收未完成。
+
+## a044 复测（2026-10-23～26）
+
+开发 50 次调用的数值、暖机和活动窗口资格全部通过。旧卡 S32 下 J4/J8 的稳定单调反例（353,856–354,592 ns 对 355,328–355,552 ns）在 a044 上区间重叠（352,800–353,024 对 352,192–353,600 ns），未复现。六个登记形式仍未拟合或选择。见[内存服务阶段报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-storage-stage-report.md)。
+
+NCU 已可用：8 MiB `.cg` 读单 pass 的 L2 读与逻辑量/32 只差 1,178 sector，DRAM 读 768 B；大工作集的额外 L2 查询来自跨分区转发。见[单 pass 复核](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/ncu-pending-20261026-report.md)。

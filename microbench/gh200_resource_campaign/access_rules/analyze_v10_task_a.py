@@ -98,8 +98,8 @@ def case_components(processes):
 
 
 def run(base, output, clock_path=None):
-    freeze = base / '20261009-V09-freeze-job738972-r2'
-    observed = base / '20261009-V09-heldout-job739011'
+    freeze = base / 'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
+    observed = base / 'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     paths = [freeze/'frozen/calibration.json', freeze/'frozen/predictions.json',
              freeze/'frozen/manifest.json', freeze/'cases.json', freeze/'static_setup.json',
              observed/'reanalysis/manager-results-v1/summary.json']

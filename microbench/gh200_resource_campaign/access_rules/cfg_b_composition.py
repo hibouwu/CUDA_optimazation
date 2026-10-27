@@ -15,7 +15,7 @@ import supply_model as supply
 import v06_model
 import v08_model
 
-DEFAULT_ARCHIVE = Path(__file__).resolve().parents[3] / 'results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011'
+DEFAULT_ARCHIVE = Path(__file__).resolve().parents[3] / 'results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
 
 
 class V09Mainloop:

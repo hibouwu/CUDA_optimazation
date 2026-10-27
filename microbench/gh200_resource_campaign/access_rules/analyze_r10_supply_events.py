@@ -87,7 +87,7 @@ def paired_windows(base, variant, selected=lambda w:True):
 
 def analyze(root, output):
     output.mkdir(parents=True,exist_ok=False)
-    dev=root/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
+    dev=root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
     parameters_path=dev/'B-source-candidate-examples.json'
     parameters=read(parameters_path)['examples']['shared']['parameters']
     observed=read(dev/'R10-raster-pitch.json')
@@ -98,14 +98,14 @@ def analyze(root, output):
         inputs[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
     for p in (parameters_path,dev/'R10-raster-pitch.json',dev/'R10-source-pressure.json',
             Path(__file__),Path(__file__).with_name('supply_model.py')):fingerprint(p)
-    parameter_setup=root/'20261010-R13-second-prefill/static_setup.json'
+    parameter_setup=root/'Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill/static_setup.json'
     fingerprint(parameter_setup)
     if any(r['setup']['gpu_uuid']!=GPU for r in read(parameter_setup)):
         raise ValueError('declared R13 parameter cohort is not on the R10 card')
-    kernel=root/'20261010-R13-second-prefill/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp'
+    kernel=root/'Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp'
     fingerprint(kernel)
     contexts={}
-    for run_name in ('20261010-R10-raster-pitch','20261010-R10-source-pressure'):
+    for run_name in ('Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch','Q03-source-service/R10-layout-cache/20261010-R10-source-pressure'):
         run=root/run_name
         rows=read(run/'cases.json');setups={s['case']:s['setup'] for s in read(run/'static_setup.json')}
         for p in (run/'cases.json',run/'static_setup.json'):fingerprint(p)

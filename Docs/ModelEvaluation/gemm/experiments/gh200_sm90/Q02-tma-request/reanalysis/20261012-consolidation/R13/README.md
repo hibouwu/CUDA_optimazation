@@ -9,30 +9,30 @@
 
 | 证据 | 条件与作用 | 可复核入口 |
 |---|---|---|
-| R05-D，735059 | 立即释放消费者，stage 2/4；共享小源与独立大源 | [正式报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/report.md) |
-| R13，735876/735985/736169 | 18 条件的 plain 服务率、ready/retire/reuse 事件对 | [ready](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735876-v8-formal-ready-review-B/report.md)、[ready 补查](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735985-v9-ready-recheck-review-B/report.md)、[retire](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735985-v9-formal-retire-review-B/report.md)、[reuse](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse-review-B/report.md) |
-| V08F，737322 | 51 条后续窗口拟合；14 条尾部/D 行距诊断 | [候选与留组结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-v3/summary.json) |
-| SM 扫描，738101 | cfg_a 四档 grid、三个 pitch，固定 K4096 | [软件波次](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-sm-job738101/reanalysis/shared-cap-candidates-v3/summary.json)、[有限预填](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-sm-job738101/reanalysis/prefill-cap-candidates-v1/summary.json) |
-| 同卡 B13，738203/738296/738307 | B 行距和 A/B source-map 共 13 条件，供给与填零组合开发 | [需求/填零候选](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-valid-fill-v4/summary.json)、[CTA 组合](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-cta-composition-v3/summary.json) |
-| 三配置，738496 | 29 条件的 first/later 定值；cfg_b 后与旧 B13 有条件联合 | [phase 模型](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)、[cfg_b 联合报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/summary.json) |
-| 首轮填零，738707/738865 | 只补 A/C first；六组训练行与拒绝范围 | [模型](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/models.json)、[验证](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json)、[支持定位](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json) |
+| R05-D，735059 | 立即释放消费者，stage 2/4；共享小源与独立大源 | [正式报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-formal-v2/report.md) |
+| R13，735876/735985/736169 | 18 条件的 plain 服务率、ready/retire/reuse 事件对 | [ready](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261007-R13-job735876-v8-formal-ready-review-B/report.md)、[ready 补查](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261007-R13-job735985-v9-ready-recheck-review-B/report.md)、[retire](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261007-R13-job735985-v9-formal-retire-review-B/report.md)、[reuse](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261007-R13-job736169-v11-formal-reuse-review-B/report.md) |
+| V08F，737322 | 51 条后续窗口拟合；14 条尾部/D 行距诊断 | [候选与留组结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-v3/summary.json) |
+| SM 扫描，738101 | cfg_a 四档 grid、三个 pitch，固定 K4096 | [软件波次](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-sm-job738101/reanalysis/shared-cap-candidates-v3/summary.json)、[有限预填](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-sm-job738101/reanalysis/prefill-cap-candidates-v1/summary.json) |
+| 同卡 B13，738203/738296/738307 | B 行距和 A/B source-map 共 13 条件，供给与填零组合开发 | [需求/填零候选](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-valid-fill-v4/summary.json)、[CTA 组合](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-cta-composition-v3/summary.json) |
+| 三配置，738496 | 29 条件的 first/later 定值；cfg_b 后与旧 B13 有条件联合 | [phase 模型](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)、[cfg_b 联合报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/summary.json) |
+| 首轮填零，738707/738865 | 只补 A/C first；六组训练行与拒绝范围 | [模型](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/models.json)、[验证](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json)、[支持定位](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json) |
 | V09，739011 | 冻结后的新几何、行距和 stage 迁移 | [完整留出与判定](../../../../Q15-full-time/V09-component-validation.md) |
-| stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
-| 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
-| consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
-| 组内服务递推，离线 | 仅stage6三个局部量校准；独立局部约束的q剖面仍高估stage4，推导有限窗口下界 | [参数族与逐分项比较](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-admission.md) |
-| 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
-| 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
-| 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
-| 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)、[联合端点](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md) |
-| 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](../../../../Q06-handoff-output/R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
-| 输出背景，739740 | 固定CTA0处理、仅改变其它CTA首输出；stage4早段缩短、后段变长 | [R15统一分析](../../../../Q06-handoff-output/R15-output-service.md#stage-output-background)、[同调用背景与进程差](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md) |
-| 第二WG初态，739790 | 仅CTA0预等S槽，stage4/6同binary开关；early与完整时间分列 | [同批配对与限制](#second-prefill)、[逐进程结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md) |
-| 背景基线，离线 | 区分早/后段输出相位；仅两个无E0覆盖窗口约束c/T，固定后迁移 | [条件范围与未定项](#stage-background-baseline)、[逐进程包络](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md) |
-| 共享服务候选，离线 | 真实软件依赖自行生成E0；低窗口残差仍伴随相位/本地响应失败 | [候选边界](#stage-shared-service)、[拟合与全卡对照](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md) |
-| 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
-| 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
-| 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
+| stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
+| 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
+| consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
+| 组内服务递推，离线 | 仅stage6三个局部量校准；独立局部约束的q剖面仍高估stage4，推导有限窗口下界 | [参数族与逐分项比较](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-admission.md) |
+| 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
+| 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
+| 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
+| 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)、[联合端点](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md) |
+| 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](../../../../Q06-handoff-output/R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
+| 输出背景，739740 | 固定CTA0处理、仅改变其它CTA首输出；stage4早段缩短、后段变长 | [R15统一分析](../../../../Q06-handoff-output/R15-output-service.md#stage-output-background)、[同调用背景与进程差](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md) |
+| 第二WG初态，739790 | 仅CTA0预等S槽，stage4/6同binary开关；early与完整时间分列 | [同批配对与限制](#second-prefill)、[逐进程结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md) |
+| 背景基线，离线 | 区分早/后段输出相位；仅两个无E0覆盖窗口约束c/T，固定后迁移 | [条件范围与未定项](#stage-background-baseline)、[逐进程包络](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md) |
+| 共享服务候选，离线 | 真实软件依赖自行生成E0；低窗口残差仍伴随相位/本地响应失败 | [候选边界](#stage-shared-service)、[拟合与全卡对照](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md) |
+| 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
+| 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
+| 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
 
 <a id="supply-work-ledger"></a>
 
@@ -95,7 +95,7 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 | 739653 producer延迟与ready | 40/40绑定首代，issue→ready增量20/20严格为正 | 排除本协议“ready不变、只晚consumer返回”；排队/服务/通知可见性仍不可区分 |
 | R10 B32方向/规模、基址/工作交换/producer延迟 | 同批方向与规模改变行距响应，固定位置改变起步也改变响应 | 固定覆盖价、面板价、位置价均不充分；旧/新B32现象同时保留，尚无可迁移时间规则 |
 
-本轮专用入口为 `analyze_r13_lifecycle.py --data-root <主checkout结果根> --output <新的B独占目录>`。[复核结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-verification.json)核对34份交接哈希，精确重现旧候选/局部排他/轮换的13组结果；[账目](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-work-ledger-summary.json)与[全部已有窗口及干预](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-existing-constraints.json)保持原生cycle/ns。v1因遗漏历史参数默认值在审计阶段停止，失败说明保留；v2成功，v3补齐接口版本与拒绝范围后重放。旧报告、V09冻结/评分和正式参数不变。
+本轮专用入口为 `analyze_r13_lifecycle.py --data-root <主checkout结果根> --output <新的B独占目录>`。[复核结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-verification.json)核对34份交接哈希，精确重现旧候选/局部排他/轮换的13组结果；[账目](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-work-ledger-summary.json)与[全部已有窗口及干预](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-existing-constraints.json)保持原生cycle/ns。v1因遗漏历史参数默认值在审计阶段停止，失败说明保留；v2成功，v3补齐接口版本与拒绝范围后重放。旧报告、V09冻结/评分和正式参数不变。
 
 下一轮先检验有限局部发射/消费/释放前驱与源ready的联合可行性，保留first/later和空间约束；没有两个明确解释给出现有证据无法区分的预测前，不申请补测。该里程碑没有独立冻结局部留出，持续目标未完成。
 
@@ -109,11 +109,11 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 
 每个K-group两rank发六个源atom：两个本地A16KiB和四个组播B4KiB，共48KiB。组播后共有十次目的投递/64KiB；每个full保留本地producer arrival、本地A16KiB，以及两issuer各两个B4KiB完成前驱，总payload32KiB。C的`B_issue`是两个B atom发起后的汇合，`B_to_r`是两个4KiB目的完成后的汇合，不能再收一份传输费用。B0/B1各有源就绪与目的完成事件，可以在另一个box尚未发出时推进；本次没有SASS确认两者的相对发起次序，偏序图不额外加入该顺序。
 
-[组合复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v2/B-cfg-a-source-composition.json)覆盖三份已有归档的22个cfg_a条件、220个dual进程、28200个CTA，全部实际工作坐标与两WG工作列表一致；12种stage6、K1024/4096、每rank输出数1/2/3/4/7/8图模板无环，保留C的147284条原依赖边、全部release/empty arrival与输出节点。OOB填充、扩展map的显式零路径、D有效面积和四个名义子tile分别守恒。任意scheduler映射若跨越物理cluster/rank/输出序号则拒绝；已见`[132,1,1]` grid通过，任意多行AlongM grid不据此宣称支持。空闲cluster仅列明，不赋予生命周期时间。
+[组合复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v2/B-cfg-a-source-composition.json)覆盖三份已有归档的22个cfg_a条件、220个dual进程、28200个CTA，全部实际工作坐标与两WG工作列表一致；12种stage6、K1024/4096、每rank输出数1/2/3/4/7/8图模板无环，保留C的147284条原依赖边、全部release/empty arrival与输出节点。OOB填充、扩展map的显式零路径、D有效面积和四个名义子tile分别守恒。任意scheduler映射若跨越物理cluster/rank/输出序号则拒绝；已见`[132,1,1]` grid通过，任意多行AlongM grid不据此宣称支持。空闲cluster仅列明，不赋予生命周期时间。
 
 入口为`analyze_cfg_a_supply.py --data-root <结果根> --c-model <只读C/output_model.py> --output <新B目录>`，保存源文件、case/setup、record/raw哈希与压缩后的绑定/完整图。v1加入了尚未由本次SASS确认的B0→B1顺序；v2删除该额外边并重新复核，v1保留。74项相关测试通过。以上仅确认结构接口及旧样本工作绑定，不证明源/目的服务价格、局部窗口、干预或空间时间分布；R10/V09失败结果不变，新的独立冻结局部留出仍未完成。
 
-C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组合复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v3/B-cfg-a-source-composition.json)仍通过同一22条件/220进程；静态绑定压缩文件与v2逐字一致，12种图保留全部新增端点及输出保证。empty实际发出、目的可见和producer返回不再合为同一事件；这些仍是cfg_a接口，不能套用cfg_b的四warp leader观察。
+C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组合复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v3/B-cfg-a-source-composition.json)仍通过同一22条件/220进程；静态绑定压缩文件与v2逐字一致，12种图保留全部新增端点及输出保证。empty实际发出、目的可见和producer返回不再合为同一事件；这些仍是cfg_a接口，不能套用cfg_b的四warp leader观察。
 
 <a id="release-prerequisites"></a>
 
@@ -123,11 +123,11 @@ C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组
 
 输出OOB不代表该rank无供给义务。例如M256/N128时rank1的D有效面积为0，但它仍发出A16供rank0组成完整A32；本地B16为fill，完整输入请求不能随D有效面积删除。M192时，两rank向每个目的提供的A为24KiB有效＋8KiB fill；扩大descriptor覆盖并初始化为零后才成为32KiB有效，full名义payload均为48KiB。C的本地输出接口独立核对每tile八个128×32 FP32名义子tile、两个source buffer及末名义generation，不因空D子tile删除源保护义务。
 
-[离线接口复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/B-cfg-c-source-ports.json)覆盖26个静态条件；其中原composition/first-fill的150个dual进程、18960个CTA、150×4096个D抽样值重新复核，实际物理伙伴及两consumer WG工作一致。另11个已揭示V09条件仅做静态几何，不重评或改变原失败。12个源接口模板与6个C本地输出模板通过拓扑和工作守恒检查；cfg_a的22份既有压缩绑定逐字节不变。
+[离线接口复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/B-cfg-c-source-ports.json)覆盖26个静态条件；其中原composition/first-fill的150个dual进程、18960个CTA、150×4096个D抽样值重新复核，实际物理伙伴及两consumer WG工作一致。另11个已揭示V09条件仅做静态几何，不重评或改变原失败。12个源接口模板与6个C本地输出模板通过拓扑和工作守恒检查；cfg_a的22份既有压缩绑定逐字节不变。
 
 上述v1交付时，`arrive_expect_tx`与`acquire_return`仍是外部producer端口，`full`待接consumer。随后C交付本配置的`cfg_c_rank_dependencies`；B通过只读接口将12份源模板接入，并逐项核对源前驱没有被覆盖。每rank的`acquire(g)`等待本地`B_issue(g−1)`；g≥4时另等两rank、两WG的四个`empty_to_rank(g−4)`。`arrive_expect_tx→acquire_return`、两WG的安全释放、empty发出/可见、四slot的producer尾部等待以及本地输出图均已接入。仅剩`cluster_initialized`这一外部入口；入口与所有服务均未赋价，结构闭合不代表自主时间预测成立。
 
-[闭合图接入与影响范围复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-closed-response-v1/B-cfg-c-supply-response.json)保持26份物理绑定与12份源模板逐字节不变，生成的12份闭合gzip与主集成规范版本逐字节相同。复核重新计算349份输入SHA，其中320份是v1的原始数据输入；150进程、18960 CTA和614400个D抽样值的数值/工作证据在SHA核对后复用，本次没有重新执行数值重放。V09仍只用静态几何，原失败判定不变。
+[闭合图接入与影响范围复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-closed-response-v1/B-cfg-c-supply-response.json)保持26份物理绑定与12份源模板逐字节不变，生成的12份闭合gzip与主集成规范版本逐字节相同。复核重新计算349份输入SHA，其中320份是v1的原始数据输入；150进程、18960 CTA和614400个D抽样值的数值/工作证据在SHA核对后复用，本次没有重新执行数值重放。V09仍只用静态几何，原失败判定不变。
 
 以下固定S=4，以全局K-group编号g、输出内位置q=`g%Ktiles`描述。只改变rank1所列事件的完成时间，固定入口、其它边成本及资源组织，不添加全局源服务或SM发射竞争边。表中给出依赖图中最早可达的rank0 full；可达只表示可能受影响，不保证延迟为正或成为关键路径。若所列组号已超过本次调用，则无后续full可达。
 
@@ -160,9 +160,9 @@ C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组
 
 最小新观察只在同样的stage4/6、同geometry和原slot上，为thread288/320/352补原arrival的clock64前后界；thread256原标记保留，同stage同binary用runtime开关比较leader-only与四warp观察。无需新增polling warp、named barrier、arrival或同步依赖。若全部四warp到达前/后分别为B/E，则最后emit位于`[max(B),min(max(E),A)]`，可保守分开arrival分散与最后emit之后的路径。各warp标记之后才producer返回不是必要条件，后clock可晚于已完成arrival。
 
-[具体观察请求](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-minimal-release-observation.json)预列两stage×开关×十进程、实际GPU-ef8692f3、完整D检查和全部窗口。64cycle是预定辨识尺度，依据旧20～23cycle release bracket及60～69cycle acquire→三输入发出窗口选择，不是全GEMM百分比或物理常数。四warp的arrival分散上界≤64支持集中arrival解释；最后emit→acquire后上界≤64支持晚arrival解释；对应下界>64则排除该近似，跨界或两者都大时保留未分辨/混合结果。观察有效性另检查每warp bracket≤32cycle、局部on/off绝对误差门槛及整调用扰动，不能用整调用合格代替局部检查。
+[具体观察请求](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-minimal-release-observation.json)预列两stage×开关×十进程、实际GPU-ef8692f3、完整D检查和全部窗口。64cycle是预定辨识尺度，依据旧20～23cycle release bracket及60～69cycle acquire→三输入发出窗口选择，不是全GEMM百分比或物理常数。四warp的arrival分散上界≤64支持集中arrival解释；最后emit→acquire后上界≤64支持晚arrival解释；对应下界>64则排除该近似，跨界或两者都大时保留未分辨/混合结果。观察有效性另检查每warp bracket≤32cycle、局部on/off绝对误差门槛及整调用扰动，不能用整调用合格代替局部检查。
 
-该请求是开发辨识，不是新的独立冻结留出或参数验收。公共probe和GPU仅由主集成实施，并在采样前保存最终范围、端点、具体门槛与source/binary身份。本组没有提交GPU任务。[20次原始端点与见证](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-release-prerequisites.json)由 `analyze_r13_release.py --run <739556归档> --output <新的B目录>`复放；输入记录/raw/source/SASS哈希全部保留。
+该请求是开发辨识，不是新的独立冻结留出或参数验收。公共probe和GPU仅由主集成实施，并在采样前保存最终范围、端点、具体门槛与source/binary身份。本组没有提交GPU任务。[20次原始端点与见证](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-release-prerequisites-v3/B-release-prerequisites.json)由 `analyze_r13_release.py --run <739556归档> --output <新的B目录>`复放；输入记录/raw/source/SASS哈希全部保留。
 
 ### 四warp smoke保留了明显的局部观察差
 
@@ -177,13 +177,13 @@ stage4上游单对差超过原最大192cycle；stage6单对local差超过原中�
 
 两个开启记录的其它三个warp均在leader前发出arrival。条件于四warp bracket确实覆盖全部必要arrival，stage4的post-last-emit→acquire后区间为[209,232]cycle、warp-skew为[0,23]；stage6分别为[206,231]、[0,25]。按64cycle尺度，两次条件分类均排除“最后arrival之后很短”的近似，与arrival集中近似相容。但GPU、样本数和观察资格尚未满足，**不采用机制解释，也不定barrier或供给价格**。
 
-[逐进程区间与门槛](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-warp-smoke-v2/B-release-warp-smoke.json)由专用`analyze_r13_release_interpretation.py`生成；纯`paired_observer_gates`保留缺失配对、SM/工作身份不符、宽bracket、最大单对超限及不足十次的原因。v1因将构建case当作smoke命令而被暖机身份检查拒绝；v2按两份一致的归档run.sh绑定，未修改旧case或raw。10项新增测试覆盖区间边界、混合/未分辨、符号抵消和失效保留，连同既有测试共84项通过。
+[逐进程区间与门槛](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-release-warp-smoke-v2/B-release-warp-smoke.json)由专用`analyze_r13_release_interpretation.py`生成；纯`paired_observer_gates`保留缺失配对、SM/工作身份不符、宽bracket、最大单对超限及不足十次的原因。v1因将构建case当作smoke命令而被暖机身份检查拒绝；v2按两份一致的归档run.sh绑定，未修改旧case或raw。10项新增测试覆盖区间边界、混合/未分辨、符号抵消和失效保留，连同既有测试共84项通过。
 
 四leader区间仍依赖整warp arrival覆盖假设，不能由leader自身时钟无条件证明。主集成正准备`r13-release-threads-v2`，让目标WG的全部128个必要线程各记录自身原arrival前后戳。B的`thread_release_arrival_bounds`只接受256..383各且仅各一次、128对有序正uint64时钟；`release_thread_process`读取独立的`release_threads`字段，旧`release_process`遇到该字段直接拒绝，不能静默只用四leader兼容字段。关闭时没有完整128观测，不给机制分类；source/SASS指令顺序、同调用/SM/slot代数和数值/扰动资格仍由caller核对。
 
-[合成覆盖反例](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-required-thread-coverage-v1/B-required-thread-coverage-witness.json)令四leader都在[100,110]、未观察thread257在[200,210]、acquire后为230；四leader条件post-last界为[120,130]，全部必要线程的界却为[20,30]，按原64cycle尺度可从排除翻为相容。这不是测量或价格，说明缺少124条arrival不能由兼容字段补齐。增加覆盖、错类型、缺失/重复线程、异常acquire、v2防误用与关闭状态测试后，共89项相关测试通过；新协议尚未取得正式时间观察资格。
+[合成覆盖反例](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-required-thread-coverage-v1/B-required-thread-coverage-witness.json)令四leader都在[100,110]、未观察thread257在[200,210]、acquire后为230；四leader条件post-last界为[120,130]，全部必要线程的界却为[20,30]，按原64cycle尺度可从排除翻为相容。这不是测量或价格，说明缺少124条arrival不能由兼容字段补齐。增加覆盖、错类型、缺失/重复线程、异常acquire、v2防误用与关闭状态测试后，共89项相关测试通过；新协议尚未取得正式时间观察资格。
 
-主集成740056在同一GPU432完成逐线程协议的正确性准备。B复放四份原始smoke及各4096个D抽样值，开启时两stage均保留全部128对线程戳，最大bracket宽分别25/22cycle；报告同时保留协议身份与四leader兼容字段，不能据兼容字段删掉内部lane。新的单对local on−off为0/+1cycle，上游为−6/+14cycle，event变化为−0.5414%/0%。这些实际数值落在原数值门槛内，但仍为非独占、不同于原ef卡的每stage一对smoke，正式资格保持不合格。新[逐线程报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-thread-smoke-v1/B-release-warp-smoke.json)的条件post-last界为stage4 [206,231]、stage6 [210,232]cycle；SM/调用/slot绑定、SASS指令顺序和正式观察资格仍须共同满足后才能解释。Markdown按实际metrics生成，不能套用旧四leader批的超限结论。
+主集成740056在同一GPU432完成逐线程协议的正确性准备。B复放四份原始smoke及各4096个D抽样值，开启时两stage均保留全部128对线程戳，最大bracket宽分别25/22cycle；报告同时保留协议身份与四leader兼容字段，不能据兼容字段删掉内部lane。新的单对local on−off为0/+1cycle，上游为−6/+14cycle，event变化为−0.5414%/0%。这些实际数值落在原数值门槛内，但仍为非独占、不同于原ef卡的每stage一对smoke，正式资格保持不合格。新[逐线程报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-release-thread-smoke-v1/B-release-warp-smoke.json)的条件post-last界为stage4 [206,231]、stage6 [210,232]cycle；SM/调用/slot绑定、SASS指令顺序和正式观察资格仍须共同满足后才能解释。Markdown按实际metrics生成，不能套用旧四leader批的超限结论。
 
 ### ef卡冻结研究未通过上游门槛
 
@@ -197,7 +197,7 @@ stage4上游单对差超过原最大192cycle；stage6单对local差超过原中�
 
 plain参照CV分别0.9939%/0.6383%，低于5%。两stage均因上游门槛失败，整体`observation_qualified=false`；20个on条件分类虽均排除短post-last近似、与集中arrival相容，也不采用为机制或价格。stage4 signed median为0并不能抵消absolute median64.5，最大单对失败也不能由整调用差小抵消。
 
-[同调用分解](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-study-replay-v3/B-release-study-replay.json)保留全部40个H16=`full_wait+issue/commit+wait1`、20个原on/off差及各臂内部波动。最大两个窗口分别为stage4 trial8 off：1451=1338+107+6cycle；stage6 trial0 on：1395=1282+107+6cycle。对应producer三请求发出后的`issue_end`早于full_wait开始826/1945cycle。全部40次issue_end都早于wait开始，整段full_wait均在这三个请求已经发出标记之后，不能用“producer尚未发出”解释这些局部窗口；仍未区分排队、源/目的完成、通知、轮询和调度，不称为裸TMA延迟。
+[同调用分解](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-release-study-replay-v3/B-release-study-replay.json)保留全部40个H16=`full_wait+issue/commit+wait1`、20个原on/off差及各臂内部波动。最大两个窗口分别为stage4 trial8 off：1451=1338+107+6cycle；stage6 trial0 on：1395=1282+107+6cycle。对应producer三请求发出后的`issue_end`早于full_wait开始826/1945cycle。全部40次issue_end都早于wait开始，整段full_wait均在这三个请求已经发出标记之后，不能用“producer尚未发出”解释这些局部窗口；仍未区分排队、源/目的完成、通知、轮询和调度，不称为裸TMA延迟。
 
 stage4的10个off自身H16范围已为383～1451cycle，45个同臂绝对差的中位/最大为107/1068；stage6 off为368～389cycle，而full_wait为61～228、issue/commit为144～317，两个分项的变化大于H16总变化，wait1仅6～7。两个最大上游配对差−848/+1020对应local差仅+1/−1cycle，故不把上游变化直接写成release可见性或TC退休价格。20个on记录中最早新增release前戳都在H16结束至少493cycle之后；这些读取不属于该计时区间，但不能据此排除此前控制、执行历史或调度的间接影响。同臂45对差仅作描述，不替换冻结评分；原观察资格失败保持不变。
 
@@ -230,7 +230,7 @@ stage6 post与其它E0重叠的CTA数由35～71变为每次131，post cycle配�
 | stage4 | 4281.9 [619.1,5524.7] | 1052.9 [152.2,1358.5] |
 | stage6 | 22.7 [12.6,23.7] | 5.6 [3.1,5.8] |
 
-stage4十次均不相容，无需用off拟参或从观测反填初态；旧输出尾项、交接延迟或producer单次边界间隙只能改变起点，不能修复此关系。ε是修复两个**时长窗口**所需的数值松弛，不是实测观察误差界。stage6的小差与已知不均匀打点路径相容，但不能直接当stage4的误差上界。此结论只排除上述完整子类：放宽producer推进或提交/退休分支后可有反例，尚不能唯一断言服务率随时间变化。`admission_stage_events(second_prefill=True)`已按槽依赖实现干预，默认行为不变；完整证明、逐进程量和边界见[同份分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)。
+stage4十次均不相容，无需用off拟参或从观测反填初态；旧输出尾项、交接延迟或producer单次边界间隙只能改变起点，不能修复此关系。ε是修复两个**时长窗口**所需的数值松弛，不是实测观察误差界。stage6的小差与已知不均匀打点路径相容，但不能直接当stage4的误差上界。此结论只排除上述完整子类：放宽producer推进或提交/退休分支后可有反例，尚不能唯一断言服务率随时间变化。`admission_stage_events(second_prefill=True)`已按槽依赖实现干预，默认行为不变；完整证明、逐进程量和边界见[同份分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)。
 
 **宽分支只用关闭处理定值。** 保留名义c=512和本协议h=89，共同参数跨两stage使用；开启处理仅改变依赖。内部窗口对`(ℓ,a)→(ℓ+a,0)`完全不变，故合并为u=ℓ+a，少拟合一个不可辨识方向；a=0不代表物理复用成本为零。
 
@@ -239,14 +239,14 @@ stage4十次均不相容，无需用off拟参或从观测反填初态；旧输�
 | 省略两处局部full-wait窗口，十个量 | 0.28% / 0.54% | 9332.0 / 7865.5 |
 | 加入两stage的两处局部窗口，十四个量 | 4.86% / 13.84% | 8883.6 / 7865.5 |
 
-第一组解遗漏的stage4 H16→C16高估52.8%、H17→C17低估22.9%；两组解都预测early开关效应为0，实测配对中位为−1317cycle。交接也没有被窗口唯一约束：只将第一组解δ从1024改到2048/4096，off十个训练窗口不变，模型预等却由866cycle变成0。七个δ全部保留，没有用开启数据选择参数。有限box与数值搜索不证明宽参数族整体不可行；当前结果分别暴露了局部端点失配和不可辨识性，不能把u、δ逐项命名为硬件服务价格。完整端点与参数范围仍在[同份分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)，未增加新实验或预测成绩。
+第一组解遗漏的stage4 H16→C16高估52.8%、H17→C17低估22.9%；两组解都预测early开关效应为0，实测配对中位为−1317cycle。交接也没有被窗口唯一约束：只将第一组解δ从1024改到2048/4096，off十个训练窗口不变，模型预等却由866cycle变成0。七个δ全部保留，没有用开启数据选择参数。有限box与数值搜索不证明宽参数族整体不可行；当前结果分别暴露了局部端点失配和不可辨识性，不能把u、δ逐项命名为硬件服务价格。完整端点与参数范围仍在[同份分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)，未增加新实验或预测成绩。
 
 **先对齐端点，再解释初始等待。** 预等块位于collective内部、张量/fragment与release-state准备之后，没有额外named barrier。on/off在end读表处汇合，之后是同一机器码；初始S槽已成功等待且尚未释放，所以on的原首次wait不需要再等新的TMA事务，但检查、可见性和调度成本不为零。FIRST之后还有WARPSYNC、WARPGROUP.ARRIVE与发射准备，不能直接当TC执行开始。
 
 | progress SASS | prefill_end clock | 原首次TRYWAIT | FIRST clock | 首条HGMMA |
 |---|---:|---:|---:|---:|
-| [stage4](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill/build/cfg_b_s4_progress.sass) | 1e10 | 1e80 | 1ef0 | 2060 |
-| [stage6](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill/build/cfg_b_progress.sass) | 1fb0 | 2020 | 2090 | 2200 |
+| [stage4](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill/build/cfg_b_s4_progress.sass) | 1e10 | 1e80 | 1ef0 | 2060 |
+| [stage6](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill/build/cfg_b_progress.sass) | 1fb0 | 2020 | 2090 | 2200 |
 
 地址只用于确认路径，不用于换算cycle。设实测P为prefill_end，`FIRST−P=max(A−P,a_pre)+a_post=α+R`。前检查、后返回与ready时刻未分别观测，不能将α任意放在max前或后。off的stage4中位658.5、stage6为155cycle；仅要求共同中央映射且R≥0时，α≤155，stage4仍需至少503.5cycle的余量。若进一步要求每个off进程精确共用同一固定项，最小值给α≤113；这是更强假设，不用于卡住中央拟合。R可包含等待、调度或变化的观察开销，不是裸TMA延迟；on约110cycle只作对照，不反用为off常数。
 
@@ -263,13 +263,13 @@ stage4到C1十次均变晚，early十次缩短，但到C16和M的累计变化有
 
 下一候选转向逻辑源身份相关的共享状态：只假设相同源的在途请求可共用源就绪事件，每个目的CTA仍独立付出投递工作。这是假设检验，不代表已识别硬件合并，不再为当前恒定候选补统一偏移。下列具体候选的守恒已检查，但空间完成分布仍失败。
 
-四份计时外全D比较各4325376元素，差异/非有限数均为0；四binary均168寄存器、16 HGMMA、无spill。100个有效进程无采样重试，采样前停止的739785构建尝试保留于原run的attempts。两项同卡参照相对739740的批次中位变化为+2.41%/+0.76%，只作背景，主要结论来自本批配对；新旧批次绝对参数未合并。[原始数据](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill)、[逐进程与观察扰动](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)。冻结V09与正式预测参数未改。
+四份计时外全D比较各4325376元素，差异/非有限数均为0；四binary均168寄存器、16 HGMMA、无spill。100个有效进程无采样重试，采样前停止的739785构建尝试保留于原run的attempts。两项同卡参照相对739740的批次中位变化为+2.41%/+0.76%，只作背景，主要结论来自本批配对；新旧批次绝对参数未合并。[原始数据](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill)、[逐进程与观察扰动](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)。冻结V09与正式预测参数未改。
 
 <a id="source-candidate-replay"></a>
 
 ### 在途共享能解释局部预等方向，但当前参数仍失配空间完成分布
 
-2026-10-11离线复放两套已存在的探索参数，未再拟合。共享版本只合并源服务，每个CTA仍接受独立目的端投递；源完成后立即删除身份，不模拟驻留缓存。原临时结果的early、post、累计C16/M和E0逐项重现至1e-6 ns以内。原参数选择过程未完整重建，因此本次只是两个明确参数点的开发比较，不能称off校准后独立通过on留出。[参数、逐进程来源与复放结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-candidate-replay.md)。
+2026-10-11离线复放两套已存在的探索参数，未再拟合。共享版本只合并源服务，每个CTA仍接受独立目的端投递；源完成后立即删除身份，不模拟驻留缓存。原临时结果的early、post、累计C16/M和E0逐项重现至1e-6 ns以内。原参数选择过程未完整重建，因此本次只是两个明确参数点的开发比较，不能称off校准后独立通过on留出。[参数、逐进程来源与复放结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-candidate-replay.md)。
 
 stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9ns，不共享预测+1.0ns；共享预测累计开始→C16/M均不变，与本批有正有负的范围相容。不共享预测分别+721.3/+722.9ns，均高于对应十进程差的最大值640/576ns。stage6两个候选都预测early不变，累计C16/M推迟930.5ns，落在本批范围内。累计起点在模型中是前WG的mma返回，实测是软件预等开始，映射尚未完全对齐；这里的相容不等于识别硬件机制。
 
@@ -286,7 +286,7 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 固定CTA0，将其它同时起步的actor倒序或按偶/奇重排，同时携带其源身份，stage4/6的early、post、M跨度和源工作量在报告精度内均未改变。因此这三个插入顺序不能修复当前跨度失败，也不能据此证明任意仲裁次序都无影响。下一步先利用已有全CTA阶段记录约束共享状态的空间传播与首/后输出推进，检查源服务差异与周期到时间换算各自还缺多少；不新增stage专属常数，不把测后入口或频率当正式预测输入。只有剩余两个解释给出现有数据无法检验的不同响应时才补最小对照。
 
-复核：`analyze_r13_supply.py --source-candidate-replay --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。18项依赖与守恒测试通过只证明事件实现检查通过，不证明共享假设成立。原始样本、V09评分和正式预测参数未改。
+复核：`analyze_r13_supply.py --source-candidate-replay --run results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。18项依赖与守恒测试通过只证明事件实现检查通过，不证明共享假设成立。原始样本、V09评分和正式预测参数未改。
 
 <a id="request-path-joint"></a>
 
@@ -303,13 +303,13 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 模型入口明确取前WG的mma返回加handoff；实际入口是软件预等开始，映射限制与前述探索比较相同，不能把累计窗口的近似相容当成端点识别。stage4/off的early/post为5248/16322.901ns，接近已有5168/16320ns，但同价on的early却增加而不是十对均缩短；这个响应失败已足以拒绝本点。stage6方向相容不能抵消stage4和R10 B32/空间失败。
 
-[联合结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json)保留四个完整图的局部窗口、累计入口、路径工作和模型末端。这里未重拟、未升级观察资格，也未判定整个共享请求路径家族不可行；当前开发点不采用。
+[联合结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json)保留四个完整图的局部窗口、累计入口、路径工作和模型末端。这里未重拟、未升级观察资格，也未判定整个共享请求路径家族不可行；当前开发点不采用。
 
 <a id="source-spatial"></a>
 
 ### stage4周期离散集中在A行组，但源与位置尚未分开
 
-复用739095全部20个dual进程，以实际工作坐标组成11个A组×12个B组。每个首/后输出窗口均在同CTA、同consumer角色内计算`MAIN−FIRST`，先作整数时间戳差，再换成浮点。每进程独立分解`x_ab=全体均值+行效应+列效应+残差`；平衡表的三项平方和与总离散精确闭合，随后才汇总进程。[完整逐组曲线与复核结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-spatial.md)。
+复用739095全部20个dual进程，以实际工作坐标组成11个A组×12个B组。每个首/后输出窗口均在同CTA、同consumer角色内计算`MAIN−FIRST`，先作整数时间戳差，再换成浮点。每进程独立分解`x_ab=全体均值+行效应+列效应+残差`；平衡表的三项平方和与总离散精确闭合，随后才汇总进程。[完整逐组曲线与复核结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-spatial.md)。
 
 | stage/输出 | 周期跨度中位 | A组均值周期跨度中位 | A组所占周期离散中位〔十进程范围〕 | A组所占ns离散中位 |
 |---|---:|---:|---:|---:|
@@ -324,13 +324,13 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 当前在途共享候选只读取源键的相等关系；对所有键作一一重命名，源服务、目的投递和全部事件必须不变。stage4/6及预等开/关的CPU回归已验证这一结构不变量。若下一步确需新证据，最小辨识方向是在同一stage4完整几何中整体轮换A行组到固定CTA/SM集合，保留每组12个CTA、B工作、每轮地址集合和两轮工作量：纯相等关系模型预言零响应，地址相关的组服务与位置相关服务则可通过组差随地址迁移还是留在原位置区分。仍须控制映射指令开销、实际CTA→SM映射、输入/输出地址变化及同调用输出重叠；尚未据此启动采样，不将零结果自动判为某物理机制成立。
 
-复核使用`analyze_r13_supply.py --source-spatial-diagnostics --run results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。不把组编号、实测周期率或观测端点加入正式预测。
+复核使用`analyze_r13_supply.py --source-spatial-diagnostics --run results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls --output results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。不把组编号、实测周期率或观测端点加入正式预测。
 
 <a id="source-offsets"></a>
 
 ### 实测producer起步差仍未让共享候选产生足够分散
 
-源共享加入后重新检验起步切口：固定上述探索参数、使用739095普通输出组织defer0，把每个进程132个PROD相对偏移分别乘0、10⁻⁶、1。没有重新拟合，源身份与工作映射逐CTA核对。PROD是producer循环入口而非首TMA发射；参数来自另一观察协议/批次，因此这里只问该具体候选能否放大既有起步差，不作为跨批绝对验证。[20进程及完整预测窗口](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-offsets.md)。
+源共享加入后重新检验起步切口：固定上述探索参数、使用739095普通输出组织defer0，把每个进程132个PROD相对偏移分别乘0、10⁻⁶、1。没有重新拟合，源身份与工作映射逐CTA核对。PROD是producer循环入口而非首TMA发射；参数来自另一观察协议/批次，因此这里只问该具体候选能否放大既有起步差，不作为跨批绝对验证。[20进程及完整预测窗口](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-offsets.md)。
 
 | stage | 实测PROD跨度ns | 实测第二MAIN跨度ns | 零偏移预测ns | 原幅偏移预测ns |
 |---|---:|---:|---:|---:|
@@ -343,13 +343,13 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 下一候选需要同时保留真实源复用关系与非同质推进；局部软件前驱、目的端服务及源状态何者造成差异仍未分开。先检查现有逐阶段事件能施加的必要约束，不为CTA/SM/A组加常数，也不把一份失败参数点升级为全族排除。工作整体轮换还会移动D地址并改变映射指令路径，最小对照须先解决这些混淆，暂不申请GPU。
 
-复核入口：`analyze_r13_supply.py --source-offset-diagnostics --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
+复核入口：`analyze_r13_supply.py --source-offset-diagnostics --run results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
 
 <a id="a-source-rotation-preparation"></a>
 
 ### A源行组轮换未给出稳定的地址跟随规律
 
-740033固定cfg_b、2816×1536×4096、stage4、AlongN、swizzle1、dyadic/seed17、E0 defer2，只将A读取tile行m变成`11*(m/11)+(m%11+shift)%11`，shift为0/1。每轮11组独立循环，B分片、D写回、persistent工作与CTA位置不变；初始化逆排列A，保持每个逻辑CTA收到的FP16值及顺序。纯源键相等关系模型对该干预严格预言零响应。本批只作机制对照，不是V10或新留出。[配置](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r13-a-row-rotation.json)、[原始样本](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation)、[逐进程分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/reanalysis/B-a-source-rotation.md)。
+740033固定cfg_b、2816×1536×4096、stage4、AlongN、swizzle1、dyadic/seed17、E0 defer2，只将A读取tile行m变成`11*(m/11)+(m%11+shift)%11`，shift为0/1。每轮11组独立循环，B分片、D写回、persistent工作与CTA位置不变；初始化逆排列A，保持每个逻辑CTA收到的FP16值及顺序。纯源键相等关系模型对该干预严格预言零响应。本批只作机制对照，不是V10或新留出。[配置](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r13-a-row-rotation.json)、[原始样本](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-a-row-rotation)、[逐进程分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-a-row-rotation/reanalysis/B-a-source-rotation.md)。
 
 **主观测10/10配对有效。** 同档同binary各plain/dual十进程，共40进程、无采样重试；全体CTA的实际work/SM映射在配对内相同。首MAIN戳位于mma_tail之后、新增E0等待之前；20个dual调用中，全卡最后首MAIN比最早E0 permit早18720～20480ns，主窗口没有其它CTA输出覆盖。周期和ns均取同CTA、同consumer的FIRST→MAIN，不用跨SM clock64拼接。
 
@@ -372,13 +372,13 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 本批仍不可分离共享到达历史、局部消费/释放状态和位置相关服务。反向初始化保持逻辑操作数，却改变物理A地址上的内容，不能进一步独占归因缓存或路由。下一步复用已有stage进度与本批有效首窗口，约束共同源ready之后的非同质推进；不因本批未唯一识别而扩展整套地址矩阵，不新增A组/SM价格。
 
-复核：`analyze_r13_supply.py --a-source-rotation --run results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation --output results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/reanalysis`。预定范围、门槛及执行身份保存在[planned_observations](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/planned_observations.json)。
+复核：`analyze_r13_supply.py --a-source-rotation --run results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-a-row-rotation --output results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-a-row-rotation/reanalysis`。预定范围、门槛及执行身份保存在[planned_observations](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-a-row-rotation/planned_observations.json)。
 
 <a id="source-join-boundary"></a>
 
 ### 缩短源订阅窗口没有同时修复空间分散与预等响应
 
-当前源ready含FIFO服务结束后的共同延迟。原候选允许后来请求直到ready前都订阅同一generation，可能强化同步。现已在纯模型中明确比较三个截止事件：ready、服务结束、服务开始。到达严格早于截止才能加入；关闭订阅不取消已有订阅者的目的投递，旧generation完成也不能删除后来新建的同源generation。它们是逻辑事件假设，未识别物理合并时限；默认仍为原ready行为。[实现](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)、[开发诊断](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-join-boundary.md)。
+当前源ready含FIFO服务结束后的共同延迟。原候选允许后来请求直到ready前都订阅同一generation，可能强化同步。现已在纯模型中明确比较三个截止事件：ready、服务结束、服务开始。到达严格早于截止才能加入；关闭订阅不取消已有订阅者的目的投递，旧generation完成也不能删除后来新建的同源generation。它们是逻辑事件假设，未识别物理合并时限；默认仍为原ready行为。[实现](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)、[开发诊断](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-join-boundary.md)。
 
 先原样复放探索参数，服务结束/开始截止使stage4/off的M跨度从124.9增至653.0/664.0ns，但预等early由缩短变为增长。随后给每个边界一次共同起点的两坐标重拟，仅用739790 stage4/off的early=5168ns、post=16320ns，调整服务时间与ready延迟；范围分别0.01～30ns、0～2000ns，最多40次求解评估，没有多起点或大网格。stage6/on不进入本次两坐标目标；其它固定参数来自历史探索元组，不声称其选择未用过这些数据。所有候选均保留：
 
@@ -392,7 +392,7 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 三种候选全部保留33792个16KiB单位的目的投递工作。早截止增加的是模型中的源generation及服务工作，不能称物理流量增加。21项模型测试通过，包括严格截止、完成前的新generation与旧完成事件清理、投递守恒；不作为硬件假设成立的证据。
 
-本轮不采用任一截止边界或重拟参数，不进一步扫描截止常数，也不新增GPU条件。下一组合候选须同时检查局部发射、消费/释放与共享源服务的竞争前驱；仅靠改变源合并寿命不足以修复当前三个具体候选，不能把这一局部结论扩展成所有源共享模型的反证。复核入口为`analyze_r13_supply.py --source-join-boundary --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
+本轮不采用任一截止边界或重拟参数，不进一步扫描截止常数，也不新增GPU条件。下一组合候选须同时检查局部发射、消费/释放与共享源服务的竞争前驱；仅靠改变源合并寿命不足以修复当前三个具体候选，不能把这一局部结论扩展成所有源共享模型的反证。复核入口为`analyze_r13_supply.py --source-join-boundary --run results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
 
 <a id="local-epilogue-exclusion"></a>
 
@@ -402,17 +402,17 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 整box共享中，若旧源完成为`server_end+L`而订阅严格在`server_end`关闭，把源read latency改为0、每需求目的后程改为L，会得到同一图的另一参数化。两者都在`server_end`停止接收新订阅，每个需求都在`server_end+L`进入同一目的FIFO；源代次、队列工作、投递、消费、释放及输出随后按归纳一致，只有内部`source_ready`标签改变。因此仅靠issue/full、consumer/output端点或起步延迟响应不能区分这两个标签，不应另起一个“目的延迟机制”重新拟价或申请区分它们的GPU对照。
 
-[等价复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-latency-relocation-v1/B-latency-relocation.json)固定原探索元组，在stage4/6各复放普通、合成CTA55根延迟512ns、全E0延后及延后后的prefill共八对模型。405504个需求、全部源订阅身份和目的时间线一致；19项完整公开字段及全actor状态精确相等。512ns只是规定的合成根偏移，不输入实测起步戳，也不声称模拟了实际计时循环的overshoot。没有重扫截止、拟合或采样，原service_end分支的有界开发失败直接继承；该结论不排除所有缓存或部分地址单元模型，也不识别物理源/目的延迟分配。
+[等价复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events/reanalysis/B-20261011-latency-relocation-v1/B-latency-relocation.json)固定原探索元组，在stage4/6各复放普通、合成CTA55根延迟512ns、全E0延后及延后后的prefill共八对模型。405504个需求、全部源订阅身份和目的时间线一致；19项完整公开字段及全actor状态精确相等。512ns只是规定的合成根偏移，不输入实测起步戳，也不声称模拟了实际计时循环的overshoot。没有重扫截止、拟合或采样，原service_end分支的有界开发失败直接继承；该结论不排除所有缓存或部分地址单元模型，也不识别物理源/目的延迟分配。
 
 ### 本地E0排他只能解释部分响应，不能修复defer2缺口
 
-纯模型增加可关闭的局部排他候选：沿用已有epilogue prepare/write时长，在这些区间内分别推迟本CTA producer请求、MMA起动或两者；不重拟或新增时间常数。请求和MMA起动自身不占用此局部资源，因此这是单向排他假设，不是对称仲裁，也不命名SM端口。未来才开始的write区间不会阻塞之前的事件；同时间保持原插入顺序。[逐条件复放](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-local-epilogue-exclusion.md)。
+纯模型增加可关闭的局部排他候选：沿用已有epilogue prepare/write时长，在这些区间内分别推迟本CTA producer请求、MMA起动或两者；不重拟或新增时间常数。请求和MMA起动自身不占用此局部资源，因此这是单向排他假设，不是对称仲裁，也不命名SM端口。未来才开始的write区间不会阻塞之前的事件；同时间保持原插入顺序。[逐条件复放](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-local-epilogue-exclusion.md)。
 
 stage4的输出延期early响应，原图为−0.135%，仅阻塞producer为−0.860%，仅阻塞consumer为+0.695%，同时阻塞为−0.801%；739717的周期配对中位为−6.822%〔−9.684,−1.309〕。跨观察协议只比较无量纲响应，不把模型ns与旧批周期拼成绝对时间。当前参数下该候选仍不足以解释幅度，未接入正式预测。
 
 更强的图结构限制是：defer2要求E0在本CTA第二M返回之后开始，而M返回之前该CTA的全部输入请求与MMA起动都已完成。此时局部排他没有可阻塞事件，E1更晚，因此不存在第一处变化可以传播到共享服务器。三个排他范围、两个stage的全部返回结果与关闭排他完全相同；阶段数2/4/6及预等开/关的回归同样检查了这一不变量。它与具体prepare/write价格无关，故不能通过增大E0常数修复defer2中仍存在的stage4缺口。
 
-24项事件模型测试通过，包括目的工作守恒、仅阻塞本CTA区间、零时长退化和defer2不变性。这些仅证明候选实现与结构边界，不证明硬件假设。本轮到此交接；待B继续约束producer与consumer本身的推进/释放竞争，以及跨调用状态，主集成不再展开下一轮供给研究。复核入口：`analyze_r13_supply.py --local-epilogue-exclusion --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
+24项事件模型测试通过，包括目的工作守恒、仅阻塞本CTA区间、零时长退化和defer2不变性。这些仅证明候选实现与结构边界，不证明硬件假设。本轮到此交接；待B继续约束producer与consumer本身的推进/释放竞争，以及跨调用状态，主集成不再展开下一轮供给研究。复核入口：`analyze_r13_supply.py --local-epilogue-exclusion --run results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
 
 <a id="stage-background-baseline"></a>
 
@@ -429,7 +429,7 @@ stage4的输出延期early响应，原图为−0.135%，仅阻塞producer为−0
 | stage4 flag2 late46 | 27288.70～27801.85 | 28095 | 293.15 |
 | stage6 flag2 late46 | 23564.27 | 23587 | 22.73 |
 
-条件包络沿用原reduced/default-inheritance的全部假设，早段上界还要求默认继承状态；不是置信区间或任意模型的极限。每进程散布保留在[分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md)。改用nominal c=512时，两个stage4上限仅变化0.09/0.82cycle，不解释上述中位残差。
+条件包络沿用原reduced/default-inheritance的全部假设，早段上界还要求默认继承状态；不是置信区间或任意模型的极限。每进程散布保留在[分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md)。改用nominal c=512时，两个stage4上限仅变化0.09/0.82cycle，不解释上述中位残差。
 
 局部打点不适合直接反解所有参数：stage6 flag2的C16→C17为534/535，约比其early平均间隔多22cycle；W16−C16约49、C63→M为57，不能沿用旧协议43/10，也不能把被选中的单步开销应用于每次迭代。M→MAIN还与本CTA E0重叠约339cycle，不能拟成单一退休延迟λ。FIRST→C1混有继承的服务状态，q与ready时间仍不可分。
 
@@ -455,7 +455,7 @@ stage4的输出延期early响应，原图为−0.135%，仅阻塞producer为−0
 
 复用739095同卡dual作独立入口检查：stage6 CTA0的entry十次都处在最早32ns格点，但首输入FIRST前面已有2～105个CTA，第二MAIN_END前面已有58～105个。stage4 entry中位仅比最早晚32ns。PROD不是首请求发出，旧MAIN_END也不是本批M；这些端点不能跨批拼接，但足以阻止把后续落后全部补成一个CTA0入口延迟。请求形成与分阶段换算检查见下节；不能按测后M排名改变仲裁或拟CTA专属常数。
 
-[完整分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)保存两个原拟合、联合开发解、每CTA预测相位和原始来源。模型末端是最后E1源读取完成，尚无全局D可见尾项或kernel固定项，不冒充完整CUDA时间。CPU退化及依赖测试通过只证明实现按候选运行；该候选仍不采用。
+[完整分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)保存两个原拟合、联合开发解、每CTA预测相位和原始来源。模型末端是最后E1源读取完成，尚无全局D可见尾项或kernel固定项，不冒充完整CUDA时间。CPU退化及依赖测试通过只证明实现按候选运行；该候选仍不采用。
 
 <a id="stage-order-invariant"></a>
 
@@ -467,13 +467,13 @@ stage4的输出延期early响应，原图为−0.135%，仅阻塞producer为−0
 
 独立的739740 flag2观测也与默认同起步图不同：其它CTA最早M1领先CTA0的stage4/6中位分别1184/640ns，且其它E0与CTA0后段重叠CTA数均为60。模型同起步时CTA0必先M1，flag2又要求每个E0等自身M1，故此重叠恒为0，任意统一gap都不改变它。
 
-32ns只是逆序计数筛选，未给跨SM计时误差设上界。若每端点允许独立±ε修正，上述两个见证至少需ε≥304/384ns才能消除一个严格方向；这是必要修复量，不是实测skew。结论限定为当前同质FIFO图不能解释名义观测，不据此命名物理仲裁或局部资源。[周期/周期率分解](../../../../Q09-frequency/R09-inkernel-clock-stages.md#stage-order-decomposition)表明，固定每阶段周期率和交接项后stage4仍保留71.0%的原逆序，stage6只有12.5%；不能把两者的ns逆序都当成同一种供给瓶颈。[推导、逐进程逆序与源端点](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
+32ns只是逆序计数筛选，未给跨SM计时误差设上界。若每端点允许独立±ε修正，上述两个见证至少需ε≥304/384ns才能消除一个严格方向；这是必要修复量，不是实测skew。结论限定为当前同质FIFO图不能解释名义观测，不据此命名物理仲裁或局部资源。[周期/周期率分解](../../../../Q09-frequency/R09-inkernel-clock-stages.md#stage-order-decomposition)表明，固定每阶段周期率和交接项后stage4仍保留71.0%的原逆序，stage6只有12.5%；不能把两者的ns逆序都当成同一种供给瓶颈。[推导、逐进程逆序与源端点](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
 
 <a id="stage-request-formation"></a>
 
 ## 起步分散与请求粒度
 
-四个实际二进制的producer循环都发出三条UTMALDG：A16KiB、B0/B1各8KiB。旧候选将B合为16KiB，逻辑工作总量正确，但FIFO粒度不符；上节已按三请求重算，旧[两请求结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service-two-request.md)保留。当前两输出共50688个输入原子，归一工作仍为33792个16KiB单位。
+四个实际二进制的producer循环都发出三条UTMALDG：A16KiB、B0/B1各8KiB。旧候选将B合为16KiB，逻辑工作总量正确，但FIFO粒度不符；上节已按三请求重算，旧[两请求结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service-two-request.md)保留。当前两输出共50688个输入原子，归一工作仍为33792个16KiB单位。
 
 739095的PROD在producer首次工作循环入口，早于坐标计算与load，不能叫预填完成或首TMA发出。以下每列先在同调用132个CTA内求跨度，再取十个进程中位，单位ns：
 
@@ -482,9 +482,9 @@ stage4的输出延期early响应，原图为−0.135%，仅阻塞producer为−0
 | 4 | 2624 | 112 | 208 | 560 | 1600 | 1488 |
 | 6 | 1136 | 96 | 224 | 688 | 736 | 640 |
 
-完成分散在首输入后继续累积，不能只补入口延迟。各段逐CTA相加闭合，跨度不相加；FIRST0→FIRST1跨consumer角色，也不是纯计算服务。每轮11组A源各供12个CTA、B0/B1各12组各供11个CTA；第二输出换A组、复用B地址。这些身份在等权服务中被折叠，但与物理CTA/SM绑定，尚不能分离缓存、路由和到达组织。[逐CTA来源与静态请求](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-request-formation.md)。
+完成分散在首输入后继续累积，不能只补入口延迟。各段逐CTA相加闭合，跨度不相加；FIRST0→FIRST1跨consumer角色，也不是纯计算服务。每轮11组A源各供12个CTA、B0/B1各12组各供11个CTA；第二输出换A组、复用B地址。这些身份在等权服务中被折叠，但与物理CTA/SM绑定，尚不能分离缓存、路由和到达组织。[逐CTA来源与静态请求](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-request-formation.md)。
 
-起步差条件诊断固定新批joint参数，把旧PROD偏移仅作输入切口，不报跨批绝对成绩。零发射间隔下，将偏移缩至百万分之一仍显著改变分散；改用两个未标定的有限间隔示例δ∈{τ,16τ}（τ是拟合的逻辑服务时间，约0.64ns）后，微小偏移下的全卡MAIN1排序曲线与全0起步完全相同。原幅度偏移仍能改变分散。因此零间隔的并列处理与有限起步差是两个影响，不能把前者当成实测240ns起步差的物理放大，也不能按后者挑一个δ进入预测。逐进程对照见[共享服务报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
+起步差条件诊断固定新批joint参数，把旧PROD偏移仅作输入切口，不报跨批绝对成绩。零发射间隔下，将偏移缩至百万分之一仍显著改变分散；改用两个未标定的有限间隔示例δ∈{τ,16τ}（τ是拟合的逻辑服务时间，约0.64ns）后，微小偏移下的全卡MAIN1排序曲线与全0起步完全相同。原幅度偏移仍能改变分散。因此零间隔的并列处理与有限起步差是两个影响，不能把前者当成实测240ns起步差的物理放大，也不能按后者挑一个δ进入预测。逐进程对照见[共享服务报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
 
 源码还限制了参数含义：A→B0/B0→B1在stage6 plain分别跨4/1条指令步，stage4 plain为5/1，progress均为3/2；指令步不是cycle。普通迭代可写为`nextA=max(prevB1+acquire前工作,slot_ready)+acquire后工作`，跨两次load还含调度与坐标重建，不能把所有producer工作放在等待前。已有端点只给出下列同producer合并窗口（十进程中位[最小,最大]，cycle）：
 
@@ -516,7 +516,7 @@ stage4 的真实 WGMMA 在 32/48 KiB 输入下分别为 58.046/45.337，而直�
 
 <a id="r05-d"></a>
 
-R05-D 使用不同协议：160 线程、48 KiB/Ktile、动态 SMEM 至少 192 KiB、每 SM 一个 CTA，consumer 在 mbarrier 完成后立即释放槽。共享小源实际访问 15 MiB，独立大源 241 MiB；stage2/4 的 132 CTA 中位供给率分别为 **55.45/55.48** 和 **15.26/15.26 B/cycle/CTA**。共享源条件满足约 48 B/cycle 的计算需求，独立源不满足；stage2 与 stage4 没有响应。此表与上述 SM-covered-cycle 的消费者、源布局及分母不同，不合并定值。完整设计见 [R05-D 报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/report.md)。
+R05-D 使用不同协议：160 线程、48 KiB/Ktile、动态 SMEM 至少 192 KiB、每 SM 一个 CTA，consumer 在 mbarrier 完成后立即释放槽。共享小源实际访问 15 MiB，独立大源 241 MiB；stage2/4 的 132 CTA 中位供给率分别为 **55.45/55.48** 和 **15.26/15.26 B/cycle/CTA**。共享源条件满足约 48 B/cycle 的计算需求，独立源不满足；stage2 与 stage4 没有响应。此表与上述 SM-covered-cycle 的消费者、源布局及分母不同，不合并定值。完整设计见 [R05-D 报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-formal-v2/report.md)。
 
 ### ready、retire 与槽复用的观测边界
 
@@ -528,7 +528,7 @@ ready 是 issue→wait_return；retire 是 consume→empty.arrive 前；reuse �
 | retire | n128_s2_c2、n128_s4_c0/c1/c2、n256_s1_c2、n256_s2_c2 均值超限，只保留定性顺序。 |
 | reuse | v11 完整 180 对仅 CTA0/tile16 的两个字段非零且正序；16/18 条件通过均值门槛。n128_s1_c0 为 5.750%，n128_s4_c2 为 5.903%，仅定性。后者代表批 4.781% 通过不替代正式失败。 |
 
-均值门槛通过不表示每对、每个 SM 均无扰动。事件失败的条件仍保留数值正确的 plain；v10 reuse 的零字段缺陷已由 v11 修正，但不采用 v10 的事件间隔。完整 reuse 的 397393920 个保存输出值与最后输入槽通过参考复算，续采按冻结来源核对。[独立 retire 复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735985-v9-formal-retire/reviews/independent-C.md)、[独立 reuse 复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse/reviews/independent-C.md)保留源码、SASS、逐对扰动与字段证据。早期实现和续采流水见[固定旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R13-async-retirement.md#槽可复用与补发直接观测)。
+均值门槛通过不表示每对、每个 SM 均无扰动。事件失败的条件仍保留数值正确的 plain；v10 reuse 的零字段缺陷已由 v11 修正，但不采用 v10 的事件间隔。完整 reuse 的 397393920 个保存输出值与最后输入槽通过参考复算，续采按冻结来源核对。[独立 retire 复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261007-R13-job735985-v9-formal-retire/reviews/independent-C.md)、[独立 reuse 复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261007-R13-job736169-v11-formal-reuse/reviews/independent-C.md)保留源码、SASS、逐对扰动与字段证据。早期实现和续采流水见[固定旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R13-async-retirement.md#槽可复用与补发直接观测)。
 
 <a id="v08-supply"></a>
 <a id="v08-supply-fit"></a>
@@ -549,7 +549,7 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 | 再加输入足迹 | 11.05% | K 与足迹共同变化，无法选择因果解释 |
 | 再加 cfg_a 专属项 | 5.71% | 留 K 组最大 11.16%；首段转移最大 15.27% |
 
-这些都属于已见数据开发诊断。留出某 M×N 后训练缺非零行距、留配置后系数不可识别的折不评分，不用零系数补缺。有限窗口截距可能吸收供给代价，不能命名为纯启动/排空；改截距后上述失败仍在。[完整拟合、参数与敏感性](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-v3/summary.json)。逐项行距响应和配置反例集中在 [R10](../../../../Q03-source-service/R10-layout-cache.md#v08-stride)。
+这些都属于已见数据开发诊断。留出某 M×N 后训练缺非零行距、留配置后系数不可识别的折不评分，不用零系数补缺。有限窗口截距可能吸收供给代价，不能命名为纯启动/排空；改截距后上述失败仍在。[完整拟合、参数与敏感性](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-v3/summary.json)。逐项行距响应和配置反例集中在 [R10](../../../../Q03-source-service/R10-layout-cache.md#v08-stride)。
 
 <a id="requested-sm-pitch"></a>
 
@@ -561,13 +561,13 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 
 加入固定 stage 数作为预填信用、同时考虑下一输出需求后，s=5/6 的最大误差降至 **4.41%/3.78%**；s=6 首段转移仍为 5.90%。移除 132 SM 档训练后，基准服务项秩亏，向该档外推最大误差仍为 24.02%。这是增加了需求状态信息，未测出 FIRST_MMA 时实际可消费的 Ktile 数。
 
-原卡 V08F 重拟合中，原形式/波次/六 stage 预填最大误差为 **5.71%/5.80%/6.69%**；留 K1024 有改善、留 K4096 略变差，未得到一致迁移。[原卡转移重放](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/manager-wave-transfer-v1/result.txt)。stage、在途 SMEM 量和物理队列深度不能等同；有限预填还缺同一调用内的可消费量、当前/下一输出补发边界约束。
+原卡 V08F 重拟合中，原形式/波次/六 stage 预填最大误差为 **5.71%/5.80%/6.69%**；留 K1024 有改善、留 K4096 略变差，未得到一致迁移。[原卡转移重放](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/reanalysis/manager-wave-transfer-v1/result.txt)。stage、在途 SMEM 量和物理队列深度不能等同；有限预填还缺同一调用内的可消费量、当前/下一输出补发边界约束。
 
 <a id="composed-coverage"></a>
 
 ### 地址覆盖与填零需求的边界
 
-32/128 B 覆盖量只数实际有效地址，按真实发起 box 与 multicast ownership 聚合；相邻 box 可重复覆盖 granule，不能称物理事务数。cfg_a/c 的多播源 box 与目的 tile 不相同，不能机械平分每个目的 CTA 的有效量。逐 box ownership、25 个旧条件和拟议条件的静态检查见[报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-static-requests-v1/summary.json)。当前公式和输入定义见 [RULES](../../../../access_rules/RULES.md#v09-model)。
+32/128 B 覆盖量只数实际有效地址，按真实发起 box 与 multicast ownership 聚合；相邻 box 可重复覆盖 granule，不能称物理事务数。cfg_a/c 的多播源 box 与目的 tile 不相同，不能机械平分每个目的 CTA 的有效量。逐 box ownership、25 个旧条件和拟议条件的静态检查见[报告](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-static-requests-v1/summary.json)。当前公式和输入定义见 [RULES](../../../../access_rules/RULES.md#v09-model)。
 
 共同覆盖单价、分开 A/B 单价都留下失败；覆盖的秩、非唯一参数范围、反例与原冻结判定见 [R10](../../../../Q03-source-service/R10-layout-cache.md#coverage-identifiability)。只有 p0/p16 时，extra32/extra128 为 1:7，能定的是组合价，不能拆成两项物理代价。有效地址需求下降也不意味着服务减少：OOB 填零有独立条件代价，证据集中在 [R18](../../../../Q01-scheduling/R18-cluster-boundary.md#valid-fill-candidate)。
 
@@ -576,7 +576,7 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 
 同卡旧 B13 的有效地址＋填零候选能改善 CTA 组合，但局部有效地址慢窗口仍有约 24%～25% 误差；填零分项见 [R18](../../../../Q01-scheduling/R18-cluster-boundary.md#valid-fill-candidate)。在相同 non-L 参数下，周期/ns 候选把 13 条件 dual event 的中位/最大误差从 **9.56%/13.76%、6.87%/15.50%** 降至 **3.76%/7.14%、3.46%/5.95%**。这是同数据开发组合，显式频率假设为 1.6 GHz，未回填目标例实测频率。
 
-诊断性地接入同调用实测全部 L 后，ns event 最大误差为 1.60%，周期换算仍为 8.26%；后者说明周期路径和固定频率可能抵消误差。只换实测首 L 也未消除最大残差。组合报告见[CTA composition](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-cta-composition-v3/summary.json)，本页不再维护旧递推或参数副本。
+诊断性地接入同调用实测全部 L 后，ns event 最大误差为 1.60%，周期换算仍为 8.26%；后者说明周期路径和固定频率可能抵消误差。只换实测首 L 也未消除最大残差。组合报告见[CTA composition](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-cta-composition-v3/summary.json)，本页不再维护旧递推或参数副本。
 
 ## first/later 定值与非唯一预测
 
@@ -590,7 +590,7 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 
 未分 first 时 cfg_c B16/K4096 首 tile case 中位曾高估 75.20%；独立 first 定值后 K1024/4096 B16 的窗口平均有符号误差为 +0.26%/+5.61%。这只证明训练状态需要分开，不是新留出成功；single48 首段仍约 +12.61%。dual/plain 的 case 中位扰动范围为 +0.54%～+6.22%，不能忽略 observer 差异。
 
-当时的非负条件 LP 中，A/B first/later 和 C first 在 1.6 GHz 下的训练条件预测唯一；C later 的 84 个 K4096/A16 窗口仍有至多 388.70 ns 范围，其余 1940 个唯一。范围不是置信区间；首次训练没看到目的 fill，不能从 later 补 first 参数。[phase 模型和范围](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)。
+当时的非负条件 LP 中，A/B first/later 和 C first 在 1.6 GHz 下的训练条件预测唯一；C later 的 84 个 K4096/A16 窗口仍有至多 388.70 ns 范围，其余 1940 个唯一。范围不是置信区间；首次训练没看到目的 fill，不能从 later 补 first 参数。[phase 模型和范围](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)。
 
 ### cfg_b 19 条件的有条件联合
 
@@ -609,7 +609,7 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 
 [738707/738865 的 first 配对](../../../../Q01-scheduling/R18-cluster-boundary.md#first-fill)只加入 A/C first，B19 和全部 later payload 不变。A first 为 5/5 秩，源有效量系数停在非负边界不等于物理供给免费；C first 为 4/5，B-fill 条件价格范围仍为 **6.3092～33.4899 ns/KiB**。具体实验误差归 R18。
 
-最终[精确训练行](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/training-rows.json.gz)按 first/later→cfg→有序行保存，重拟合同一实现的参数与预测逐值相同；[来源清单](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/provenance.json)绑定 50 个 run/case 的原样本、源码与哈希。
+最终[精确训练行](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/training-rows.json.gz)按 first/later→cfg→有序行保存，重拟合同一实现的参数与预测逐值相同；[来源清单](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/provenance.json)绑定 50 个 run/case 的原样本、源码与哈希。
 
 | 配置 | first 行数 | later 行数 |
 |---|---:|---:|
@@ -619,7 +619,7 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 
 **固定 1.6 GHz 支持不等于任意频率支持。** 已见 50 条件的自由组合仍拒绝 `cfg_c_first_fill_oob_k1024`：训练时六个 whole B-fill 首窗处于计算分支，自由频率 1.75195 GHz 使其转入尚未唯一识别的供给方向。C 新四点没有确定所有频率下的 first-fill 服务。
 
-V09 冻结前 30 条件为 29 数值＋1 unsupported。cfg_c G2 的 CTA62/63 特征虽在请求张成空间内，在约 1.86 GHz 下却激活未识别方向；最终 r2 条件 LP 给首窗约 **9.066～9.409 µs**。它们可能决定包络，不能忽略或用中点替代；这是固定预测频率下的范围，未重新联立时钟。原诊断与 r2 数值口径分别见[支持定位](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json)、[r2 复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/support-check/report.json)。
+V09 冻结前 30 条件为 29 数值＋1 unsupported。cfg_c G2 的 CTA62/63 特征虽在请求张成空间内，在约 1.86 GHz 下却激活未识别方向；最终 r2 条件 LP 给首窗约 **9.066～9.409 µs**。它们可能决定包络，不能忽略或用中点替代；这是固定预测频率下的范围，未重新联立时钟。原诊断与 r2 数值口径分别见[支持定位](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json)、[r2 复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/reanalysis/support-check/report.json)。
 
 <a id="v09-stage-failure"></a>
 
@@ -647,7 +647,7 @@ first/later的ns变化在十trial中分别为+3.29%～+8.52%、+13.92%～+19.25%
 
 静态资源排除了驻留CTA数和spill解释：stage6/4的SMEM为215040/149504 B，均1 CTA/SM、168寄存器、16条静态HGMMA、无spill。但SASS并不等价：plain的GEMM非NOP静态指令数1266/1254，dual为1525/1535，整数与uniform指令的组织也改变。静态条数不是动态工作量，不能把总差直接解释成物理队列容量。
 
-[原卡成对分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-analysis.md)、[max分支、资源与SASS差别](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-summary.json)保留上述开发诊断，未改变V09评分。
+[原卡成对分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-analysis.md)、[max分支、资源与SASS差别](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-summary.json)保留上述开发诊断，未改变V09评分。
 
 ### 同卡K对照：固定启动差和恒定每Ktile罚项均不充分
 
@@ -662,7 +662,7 @@ job739095在a058/GPU-ef8692f3上测cfg_b、2816×1536、`K1024/4096 × stage4/6`
 
 **跨K共用一个恒定每Ktile罚项也不够。** later的ΔL/Ktile从38.00增至52.875 ns，十trial范围30～42与46.5～62不重叠；cycle/Ktile从69.125增至100.895，范围61.97～78与85.71～120.35也不重叠。这是重复范围而非置信区间。持续供给或指令组织限制仍与结果相容，但尚未从有效源足迹和工作历史中分离；没有识别物理槽容量，也不据此新增经验罚项。
 
-plain中同trial的stage4相对stage6变化中位为K1024的+6.79%、K4096的+11.92%；dual为+5.48%/+11.20%，完整时间同样显示持续差。观察协议的影响单列：K1024的dual/plain中位约+4.15%，单对最大+8.74%；K4096的stage4/6分别为+1.91%/+3.29%，单对最大+4.84%。局部定量结论因此只属于dual窗口，不能用完整时间方向一致证明局部无扰动。首输出窗口也随stage改变（K1024 +14.81%、K4096 −20.92%），不能把总差全部归给L，或把不同中位直接相加。[四点对照与逐trial残差](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json)、[原始记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls)。
+plain中同trial的stage4相对stage6变化中位为K1024的+6.79%、K4096的+11.92%；dual为+5.48%/+11.20%，完整时间同样显示持续差。观察协议的影响单列：K1024的dual/plain中位约+4.15%，单对最大+8.74%；K4096的stage4/6分别为+1.91%/+3.29%，单对最大+4.84%。局部定量结论因此只属于dual窗口，不能用完整时间方向一致证明局部无扰动。首输出窗口也随stage改变（K1024 +14.81%、K4096 −20.92%），不能把总差全部归给L，或把不同中位直接相加。[四点对照与逐trial残差](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json)、[原始记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls)。
 
 ### 有限缓冲递推：拟合略好，仍不能迁移
 
@@ -679,7 +679,7 @@ plain中同trial的stage4相对stage6变化中位为K1024的+6.79%、K4096的+11
 
 这是多起点最小二乘与测后留组开发预测，不是新的冻结验证。有限递推略降同批残差，却不能解释短K的first略变快、later明显变慢，并在只见stage6时严重误判stage4。完整八点的局部参数秩为3，留组后为1～3；数值局部可解不等于机制已识别。旧R13的ready/retire/reuse来自另一卡、不同源布局及独立调用，reuse又从acquire成功后开始，没有empty等待，不能补成当前程序的同次生命周期。
 
-因此不将该递推接入现行预测，也不增加参数修补。随后用同一对stage4/6、K4096条件的稀疏事件区分输入等待与消费侧进度，结果见下节。详细公式、八点残差和参数解见[有限stage分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.md)、[可重放数据](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.json)。
+因此不将该递推接入现行预测，也不增加参数修补。随后用同一对stage4/6、K4096条件的稀疏事件区分输入等待与消费侧进度，结果见下节。详细公式、八点残差和参数解见[有限stage分析](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.md)、[可重放数据](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.json)。
 
 ### 同次稀疏事件：差异不在最终drain，单点等待也不能代表整L
 
@@ -703,7 +703,7 @@ job739556在同一a058卡复测cfg_b 2816×1536×4096的stage4/6，只记录CTA0
 
 每次调用的`mma返回前 + handoff + mma_tail = L`精确闭合；各列中位数不要求加和闭合。稀疏/plain完整时间扰动stage4/6中位+3.49%/+1.69%，单对最大+4.77%/+4.44%；plain的stage差+10.28%，稀疏为+12.16%。与739095旧dual按同CTA第二输出整L分批比较，新值分别+2.84%/−0.93%，没有明显整L失真，但不证明每个局部窗口无扰动，更不能拼接两批时间线或直接采用事件价格。
 
-紧接着的Ktile17并不相同：从Ktile16的wait1返回，到Ktile17中释放目标slot之前，成对差中位+103 cycle，范围−25～358；不能因Ktile16 combined相同就忽略下一步推进。两stage全部十次producer refill都在consumer release前已开始等待。把release发出时刻夹在调用前后，至producer acquire返回的可观察间隔在stage4为141～273、stage6为126～249 cycle；它包含轮询、调度、expect_tx和取时开销，不是裸barrier可见性延迟，也不是新的硬件常数。[逐进程窗口与来源](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.json)、[CSV](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.csv)、[原始记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events)。
+紧接着的Ktile17并不相同：从Ktile16的wait1返回，到Ktile17中释放目标slot之前，成对差中位+103 cycle，范围−25～358；不能因Ktile16 combined相同就忽略下一步推进。两stage全部十次producer refill都在consumer release前已开始等待。把release发出时刻夹在调用前后，至producer acquire返回的可观察间隔在stage4为141～273、stage6为126～249 cycle；它包含轮询、调度、expect_tx和取时开销，不是裸barrier可见性延迟，也不是新的硬件常数。[逐进程窗口与来源](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.json)、[CSV](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.csv)、[原始记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-events)。
 
 ### 局部约束进一步否定了哪些递推简化？
 
@@ -713,7 +713,7 @@ job739556在同一a058卡复测cfg_b 2816×1536×4096的stage4/6，只记录CTA0
 
 这个失败不只是一套参数不好：在修订的零循环推进开销假设下，full-wait开始为`H_i=W_(i−1)`，wait1返回为`W_i=max(C_i,C_(i−1)+τ)`。若相邻commit都至少间隔512，便必有`W_i−H_i≥512`，而stage6全部实测只有399～407。任何p/ℓ/τ都不能同时满足这条局部区间。在“每次commit≥512”的假设下，下一full-wait前至少遗漏105 cycle的release/循环推进；也可能512只应约束服务或平均发射率，而不应限制每一步commit。739556的端点尚不能区分两者；下节用新增相邻端点直接检查，不用自由常数消差。
 
-[局部约束与修订结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-local-constraints.md)保留两递推的局部残差与参数敏感性；后续consumer进度观测删除producer字段，只保留同一对stage条件，不增加几何。
+[局部约束与修订结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-local-constraints.md)保留两递推的局部残差与参数敏感性；后续consumer进度观测删除producer字段，只保留同一对stage条件，不增加几何。
 
 ### 累计进度把额外时间定位到哪里？
 
@@ -735,7 +735,7 @@ job739578在同一a058卡用相同几何记录CTA0第二输出的commit1/16/17/6
 
 stage4早段平均差的十次范围为+151.53～+229.80、后段为+60.57～+94.26 cycle/间隔，说明额外时间跨早段与后段累积，且早段更强；尾段不能解释它。原递推/commit推进修订对stage4早段平均仅预测588.67/583.22，后段为587.26/575.86；后段接近不等于早段机制成立。修订还把最后commit→MAIN_END预测为785.72，而实测两stage为495/500，剩余尾延迟仍吸收了别处误差。只增加共享循环项h并继续仅用739095八个whole-L目标训练，中位/最大误差仅降到3.01%/8.13%，局部秩3/4；拟合h=264.43、尾延迟τ=769.17。独立progress对照中，stage6的full-wait开始17→commit17预测为0、wait1为247.57，stage4早段平均也仍只有583.12。这一修订仍分错执行重叠，不继续叠加参数，不将h或τ接入现行规则。
 
-progress/plain完整时间扰动stage4/6中位为+1.01%/+0.72%，十次范围为−1.43%～+1.76%/−1.93%～+3.02%；plain与progress的stage4减速分别为+11.37%/+11.18%。局部观察协议仍有可见影响：739556→739578的stage6 commit→wait1中位由6变27，full-wait开始→wait1由404变447。源码与SASS给出具体原因：旧stage6的commit16 clock（0x21d0）后紧接wait1；新clock（0x1f60）后还执行commit17/63的观测控制，包括predicated CS2R、IMAD和ISETP，才到0x1fb0的wait1。因此6→27包含观察器指令，不能定成裸wait开销，约90 cycle循环段同样不是硬件价格。两批只比较同名端点，不把旧combined窗口与新循环推进拼接；本批没有tail-begin，返回后只报告合并段。[逐调用数据与静态身份](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.json)、[原始记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-progress)。
+progress/plain完整时间扰动stage4/6中位为+1.01%/+0.72%，十次范围为−1.43%～+1.76%/−1.93%～+3.02%；plain与progress的stage4减速分别为+11.37%/+11.18%。局部观察协议仍有可见影响：739556→739578的stage6 commit→wait1中位由6变27，full-wait开始→wait1由404变447。源码与SASS给出具体原因：旧stage6的commit16 clock（0x21d0）后紧接wait1；新clock（0x1f60）后还执行commit17/63的观测控制，包括predicated CS2R、IMAD和ISETP，才到0x1fb0的wait1。因此6→27包含观察器指令，不能定成裸wait开销，约90 cycle循环段同样不是硬件价格。两批只比较同名端点，不把旧combined窗口与新循环推进拼接；本批没有tail-begin，返回后只报告合并段。[逐调用数据与静态身份](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.json)、[原始记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261010-R13-stage-progress)。
 
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](../../../../Q03-source-service/R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 
@@ -778,7 +778,7 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 这里固定p=50、q=407、λ=93及原w/h/r；700只作反例，1858来自独立供给上界。**三组没有按stage4挑选，也没有通过新的验证。** 相同stage6观测对应不同stage4响应，足以说明旧ℓ不是已辨识的ready价格。早段512仍低于实测522.27，旧参数的有限窗口反证也仍成立。
 
-739095同次CTA0记录只能给FIRST1−MAIN0：K4096时stage6为−319 cycle、stage4为+535 cycle（十进程中位）。MAIN0晚于MMA0，所以它只是FIRST1−MMA0的下界；负值表示两输出重叠。739556/739578没有前输出MMA0，不能分离交接和full等待。[逐进程来源与范围](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.json)。
+739095同次CTA0记录只能给FIRST1−MAIN0：K4096时stage6为−319 cycle、stage4为+535 cycle（十进程中位）。MAIN0晚于MMA0，所以它只是FIRST1−MMA0的下界；负值表示两输出重叠。739556/739578没有前输出MMA0，不能分离交接和full等待。[逐进程来源与范围](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.json)。
 
 <a id="stage-handoff-measured"></a>
 
@@ -797,7 +797,7 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 **该协议有明显局部扰动。** handoff相对原progress的整调用中位只变+0.38%/−0.63%（stage4/6），但stage6 FIRST→commit1逐trial差为−142 cycle，10/10为负。lastcommit→mma返回多106/103 cycle，随后到MAIN少126/119。SASS显示新协议在循环退出后、返回取时前增加了CTA坐标读取和两个线程谓词判断；这解释了部分窗口的重新划分，不能给每条指令单独定价，也不能将239直接作为旧协议缺失的δ。
 
-两plain参照相对739578中位变化−2.59%/−0.23%，只作跨批背景。各协议保留自己的w/h/r，不能混用旧27/40/500与新43/143/484。条件入口重放见下一节，本批不直接产生硬件定值。[同批扰动、原端点与来源](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.json)。
+两plain参照相对739578中位变化−2.59%/−0.23%，只作跨批背景。各协议保留自己的w/h/r，不能混用旧27/40/500与新43/143/484。条件入口重放见下一节，本批不直接产生硬件定值。[同批扰动、原端点与来源](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.json)。
 
 <a id="stage-conditioned"></a>
 
@@ -811,7 +811,7 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 逐调用波动不另立机制任务：stage6 trial1/9相同(w,h,r)、入口B只差1 cycle，但C1→16差637，共同常量递推至少留下约318 cycle的单调用最大残差，仅约L中位的0.96%。它不能单独证明中位预测失败，不据此扩大打点。
 
-原“stage6定值→stage4诊断”在这里结束，失败与不可辨识结论保留。两stage共同开发见下一节，不把训练吻合称为迁移通过。[逐调用结果与推导](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.json)。
+原“stage6定值→stage4诊断”在这里结束，失败与不可辨识结论保留。两stage共同开发见下一节，不把训练吻合称为迁移通过。[逐调用结果与推导](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.json)。
 
 <a id="stage-reuse"></a>
 
@@ -831,7 +831,7 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 最后两行使用额外条件q≥w+r+δ、默认首输出初始化且没有观测入口切割：首H不阻塞E，前输出末slot释放只会早于普通释放；它最早影响第二输出local S−1，尚未影响local C1，所以C16−C1≤(15/m)max(mc,Z+w)。因此这个完整子类不能解释stage4早段约2079 cycle的缺口。该反证不覆盖未知的真实第一输出状态或放宽分支后的其他模型。
 
-原progress另用自身两stage后段校准，仍有约1767 cycle早段缺口；它不要求新增handoff打点存在，但原progress的非均匀观察路径尚未排除，不能只因2079大于19就排除观察扰动。共同后段组合保留为受限约束，完整候选不进入预测；不加early专属项、不把观察值传入正式接口。[计算与完整前提](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.json)。已有输出路径对照及其不足集中在[R15](../../../../Q06-handoff-output/R15-output-service.md#next-mainloop-overlap)。
+原progress另用自身两stage后段校准，仍有约1767 cycle早段缺口；它不要求新增handoff打点存在，但原progress的非均匀观察路径尚未排除，不能只因2079大于19就排除观察扰动。共同后段组合保留为受限约束，完整候选不进入预测；不加early专属项、不把观察值传入正式接口。[计算与完整前提](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.json)。已有输出路径对照及其不足集中在[R15](../../../../Q06-handoff-output/R15-output-service.md#next-mainloop-overlap)。
 
 
 <a id="stage-boundary"></a>
@@ -840,7 +840,7 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 源码核对未发现漏释放：各WG prologue不释放前WG尾槽，local1起wait1释放自身前一槽，tail只释放自身末槽；第二输出local S−1走前输出tail、j≥S才恢复内部S−1依赖。当前递推已经对应。
 
-在上一节固定服务子类内，向第二输出首issue添加任意Δ≥0，只通过增大的C0向后传播；后续producer carry被C[j−1]+c支配。传播路径v_j=jc+floor((j−1)/(S−1))R，从而Cgap_j=max(Cbase_j,Cgap_0+v_j)。15可被3和5整除，原C16−C1上界不变。不能为剩余约1511 cycle拟合一个producer边界常数。[解析证明与数值见证](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)。
+在上一节固定服务子类内，向第二输出首issue添加任意Δ≥0，只通过增大的C0向后传播；后续producer carry被C[j−1]+c支配。传播路径v_j=jc+floor((j−1)/(S−1))R，从而Cgap_j=max(Cbase_j,Cgap_0+v_j)。15可被3和5整除，原C16−C1上界不变。不能为剩余约1511 cycle拟合一个producer边界常数。[解析证明与数值见证](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)。
 
 739556的同调用释放/重用端点只能给empty完成到下一对请求发出的区间：stage4中位[61,292.5]、stage6[62,303.5] cycle，20进程的共同常数交集为[69,207]。这不是测得该常数，也不是模型a：cfg_b要128线程完成empty-arrive，所选lane的wait1是更早的起点；同一次local17的wait1未被打点，不能借另一批progress补齐。这些点只覆盖local16释放，不能判断早/晚段是否变价。
 
@@ -853,7 +853,7 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 取同次stage4调用的X=W16−H16、Y=W16−C16，以及同次stage6调用的Z=M−C17。宽递推令G=max(g,c−q)、L=λ−G，普遍有Z≥46c+L+w+r。若w<Y且X+h>c，退休分支还要求L≥X+h−c，因此Z−X≥45c+h+w+r；不需要p≤c、固定ready历史或原子类的提交分支。
 
-739717延后组trial0为X840、Y43、Z23637。若共同服务参数解释这两个实际调用，w<43会要求c≤506.6，与既有c≥512候选不容；给每个X/Y/Z窗口±20cycle容限，trial0和8仍排除w<23。此时仅得到必要区间w∈[23,63]、w+r≤73，并未标定plain硬件延迟。±20是模型偏差敏感性，不是测得的时间戳精度或新验收标准。[全部十配对与推导](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md)。
+739717延后组trial0为X840、Y43、Z23637。若共同服务参数解释这两个实际调用，w<43会要求c≤506.6，与既有c≥512候选不容；给每个X/Y/Z窗口±20cycle容限，trial0和8仍排除w<23。此时仅得到必要区间w∈[23,63]、w+r≤73，并未标定plain硬件延迟。±20是模型偏差敏感性，不是测得的时间戳精度或新验收标准。[全部十配对与推导](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md)。
 
 该结果要求共同局部规则解释所列实际调用，允许其ready历史不同；若只找每条件一条落入进程包络的代表轨迹，就不能借最大X那次调用直接排除它。当前完整递推求解未决定可行性，不把超时当无解。所选打点的软件路径也不保证每次迭代相同。暂不将全族排除作为推进门槛。[整卡上下文](../../../../Q06-handoff-output/R15-output-service.md#stage-output-context)已经确认stage6输出重叠更多但L更短，且第二L入口相对于前输出更早。输入group64的释放前驱距前输出末次提交在stage4/6相隔2/4组；下一候选先表达这个缓冲与相位关系，避免用孤立CTA常数吸收未建模重叠。
 
@@ -863,11 +863,11 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 固定cfg_b、2816×1536×4096、stage4/6、AlongN、132 CTA、dyadic/seed17。CTA0的thread256属于Consumer1，其本地首输出是CTA第二输出j1；K64 prologue消耗local0，C1→C16恰含local2～16的15次等待。各组H在`consumer_try_wait`前，B在`consumer_wait`返回后，同调用定义`D=C16−C1`、`Q=Σ(B_i−H_i)`、`R=D−Q`。关闭新增观察时Q/R未观测，不赋零；三者只使用原生cycle，不按整段频率分摊ns。
 
-job740240的CPU-only CUDA12.9构建确认两stage均168寄存器、零spill、16条静态HGMMA；快/慢等待路径均在H/B之间。Q仍包含地址/phase准备、等待控制和取时影响；B之后的collector与汇合属于R，并可能改变后续等待到达。新binary的off仍含共同资源/控制路径，不能视为旧progress binary。[源码与SASS边界](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/README.md)。
+job740240的CPU-only CUDA12.9构建确认两stage均168寄存器、零spill、16条静态HGMMA；快/慢等待路径均在H/B之间。Q仍包含地址/phase准备、等待控制和取时影响；B之后的collector与汇合属于R，并可能改变后续等待到达。新binary的off仍含共同资源/控制路径，不能视为旧progress binary。[源码与SASS边界](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-early-wait-sum-build/README.md)。
 
-四目标正确性检查保留740259的原collector格式失败；修复固定四包与二维cluster后离线复用原stage4/off，740276仅执行余下三目标，合计16384个逐目标样本精确正确、两个on的count15/mask0x1fffc及包含链通过。每条件一次、两job，只证明字段可用；没有全D检查或扰动资格。[正确性记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/README.md)。
+四目标正确性检查保留740259的原collector格式失败；修复固定四包与二维cluster后离线复用原stage4/off，740276仅执行余下三目标，合计16384个逐目标样本精确正确、两个on的count15/mask0x1fffc及包含链通过。每条件一次、两job，只证明字段可用；没有全D检查或扰动资格。[正确性记录](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-early-wait-sum-correctness/README.md)。
 
-独立诊断job740334在采样前冻结16组，每组四个新进程s4/off、s4/on、s6/off、s6/on随机排序，各自先16次同buffer、同stage binary的off前序。64目标全部有效；主线复核12个冻结输入、64份raw、262144个数值样本。逐组取stage4−6差并核`ΔD_on=ΔQ+ΔR`，另核`ΔD_on−ΔD_off=s4(on−off)−s6(on−off)`；全部联合记录保留，不将各分项中位数组装成轨迹。[冻结定义与完整结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-diagnostic/README.md)、[主线复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-diagnostic/verification.json)。
+独立诊断job740334在采样前冻结16组，每组四个新进程s4/off、s4/on、s6/off、s6/on随机排序，各自先16次同buffer、同stage binary的off前序。64目标全部有效；主线复核12个冻结输入、64份raw、262144个数值样本。逐组取stage4−6差并核`ΔD_on=ΔQ+ΔR`，另核`ΔD_on−ΔD_off=s4(on−off)−s6(on−off)`；全部联合记录保留，不将各分项中位数组装成轨迹。[冻结定义与完整结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-early-wait-sum-diagnostic/README.md)、[主线复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-early-wait-sum-diagnostic/verification.json)。
 
 | 逐组联合差，cycle | 中位数 | 第3～14次序量条件区间 |
 |---|---:|---:|

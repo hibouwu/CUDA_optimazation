@@ -31,14 +31,50 @@ def build_program(row, setup, source_identity=None):
         raise ValueError('program does not expand intervention branches: ' + ', '.join(effective['interventions']))
     inputs = {k: v for k, v in effective.items() if k not in ('setup', 'interventions')}
     ledger = supply.supply_work_ledger(inputs, setup)
-    work = [[] for _ in range(math.prod(setup['grid']))]
+    active_stages = setup.get('active_stages', ledger['stages'])
+    repeats = setup.get('wgmma_repeats', 1)
+    if active_stages not in (4, 6) or active_stages > ledger['stages'] or repeats not in (1, 3):
+        raise ValueError('cfg_b runtime intervention requires active 4/6 slots and 1/3 WGMMA passes')
+    cta_count = math.prod(setup['grid'])
+    fold_a = setup.get('fold_a_source', 0)
+    private_source = setup.get('private_source', 0)
+    store_ctas = setup.get('store_target_ctas', cta_count)
+    if fold_a not in (0, 1):
+        raise ValueError('fold_a_source must be 0 or 1')
+    if not isinstance(store_ctas, int) or not 0 <= store_ctas <= cta_count:
+        raise ValueError('store_target_ctas must be an integer within the CTA grid')
+    if fold_a:
+        if ((inputs['m'], inputs['n'], inputs['k']) != (2816, 1536, 4096)
+                or list(setup['grid']) != [1, 132, 1] or inputs['swizzle'] != 1
+                or inputs['input_mode'] != 'dyadic' or inputs['zero_m'] != -1
+                or ledger['stages'] != 6 or active_stages != 6 or repeats != 1):
+            raise ValueError('fold_a_source requires the G3 S6 grid132 dyadic source experiment')
+        for atom in ledger['source_atoms']:
+            if atom['operand'] == 'A' and atom['origin'][0] >= 17 * 128:
+                atom['origin'] = [atom['origin'][0] - 17 * 128, atom['origin'][1]]
+    if private_source:
+        copy_bytes = dict(A=2 * setup.get('allocated_a_elements', inputs['storage_m'] * inputs['alloc_lda']),
+                          B=2 * setup.get('allocated_b_elements', inputs['k'] * inputs['alloc_ldb']))
+        for atom in ledger['source_atoms']:
+            atom['base_offset_bytes'] += atom['cta'] * copy_bytes[atom['operand']]
+    if fold_a or private_source:
+        distinct = {(a['operand'], tuple(a['extents']), tuple(a['stride_bytes']),
+                     a['base_offset_bytes'], tuple(a['origin']), tuple(a['shape'])): a['valid_KiB']
+                    for a in ledger['source_atoms']}
+        ledger['totals']['distinct_source_boxes'] = len(distinct) * ledger['ktiles']
+        ledger['totals']['distinct_valid_source_KiB'] = sum(distinct.values()) * ledger['ktiles']
+    work = [[] for _ in range(cta_count)]
     outputs = [[] for _ in work]
     for output in ledger['outputs']:
         cta, j = output['cta'], output['j']
         work[cta].append(tuple(output['coord']))
         outputs[cta].append(dict(output, consumer_warpgroup=j % 2,
             input_group_range=[j * ledger['ktiles'], (j + 1) * ledger['ktiles']]))
-    return dict(schema='gh200-cfg-b-program/1', case=inputs, setup=dict(setup),
+        if active_stages != ledger['stages']:
+            outputs[cta][-1].update(
+                first_input_state=supply.input_slot_state(j * ledger['ktiles'], active_stages),
+                last_input_state=supply.input_slot_state((j + 1) * ledger['ktiles'] - 1, active_stages))
+    program = dict(schema='gh200-cfg-b-program/1', case=inputs, setup=dict(setup),
         source_identity=source_identity or {}, schedule='pingpong', tile=[128, 128, 64],
         work=work, outputs=outputs, source_atoms=ledger['source_atoms'],
         ktiles=ledger['ktiles'], stages=ledger['stages'], totals=ledger['totals'],
@@ -47,16 +83,32 @@ def build_program(row, setup, source_identity=None):
             smem_swizzle='128B', provenance='frozen source/build reconstruction'),
         input_path=dict(source='device global A/B allocation', destination='CTA-local SMEM'),
         output_path=dict(source='FP32 accumulators', intermediate='epilogue SMEM', destination='global D'))
+    if active_stages != ledger['stages'] or repeats != 1 or fold_a or private_source or store_ctas != cta_count:
+        program['runtime_intervention'] = dict(active_stages=active_stages,
+            wgmma_repeats=repeats, epilogue_alpha=setup.get('epilogue_alpha', 1.))
+        if fold_a:
+            program['runtime_intervention']['fold_a_source'] = fold_a
+        if private_source:
+            program['runtime_intervention']['private_source'] = private_source
+        if store_ctas != cta_count:
+            program['runtime_intervention']['store_target_ctas'] = store_ctas
+            program['output_tma_enabled'] = [cta < store_ctas for cta in range(cta_count)]
+    return program
 
 
-def expand_cta(program, cta, *, register_quota=False):
+def expand_cta(program, cta, *, register_quota=False, epilogue_defer=0,
+               separate_empty_completion=False):
     """生成软件必要依赖与服务完成接口；compute_batch 保留为 Ktile 复合节点。
 
     requests 的 completion 是后续 TMA 服务的输出；compute_complete 是后续计算
     服务的输出。图只规定先后，不赋予它们零成本或具体持续时间。
     """
+    if epilogue_defer not in (0, 1, 2):
+        raise ValueError('epilogue_defer must be 0, 1 or 2')
     outputs = program['outputs'][cta]
-    kt, stages = program['ktiles'], program['stages']
+    kt = program['ktiles']
+    intervention = program.get('runtime_intervention', {})
+    stages = intervention.get('active_stages', program['stages'])
     nodes, groups, requests, observations = {}, [], [], []
 
     def add(name, *predecessors):
@@ -110,24 +162,38 @@ def expand_cta(program, cta, *, register_quota=False):
                 issue_previous = issue
             producer_previous = issue_previous
             add(gp + 'full_ready', gp + 'expect_tx', *completions)
-            add(gp + 'consumer_wait', gp + 'full_ready', consumer_previous)
+            add(gp + 'full_query', consumer_previous)
+            add(gp + 'consumer_wait', gp + 'full_ready', gp + 'full_query')
             add(gp + 'compute_batch', gp + 'consumer_wait')
             add(gp + 'commit', gp + 'compute_batch')
             add(gp + 'compute_complete', gp + 'compute_batch')
             if k:
                 add(gp + 'wait1', gp + 'commit', f'g{g-1}.compute_complete')
-                consumer_previous = add(f'g{g-1}.release', gp + 'wait1')
+                if separate_empty_completion:
+                    consumer_previous = add(f'g{g-1}.release_emit', gp + 'wait1')
+                    add(f'g{g-1}.release', consumer_previous)
+                else:
+                    consumer_previous = add(f'g{g-1}.release', gp + 'wait1')
             else:
                 consumer_previous = gp + 'commit'
             groups.append(dict(**state, output=j, k=k, consumer_warpgroup=j % 2,
                 expected_full_bytes=32768, compute_issue=gp + 'compute_batch',
                 compute_completion=gp + 'compute_complete', release=gp + 'release'))
+            if intervention.get('wgmma_repeats', 1) != 1:
+                groups[-1]['wgmma_count'] = 8 * intervention['wgmma_repeats']
         last = (j + 1) * kt - 1
         add(prefix + 'math_handoff', consumer_previous)
         add(prefix + 'wait0', prefix + 'math_handoff', f'g{last}.compute_complete')
-        add(f'g{last}.release', prefix + 'wait0')
-        add(prefix + 'main_end', f'g{last}.release')
+        if separate_empty_completion:
+            add(f'g{last}.release_emit', prefix + 'wait0')
+            add(f'g{last}.release', f'g{last}.release_emit')
+            add(prefix + 'main_end', f'g{last}.release_emit')
+        else:
+            add(f'g{last}.release', prefix + 'wait0')
+            add(prefix + 'main_end', f'g{last}.release')
         epi_pre = [prefix + 'main_end']
+        if j == 0 and (epilogue_defer == 2 or (epilogue_defer == 1 and cta == 0)):
+            epi_pre.append('j1.math_handoff')
         if j:
             epi_pre.append(f'j{j-1}.epilogue_handoff')
         add(prefix + 'epilogue_permit', *epi_pre)
@@ -155,6 +221,8 @@ def expand_cta(program, cta, *, register_quota=False):
             output=[f'j{o["j"]}.store_tail' for o in outputs]))
     if register_quota:
         graph['service_nodes']['register_quota'] = register_nodes
+    if 'output_tma_enabled' in program:
+        graph['output_tma_enabled'] = program['output_tma_enabled'][cta]
     return graph
 
 
@@ -200,21 +268,25 @@ def ordinary_lsu_demands(program):
 def smem_demands(program):
     """每输出的逻辑需求与现有复合服务覆盖关系；价格独立于程序。"""
     outputs = sum(map(len, program['outputs']))
+    output_tma_enabled = program.get('output_tma_enabled', [True] * len(program['outputs']))
+    tma_outputs = sum(len(work) for cta, work in enumerate(program['outputs'])
+                      if output_tma_enabled[cta])
     ktiles = program['ktiles']
     return dict(schema='gh200-cfg-b-smem-demands/1', output_tiles=outputs, ktiles=ktiles,
         paths=[
             dict(path='tma_input_destination', per_ktile_requests_bytes=[16384,8192,8192],
                 total_bytes=outputs*ktiles*32768, covered_by='input ready; optional input_destination_service'),
             dict(path='wgmma_operand_references', opcode='HGMMA.64x128x16.F32.tnspB',
-                instructions_per_ktile=8, a_bytes_per_instruction=2048, b_bytes_per_instruction=4096,
-                total_operand_reference_bytes=outputs*ktiles*49152, covered_by='compute_ns',
+                instructions_per_ktile=8*program.get('runtime_intervention', {}).get('wgmma_repeats', 1),
+                a_bytes_per_instruction=2048, b_bytes_per_instruction=4096,
+                total_operand_reference_bytes=outputs*ktiles*49152*program.get('runtime_intervention', {}).get('wgmma_repeats', 1), covered_by='compute_ns',
                 interpretation='logical operand references; physical SMEM reads may be reused'),
             dict(path='ordinary_output_store', opcode='STS.64', threads=128,
                 instructions_per_thread_per_subtile=8, bytes_per_lane=8, subtiles_per_output=8,
                 bytes_per_subtile=8192, total_bytes=outputs*65536, covered_by='epilogue_write_ns',
                 buffers=2, buffer_distance_bytes=8192),
             dict(path='tma_output_source', per_output_requests=8, bytes_per_request=8192,
-                total_bytes=outputs*65536, covered_by='output service source_done'),
+                total_bytes=tma_outputs*65536, covered_by='output service source_done'),
         ])
 
 

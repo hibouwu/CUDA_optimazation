@@ -1,6 +1,11 @@
 # 多 CTA 的 TMA 共享服务
 
-更新：2026-10-17。阶段4离线接口与证据回放见下节；真实计算／TMA短链迁移待测。既有研究状态：tensor 探针已通过原生正确性；首批与源分区候选留出均未通过；工作集状态的冻结干预获得支持，量化服务规则开发中；GPC 局部服务已获得新条件支持，cfg_b 匹配源迁移仍失败，近期源状态与两域工作映射已获独立干预支持，随事件更新的缓存服务尚未完成。验收与通用证据原则见[GOALS](../../../GOALS.md)。
+更新：2026-10-20。阶段4离线接口与证据回放见下节；真实计算／TMA短链的源组织响应已有局部支持，绝对窗口与CTA结束分布仍有反例，见[源组织](../../../experiments/gh200_sm90/Q02-tma-request/source-organization.md)。既有研究状态：tensor 探针已通过原生正确性；首批与源分区候选留出均未通过；工作集状态的冻结干预获得支持，量化服务规则开发中；GPC 局部服务已获得新条件支持，cfg_b 匹配源迁移仍失败，近期源状态与两域工作映射已获独立干预支持，随事件更新的缓存服务尚未完成。验收与通用证据原则见[GOALS](../../../GOALS.md)。
+
+
+2026-10-22 的 cfg_b 实机定位把当前供给主张收窄：同行CTA退出时A16两段增长降至原来的0.05%–0.93%／10.10%–11.60%；同行只关闭global TMA输出时仍保留约96%–105%／90%–112%，见[同行与输出两轮](../../../experiments/gh200_sm90/Q14-composition/gemm-connection.md)。[同二进制等值A源折叠](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-004/README.md)24/24有效：第一输出行距增长保留91.2%–101.7%，第二输出增至132.4%–148.5%。第二输出不属两个冻结类别，整体信息不足；保留“改变同行源地址后响应反增”的反例。16次前缀仍访问原源，折叠同时改变目标调用的访问历史与共享关系，物理归因待区分。
+
+[程序干预接入](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-program-intervention-001/README.md)已完成源身份、前缀与输出copy开关的共同接线。固定原价格的四条件回放均未产生两L行距增长；正式输出已核为16条，原2112条错误已修复。下一服务替代以实际源身份的历史、订阅和目的完成连接为对象。现用命中延迟与域间延迟含标量加载窗口迁移假设；既有记录没有独立识别TMA命中源行吞吐，参数来源保持原资格。推进顺序见[PLAN](../../../PLAN.md)，程序事实与服务规则分别维护。 [同覆盖A16／A80配对](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261022-Q02-row-phase-invariance-001/README.md)进一步反证本批局部模型的地址组织不变性；三个seed的增长比在cycle/ns均约0.889，源片段比例、映射与历史仍需区分。
 
 ## 1. 现象
 
@@ -27,9 +32,12 @@
 
 ### 阶段4服务接口与资格
 
-本阶段以真实cfg_b的S6／S4程序图为前端；上表四物理槽属于旧tensor探针。有限实现与回放登记见[PLAN](../../../PLAN.md#stage-4-transfer)，本轮证据见[TRANSFER-01](../../../experiments/gh200_sm90/Q02-tma-request/TRANSFER-01-replay.md)。
+本阶段以真实cfg_b的S6／S4程序图为前端；上表四物理槽属于旧tensor探针。有限实现与回放登记见[PLAN](MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，本轮证据见[TRANSFER-01](../../../experiments/gh200_sm90/Q02-tma-request/TRANSFER-01-replay.md)。
 
-实际三请求接消费者的[D短链](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md#6-d原生tma短链准备)已完成CPU与本地静态准备：六物理槽、S4／S6，全部TMA在计时窗口内；新服务价格与迁移仍待实机。
+<a id="source-tail-bound"></a><a id="locality-tail-bound"></a><a id="a-path-budget"></a><a id="a-prefill-budget"></a><a id="a-completion-state"></a><a id="joint-tail-end-bound"></a><a id="matched-pair-budget"></a><a id="mask-control-budget"></a>
+
+10-18 至 10-20 在此接口上做的局部判别，包括源工作与完成尾的必要界、A 路径预算、首次 prefill、完成状态、共同尾／终段、同版双 B 和等总量 mask 推进，都属于探针预算研究。结论与逐轮记录见[探针控制预算](../../../experiments/gh200_sm90/Q02-tma-request/probe-control.md)与[原生 D 链](../../../experiments/gh200_sm90/Q02-tma-request/native-d-chain.md)：“固定源工作／PS2 + 共同尾／共同终段”的修正族被排除；由窗口拟合的源参数，与观察开启的探针程序中直接测得的首组 A→full 上界 660–668 cycle 矛盾。接口本身保持。
+
 
 [cfg_b_request_model.simulate](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_request_model.py)继续使用已有事件引擎，两种输入接法分别保留：
 
@@ -39,7 +47,7 @@
 | `input_source_async`＋`input_source_bind_events` | 源接收`issue(t,cta,group,atom,weight,demand_id,notify_ready)`，可排队；通过回调给出`source_id/source_key/merged/source_busy_ns/service_start/service_end`及源就绪时间，定时事件接入同一队列 | 接口已核对；本轮两种信用归还仅用现成合成服务检查，调用方按索引与`request_inputs`映射实际源身份 |
 | `input_destination_service` | 在目的准入后返回`start_ns/service_end_ns/ready_ns`；未指定时保持原每CTA目的FIFO | 显式工作假设；实际独立目的服务价格待辨识 |
 
-各服务对象作为独立参数传入，价格JSON保持可序列化。`demand_id`对应一个逻辑目的请求，`source_id`对应一次源服务代次；多个目的可订阅同源，最后目的就绪按该源所有delivery取最大值。源信用的释放时刻由具体服务记录，软件槽释放由[同步服务](SYNC-SERVICE.md)和计算依赖推进。异步`issue`先接收软件请求，服务内缺信用时排队；本接口的producer仍可继续发其他请求，未引入UTMALDG发出阻塞的新规则。
+各服务对象作为独立参数传入，价格JSON保持可序列化。`demand_id`对应一个逻辑目的请求，`source_id`对应一次源服务代次；多个目的可订阅同源，最后目的就绪按该源所有delivery取最大值。源信用的释放时刻由具体服务记录，软件槽释放由[同步服务](SYNC-SERVICE.md)和计算依赖推进。异步`issue`接收请求后允许producer继续；服务实现`issue_with_admission(..., notify_ready, notify_admitted)`时，producer等待`notify_admitted`给出的受理返回时刻，再发后继请求。
 
 独立路径前端在逻辑请求发出时预留，三类源统一执行：
 
@@ -53,6 +61,10 @@ A、B0、B1 均完成 → full 条件满足
 
 `input_sources`输出各源代次的请求到达、服务开始／结束、源就绪与`last_destination_ready_ns`；逐请求记录保留`demand_id`、地址和目的窗口，条件等待另由同步接口输出。共同入口的P0前缀只做一次时间原点换算。源完成、目的就绪和消费者释放分别定价；L2阶段当前只交付固定逻辑字节的整窗`read_window`，尚无可直接用于16／8 KiB请求的价格。
 
+[D独立入口](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_tma_chain.py)已透传同一`input_destination_service`，启用时导出既有`deliveries`；源就绪、目的服务结束、目的ready及full返回可分别对照。三组合成组织的210端点与完整引擎一致，旧默认4报告和两组δ/H的18时间线逐位保持，见[CPU交付](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261019-Q02-destination-connection-001/README.md)。随后[异步源受理与信用归还](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261019-Q02-source-credit-connection-001/README.md)也已接入，启用时导出既有`input_demands`和`sources`；五合成组织418端点一致，源信用与软件槽释放分别核对。两轮均保持硬件价格，实际信用规则尚待独立证据。
+
+程序准备通过 `producer_control_ns=(A前,B0前,B1前)` 在取得 empty 后、对应请求发出前推进；D 与完整入口共用，实际 acquire 和关键路径已核对。零默认保持原报告，价格未新增，见[程序准备接线](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-program-preparation-001/README.md)。
+
 完成语义按[PTX ISA 8.8 §9.7.9.25](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html)：TMA global→shared在整个copy完成后贡献mbarrier事务字节，成功等待对应phase后读取结果；普通cp.async的commit／wait_group按发起线程分组。旧cp.async复制／消费窗口保留其CTA发布与完成边界，参数独立维护。输出bulk的`.read`等待与完整操作等待分别对应源读取和整个操作完成，原输出服务保持。
 
 本轮修复了外接源跳过三项独立路径约束的具体连接：同一零价源加100 ns最小延迟，目的就绪现在从0变为100 ns。原零价路径的六个小图和两种异步轨迹保持原值，非零约束及通知乱序回归通过。本轮不拟合、不新增硬件价格或容量，不修改原冻结成绩；完整组合C2/C3仍未通过。
@@ -64,7 +76,7 @@ A、B0、B1 均完成 → full 条件满足
 | 每CTA局部准入限制占主导 | 增加每 CTA 未完成输入组数先改善局部等待再平台化；低全局负载时改变其他CTA数量影响较小 | 低 CTA 数下的输入组并发扫描，以及加入背景 CTA 的响应 |
 | 跨SM共享供给占主导 | 增加实际活动SM/CTA后整卡吞吐趋于饱和、单CTA等待增加；源复用协议改变饱和位置或程度 | 多CTA曲线、SMID及活动重叠、各CTA推进分布、cycle/ns双口径 |
 
-[冻结 setup](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/static_setup.json)中，cfg_b S6/S4 的 SMEM 分别为 215040/149504 B（210/146 KiB），`max_active_ctas_per_sm` 均为 1。同 SM 多 CTA 竞争留待多 CTA 驻留配置研究，本轮保留单 CTA 内局部限制与跨 SM 服务。
+[冻结 setup](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/static_setup.json)中，cfg_b S6/S4 的 SMEM 分别为 215040/149504 B（210/146 KiB），`max_active_ctas_per_sm` 均为 1。同 SM 多 CTA 竞争留待多 CTA 驻留配置研究，本轮保留单 CTA 内局部限制与跨 SM 服务。
 
 [Hopper 微基准 §IV-A](https://arxiv.org/html/2501.12084v1#S4.SS1)报告 H800 在半容量和全容量附近的 L2 转折；[NVIDIA 的存储局部域说明](https://developer.nvidia.com/blog/accelerating-data-processing-with-nvidia-multi-instance-gpu-and-numa-node-localization/)解释了数据中心 GPU 通过一致缓存保留本地域副本。结合本机 30–36 MiB 的转折，保留“分区驻留与相位相关服务”作为下一候选；分区到 SM 的映射及 TMA 请求在其中的状态转换仍待本机辨识。
 
@@ -86,13 +98,13 @@ A、B0、B1 均完成 → full 条件满足
 
 <a id="bounded-supply-round"></a>
 
-**2026-10-15 本轮安排。** 用户允许新增一组有限候选，固定为[按请求大小分道的两个版本](TMA-GEMM-HYPOTHESES.md#bounded-supply-candidates)。两版均在首项`prior-q1-skew8`违反原ns/cycle门槛；[本轮结束](../../../../../../results/gh200_resource_campaign/access_rules/20261015-cfg-b-size-lanes-service-001/RESULTS.md)，完成2次CPU回放，其余53项停止。新增GPU作业为0，原阻塞项判别仍为1/2轮。下表保留固定清单与停止规则，一版本一条件只回放一次。
+**2026-10-15 本轮安排。** 用户允许新增一组有限候选，固定为[按请求大小分道的两个版本](TMA-GEMM-HYPOTHESES.md#bounded-supply-candidates)。两版均在首项`prior-q1-skew8`违反原ns/cycle门槛；[本轮结束](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-size-lanes-service-001/RESULTS.md)，完成2次CPU回放，其余53项停止。新增GPU作业为0，原阻塞项判别仍为1/2轮。下表保留固定清单与停止规则，一版本一条件只回放一次。
 
 | 次序 | 固定条件与上限 | 决定 |
 |---|---|---|
-| 1，保住局部约束 | [原18条件清单](../../../../../../results/gh200_resource_campaign/access_rules/20261015-cfg-b-dual-granule-service-001/cases.json)中的旧六项；先`prior-q1-skew8`、`prior-q2-skew32`，再`prior-q2-skew0`、`prior-q2-skew16`、`prior-q1-skew24`、`prior-q1-skew48`；最多2×6=12次 | 任一项不满足[原ns/cycle门槛](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gpc-heldout-002/plan.json)，即停止该版本。先用对齐、无复用且信用不约束的合成请求核对两通道、原每CTA目的FIFO和信用事件；按大小分道与原最早空闲仲裁分别记录 |
+| 1，保住局部约束 | [原18条件清单](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-dual-granule-service-001/cases.json)中的旧六项；先`prior-q1-skew8`、`prior-q2-skew32`，再`prior-q2-skew0`、`prior-q2-skew16`、`prior-q1-skew24`、`prior-q1-skew48`；最多2×6=12次 | 任一项不满足[原ns/cycle门槛](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-gpc-heldout-002/plan.json)，即停止该版本。先用对齐、无复用且信用不约束的合成请求核对两通道、原每CTA目的FIFO和信用事件；按大小分道与原最早空闲仲裁分别记录 |
 | 2，已有共享与重排反例 | 幸存版本先跑`permutation-grouped-q1`/`permutation-mixed-q1`，再补清单其余10项；累计最多2×18=36次 | 先比较GPC4主响应与原容差，失败即停止该版本。746797逐GPC的early/late/release与跨度全部报告；747595保留实际Q4响应及原“信息不足”结论。新候选的开发相容性与原冻结成绩分列 |
-| 3，接回关键GEMM | 每个幸存版本跑`G3_base`、`G3_stage4`、`G3_A16`、`G5_base`、`G5_B32`、`G5_B80`、`G5_B112`，最多2×7=14次 | 同时报告主循环、stage/行距响应、空间跨度、六分项和plain；输出与[当前同版报告](../../../../../../results/gh200_resource_campaign/access_rules/20261015-cfg-b-full-matrix-001/comparison-final.md)逐项对照。旧六项的门槛只用于旧六项；组合按[GOALS验收](../../../GOALS.md#34-组合)另行冻结 |
+| 3，接回关键GEMM | 每个幸存版本跑`G3_base`、`G3_stage4`、`G3_A16`、`G5_base`、`G5_B32`、`G5_B80`、`G5_B112`，最多2×7=14次 | 同时报告主循环、stage/行距响应、空间跨度、六分项和plain；输出与[当前同版报告](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-full-matrix-001/comparison-final.md)逐项对照。旧六项的门槛只用于旧六项；组合按[GOALS验收](../../../GOALS.md#34-组合)另行冻结 |
 | 4，完整矩阵收口 | 仅选一个工作版本补`G1_base`、`G2_base`、`G4_base`、`G6_base`、`G5_random_seed29`，最多5次；G6最后 | 按stage/A16/B80/B112四项响应方向的符合数降序，再按七项MAIN跨度最大绝对相对误差、plain最大与中位绝对相对误差升序选择；两版相同时暂用`size_ready`、归档另一版及未区分项。整组12条件的失败全部保留；没有可保留版本就交付未解决报告 |
 
 本轮累计最多55次CPU条件回放，GEMM每项沿原10次暖机加1次目标；失败的版本停止后续，不补价格、容量或第三版本。结束时交付两个版本的筛查决定、幸存工作版本的整组报告，或具体反例与缺少的辨识条件。GPU第二轮只有在新候选给出可区分的冻结预测后才进入设计，通用限制见[GOALS当前范围](../../../GOALS.md#current-scope)。下表保留首轮已执行的设计顺序。
@@ -117,31 +129,31 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
   python -B -m unittest test_tma_tensor_multicta test_tma_input_events -v
 ```
 
-2026-10-14 原生检查与校准见[开发记录](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-development/README.md)。最终相位版作业 746421 通过 28 组检查，共 966,983,680 个 FP16 元素、59,020 组事件，错误为零；普通及相位 memcheck 均通过。资源为 40 个寄存器、132096 B SMEM、零 local bytes，每 SM 最多一个 CTA。各样本导出 CuTe Mainloop 工厂生成的 A/B 描述符编码；SASS 每组 A/B0/B1 三请求已核对。
+2026-10-14 原生检查与校准见[开发记录](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-development/README.md)。最终相位版作业 746421 通过 28 组检查，共 966,983,680 个 FP16 元素、59,020 组事件，错误为零；普通及相位 memcheck 均通过。资源为 40 个寄存器、132096 B SMEM、零 local bytes，每 SM 最多一个 CTA。各样本导出 CuTe Mainloop 工厂生成的 A/B 描述符编码；SASS 每组 A/B0/B1 三请求已核对。
 
 开发中发现不参与消费的线程跑空循环，在结束时间戳前引入重汇合尾段；性能模式提前退出这些线程后，同条件尾段从 16913 降至 185 cycle。旧二进制、反例与复测均保留。最终二进制另完成 28 个 Q2 校准条件、每条件 7 个进程，源环相位保持 0。共享源 1 MiB 与独立源 64 MiB 的差异同时符合在途合并和工作集驻留解释，因此加入“预热工作集在 60 MiB 内用驻留价格，否则用流式价格”的竞争候选；该候选不合并在途请求。
 
-[首批冻结](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-discrimination-001/binding.json)绑定二进制、CPU 模型、校准输入、[预测](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-discrimination-001/predictions.json)与[执行判据](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-discrimination-001/plan.json)。离散价格筛选保留 26 组在途合并参数和 78 组驻留参数；相位对照分别预测增加 135.3%–252.0% 与 0%。每条件测 trace 开/关，各 7 个进程，共 168 个进程。主端点为 CTA 开始至最后一组释放；要求同一冻结价格组对全部 12 条件的误差均不超过 5%，相位响应误差不超过 5 个百分点，并通过未记录模式的方向对照。这是冻结价格集合的检验，连续参数范围未作完备辨识。
+[首批冻结](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-discrimination-001/binding.json)绑定二进制、CPU 模型、校准输入、[预测](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-discrimination-001/predictions.json)与[执行判据](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-discrimination-001/plan.json)。离散价格筛选保留 26 组在途合并参数和 78 组驻留参数；相位对照分别预测增加 135.3%–252.0% 与 0%。每条件测 trace 开/关，各 7 个进程，共 168 个进程。主端点为 CTA 开始至最后一组释放；要求同一冻结价格组对全部 12 条件的误差均不超过 5%，相位响应误差不超过 5 个百分点，并通过未记录模式的方向对照。这是冻结价格集合的检验，连续参数范围未作完备辨识。
 
-首批作业 746425 完成 168 个进程，槽复用与实际活动重叠均通过核对。[评分](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-discrimination-001/score.json)中，相位对照 trace 开/关分别增加 9.8446%/10.3439%；两个候选的通过参数组均为零。最佳联合最大误差分别为 119.22% 与 15.28%。残差还包括单 CTA Q1 相对 Q4 的完成等待，以及 132 CTA 独立源在 Q1/Q4 下的吞吐变化。下一候选把驻留/流式的服务率和完成延迟分开，并保留在途共享；沿用原软件槽释放程序，先检查全部开发端点，再冻结新的消费者延迟与独立条件。
+首批作业 746425 完成 168 个进程，槽复用与实际活动重叠均通过核对。[评分](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-discrimination-001/score.json)中，相位对照 trace 开/关分别增加 9.8446%/10.3439%；两个候选的通过参数组均为零。最佳联合最大误差分别为 119.22% 与 15.28%。残差还包括单 CTA Q1 相对 Q4 的完成等待，以及 132 CTA 独立源在 Q1/Q4 下的吞吐变化。下一候选把驻留/流式的服务率和完成延迟分开，并保留在途共享；沿用原软件槽释放程序，先检查全部开发端点，再冻结新的消费者延迟与独立条件。
 
-后续先检验 B 行距解释：[746430 配对](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-pitch-discrimination-001/README.md)中，单 CTA 的 ldb 128→2048 只使主窗口增加 0.0984%，未记录模式响应为零；未支持预测约 11.66% 的独立行距延迟，不加入该参数。
+后续先检验 B 行距解释：[746430 配对](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-pitch-discrimination-001/README.md)中，单 CTA 的 ldb 128→2048 只使主窗口增加 0.0984%，未记录模式响应为零；未支持预测约 11.66% 的独立行距延迟，不加入该参数。
 
-将驻留与流式完成延迟分开后，开发条件最大误差仍为 5.52%；再加入按源地址分区的候选，P16 的开发最大误差为 4.68%，P32 为 5.57%。[第二轮留出](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-heldout-002/README.md)完成 8 条件：N48 独立源相位 1/2、N32/96 的 Q1/Q4、N132 的 512/2048 ns 释放延迟。746459 的相位响应为 −0.1873%，相对预测 +8.9650% 构成反例；局部时间最大误差 41.45%，P16 不再作为采用候选。两个释放延迟条件的局部误差均低于 0.7%。
+将驻留与流式完成延迟分开后，开发条件最大误差仍为 5.52%；再加入按源地址分区的候选，P16 的开发最大误差为 4.68%，P32 为 5.57%。[第二轮留出](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-heldout-002/README.md)完成 8 条件：N48 独立源相位 1/2、N32/96 的 Q1/Q4、N132 的 512/2048 ns 释放延迟。746459 的相位响应为 −0.1873%，相对预测 +8.9650% 构成反例；局部时间最大误差 41.45%，P16 不再作为采用候选。两个释放延迟条件的局部误差均低于 0.7%。
 
-探针与 GEMM 已共用源服务实现；[首次迁移](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-development/gemm-transfer-001/README.md)保留原计算/输出价格，只换 TMA 后，S6/S4 的消费者跨度同为 39.180 µs，stage 响应仍为零。下一步检查计算完成/槽释放及计算与搬运的服务耦合；[同 CTA WGMMA 背景开发对照](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-compute-development-001/README.md)746470 已通过原生正确性、memcheck/synccheck 并完成 112 个采样进程。未记录模式下，WGMMA 背景使主窗口增加约 17.6%–31.2%；Q1 的记录分解显示新增时间主要位于发出、补发和进入等待之前。
+探针与 GEMM 已共用源服务实现；[首次迁移](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-development/gemm-transfer-001/README.md)保留原计算/输出价格，只换 TMA 后，S6/S4 的消费者跨度同为 39.180 µs，stage 响应仍为零。下一步检查计算完成/槽释放及计算与搬运的服务耦合；[同 CTA WGMMA 背景开发对照](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-candidates/20261015-tma-compute-development-001/README.md)746470 已通过原生正确性、memcheck/synccheck 并完成 112 个采样进程。未记录模式下，WGMMA 背景使主窗口增加约 17.6%–31.2%；Q1 的记录分解显示新增时间主要位于发出、补发和进入等待之前。
 
-[局部干扰留出 746720](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-local-interference-heldout-001/README.md)固定其他131个SM的WGMMA，只开关目标SM的计算。新源环Q1/Q4的未记录窗口增加12.10%/20.50%周期，有效频率仅变−0.125%/−0.031%；两个端点均通过冻结的局部干扰预测，排除仅频率解释。发出、补发区间仍是主要增量，下一服务候选区分本地指令发出、SMEM访问与队列反压。 [SS/RS初次对照746721](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-local-rs-development-001/README.md)存在A寄存器重复物化；[修正后746723](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-local-rs-development-002/README.md)的背景推进率相差不到0.7%，未记录模式的额外周期仍接近。将A从SMEM改到寄存器未消除局部干扰。[746785位置留出](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-issue-placement-heldout-002/README.md)中，较慢位置随issuer移动，但2.25%的未记录周期差低于首选候选的冻结范围，三种定量候选均未通过；保留位置关系假设，不采用固定干扰百分比。
+[局部干扰留出 746720](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-local-interference-heldout-001/README.md)固定其他131个SM的WGMMA，只开关目标SM的计算。新源环Q1/Q4的未记录窗口增加12.10%/20.50%周期，有效频率仅变−0.125%/−0.031%；两个端点均通过冻结的局部干扰预测，排除仅频率解释。发出、补发区间仍是主要增量，下一服务候选区分本地指令发出、SMEM访问与队列反压。 [SS/RS初次对照746721](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-local-rs-development-001/README.md)存在A寄存器重复物化；[修正后746723](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-local-rs-development-002/README.md)的背景推进率相差不到0.7%，未记录模式的额外周期仍接近。将A从SMEM改到寄存器未消除局部干扰。[746785位置留出](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-issue-placement-heldout-002/README.md)中，较慢位置随issuer移动，但2.25%的未记录周期差低于首选候选的冻结范围，三种定量候选均未通过；保留位置关系假设，不采用固定干扰百分比。
 
-[工作集判别 746486](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-footprint-discrimination-001/README.md)保持 48 CTA、48 MiB 分配和描述符，只改变预热实际访问集合。24/48 MiB 的共同前缀请求窗口为 416/832 ns，周期响应 −49.37%，符合冻结的 −50%±12 个百分点；频率变化 −0.19%，未记录模式每组时间下降 44.14%。源工作集状态候选在该范围内获得支持；30/36 MiB 的开发端点为 416/528 ns，[量化服务候选](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-development/working-set-001/README.md)对 34 个开发条件的最大误差为 8.45%，尚未达到局部时间 5% 标准；继续核对并发残差及输出存储对状态的影响。
+[工作集判别 746486](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-footprint-discrimination-001/README.md)保持 48 CTA、48 MiB 分配和描述符，只改变预热实际访问集合。24/48 MiB 的共同前缀请求窗口为 416/832 ns，周期响应 −49.37%，符合冻结的 −50%±12 个百分点；频率变化 −0.19%，未记录模式每组时间下降 44.14%。源工作集状态候选在该范围内获得支持；30/36 MiB 的开发端点为 416/528 ns，[量化服务候选](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-development/working-set-001/README.md)对 34 个开发条件的最大误差为 8.45%，尚未达到局部时间 5% 标准；继续核对并发残差及输出存储对状态的影响。
 
-[先前 global 写入判别 746495](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-output-state-discrimination-001/README.md)完成 56 个采样进程。相同 30 MiB 输入前写入 16 MiB，使共同前缀请求窗口增加 101.92%、周期增加 106.42%，均符合冻结响应范围；未记录模式增加 95.71%，频率变化 +0.12%。输入服务须保留先前存储活动。将 A/B/D 共同计入状态后，G3 的开发 stage 响应为 9.66%，但原有空间跨度与预等约束仍失败，见[联合回放](../../../../../../results/gh200_resource_campaign/access_rules/20261014-tma-tensor-development/working-set-001/README.md)。下一步先区分地址与执行位置或请求时间状态，再冻结完整组合。
+[先前 global 写入判别 746495](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-output-state-discrimination-001/README.md)完成 56 个采样进程。相同 30 MiB 输入前写入 16 MiB，使共同前缀请求窗口增加 101.92%、周期增加 106.42%，均符合冻结响应范围；未记录模式增加 95.71%，频率变化 +0.12%。输入服务须保留先前存储活动。将 A/B/D 共同计入状态后，G3 的开发 stage 响应为 9.66%，但原有空间跨度与预等约束仍失败，见[联合回放](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-development/working-set-001/README.md)。下一步先区分地址与执行位置或请求时间状态，再冻结完整组合。
 
-[地址轮换 746504](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-position-discrimination-001/README.md)完成 28 个采样进程。固定执行位置、交换两个源组后，快慢组窗口差的配对变化仅 −2.86 cycle；地址解释预测 −475.86±100 cycle，位置或推进状态解释预测 0±100 cycle。后者通过，未记录模式和 SMID 映射核对一致。下一项改变起步次序，继续分开位置与时间状态。
+[地址轮换 746504](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-position-discrimination-001/README.md)完成 28 个采样进程。固定执行位置、交换两个源组后，快慢组窗口差的配对变化仅 −2.86 cycle；地址解释预测 −475.86±100 cycle，位置或推进状态解释预测 0±100 cycle。后者通过，未记录模式和 SMID 映射核对一致。下一项改变起步次序，继续分开位置与时间状态。
 
-[起步次序 746516](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-start-order-discrimination-001/README.md)完成 42 个采样进程。正反次序均成功改变，但错开起步后的组间差仅约 11–15 cycle，低于冻结的可区分门槛，C2 记信息不足；同二进制共同时刻起步时为 200.43 cycle。下一候选须同时保留驻留状态与请求相位，不能直接采用恒定 SM 位置价格。
+[起步次序 746516](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-start-order-discrimination-001/README.md)完成 42 个采样进程。正反次序均成功改变，但错开起步后的组间差仅约 11–15 cycle，低于冻结的可区分门槛，C2 记信息不足；同二进制共同时刻起步时为 200.43 cycle。下一候选须同时保留驻留状态与请求相位，不能直接采用恒定 SM 位置价格。
 
-[暖机/本次时序 746541](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-warmup-phase-discrimination-001/README.md)将两次起步独立控制，共 56 个进程。只改暖机时插桩组差变化 +0.07 cycle，只改正式调用时为 −239.57 cycle；本次请求时序候选通过该端点，但未插桩组差的降幅超出冻结幅度，两种定量候选均未通过。下一步用 cluster 共驻留核对快慢 SM 的同 GPC 关系，再限定共享服务的分组与相位规则。方法参考[GPU 拓扑研究 §5.1](https://arxiv.org/html/2609.24270v1#S5.SS1)与[CUDA cluster 共驻留语义](https://docs.nvidia.com/cuda/archive/12.9.2/cuda-c-programming-guide/index.html#thread-block-clusters)。
+[暖机/本次时序 746541](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-warmup-phase-discrimination-001/README.md)将两次起步独立控制，共 56 个进程。只改暖机时插桩组差变化 +0.07 cycle，只改正式调用时为 −239.57 cycle；本次请求时序候选通过该端点，但未插桩组差的降幅超出冻结幅度，两种定量候选均未通过。下一步用 cluster 共驻留核对快慢 SM 的同 GPC 关系，再限定共享服务的分组与相位规则。方法参考[GPU 拓扑研究 §5.1](https://arxiv.org/html/2609.24270v1#S5.SS1)与[CUDA cluster 共驻留语义](https://docs.nvidia.com/cuda/archive/12.9.2/cuda-c-programming-guide/index.html#thread-block-clusters)。
 
 ### 首轮条件安排与迭代终点
 
@@ -158,22 +170,26 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
 
 原生正确性、开发校准与首批 C2 判别已完成；两套冻结价格集合均未通过。统一价格的局部 FIFO 与共享 FIFO 对相同 N64/Q2 的共享/独立源预测相同，与校准不符；单一价格的在途合并和单一完成延迟的驻留解释未通过首批。两种规则的组合转入新一轮开发，单 CTA 探针继续用于控制与端点检查。
 
-[同 GPC 关系核对 746548](../../../../../../results/gh200_resource_campaign/access_rules/20261015-gpc-topology-001/README.md)完成 21 次 cluster launch、6720 个 CTA 记录。SM0/16/32 确认同组；124–131 只确定四个内部配对。[带宽对照 746555](../../../../../../results/gh200_resource_campaign/access_rules/20261015-gpc-contention-002/README.md)中，四对均使原六个 SM 的窗口增加 21.8%–22.1%，与已知同 GPC 对照一致，已知跨组对照接近零；暂采用同组映射。下一步检验按该组管理的请求服务；前两次加载被移出循环的失败记录保留。
+[同 GPC 关系核对 746548](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-gpc-topology-001/README.md)完成 21 次 cluster launch、6720 个 CTA 记录。SM0/16/32 确认同组；124–131 只确定四个内部配对。[带宽对照 746555](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-gpc-contention-002/README.md)中，四对均使原六个 SM 的窗口增加 21.8%–22.1%，与已知同 GPC 对照一致，已知跨组对照接近零；暂采用同组映射。下一步检验按该组管理的请求服务；前两次加载被移出循环的失败记录保留。
 
-按该组建立的[有限并行服务开发](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gpc-development-001/README.md)能产生相位响应。随后[746563 独立相位留出](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gpc-heldout-001/README.md)实测0/16/32 ns间隔的窗口为528/512/416 ns。8槽候选提前下降、低估21.12%；2/4槽虽更接近，最大误差仍为5.29%/5.47%，三组参数均未通过。下一轮只保留2/4槽结构，先结合新增端点重新校准，再对未测相位或释放条件冻结验证。
+按该组建立的[有限并行服务开发](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-gpc-development-001/README.md)能产生相位响应。随后[746563 独立相位留出](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-gpc-heldout-001/README.md)实测0/16/32 ns间隔的窗口为528/512/416 ns。8槽候选提前下降、低估21.12%；2/4槽虽更接近，最大误差仍为5.29%/5.47%，三组参数均未通过。下一轮只保留2/4槽结构，先结合新增端点重新校准，再对未测相位或释放条件冻结验证。
 
-[746570 新相位与 Q2 留出](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gpc-heldout-002/README.md)完成84个进程。2槽版本通过6条新条件，ns/cycle最大误差3.64%/2.32%；4槽在24 ns相位低估约10%，8槽约16%。暂采用2槽结构进入GEMM组合诊断，并保留它前轮同步起步条件5.29%的失败；不以本轮覆盖前轮。G3 S6/S4的20个历史dual进程分别只有一套SM映射，且两种stage之间相同，见[放置回放](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gpc-development-001/gemm-placement.json)。
-
-
-将该服务直接接回 G3 后，不合并源请求会高估跨度，按组内在途同源合并又使 S4/S6 响应为零；加入全卡工作集状态也未改善，见[GEMM 迁移记录](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gpc-development-001/README.md)。下一轮固定已核对的 cfg_b 工作坐标，直接测 A/B 部分复用，检验源合并与独立目的路径的组合。
+[746570 新相位与 Q2 留出](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-gpc-heldout-002/README.md)完成84个进程。2槽版本通过6条新条件，ns/cycle最大误差3.64%/2.32%；4槽在24 ns相位低估约10%，8槽约16%。暂采用2槽结构进入GEMM组合诊断，并保留它前轮同步起步条件5.29%的失败；不以本轮覆盖前轮。G3 S6/S4的20个历史dual进程分别只有一套SM映射，且两种stage之间相同，见[放置回放](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-gpc-development-001/gemm-placement.json)。
 
 
-[匹配源判别 746586](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gemm-source-discrimination-001/README.md)使用 cfg_b 两轮实际工作坐标暖机，共 34 MiB A/B。四个源订阅版本均未通过，最大 ns/cycle 误差 45.14%/44.47%；无先前写入时 Q1 存在较大 GPC 差异，先写入 16.5 MiB 后窗口普遍变长，Q4 隐藏了大部分等待。下一项只交换暖机的两轮访问次序，正式请求保持不变，检验近期源状态。
+将该服务直接接回 G3 后，不合并源请求会高估跨度，按组内在途同源合并又使 S4/S6 响应为零；加入全卡工作集状态也未改善，见[GEMM 迁移记录](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/multi-cta-gpc-sharing/20261015-tma-gpc-development-001/README.md)。下一轮固定已核对的 cfg_b 工作坐标，直接测 A/B 部分复用，检验源合并与独立目的路径的组合。
 
 
-[暖机次序 746588](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gemm-recency-discrimination-001/README.md)保持正式 cfg_b 请求相同，交换十次暖机的两轮次序。GPC2/3 的早窗口分别缩短41.30%/39.53%，未插桩时间缩短35.07%/32.65%；cycle/ns、放置与频率门槛均通过。近期源状态获得支持，固定位置价格被反证。接下来补齐存储局部域的工作映射，使模型按访问序列更新源状态。
+[匹配源判别 746586](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-discrimination-001/README.md)使用 cfg_b 两轮实际工作坐标暖机，共 34 MiB A/B。四个源订阅版本均未通过，最大 ns/cycle 误差 45.14%/44.47%；无先前写入时 Q1 存在较大 GPC 差异，先写入 16.5 MiB 后窗口普遍变长，Q4 隐藏了大部分等待。下一项只交换暖机的两轮访问次序，正式请求保持不变，检验近期源状态。
 
 
-[局部域验证 746596](../../../../../../results/gh200_resource_campaign/access_rules/20261015-numa-affinity-heldout-001/README.md)在三次新分配的 192 对新页上支持 GPC{0,4,5,6}/{1,2,3,7} 的两域映射，每域66个SM。新模型按此映射维护缓存与未完成填充，令命中、同源等待和每CTA推进共同决定就绪时刻；先回放暖机次序及匹配源条件，再接回GEMM。
+[暖机次序 746588](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-gemm-recency-discrimination-001/README.md)保持正式 cfg_b 请求相同，交换十次暖机的两轮次序。GPC2/3 的早窗口分别缩短41.30%/39.53%，未插桩时间缩短35.07%/32.65%；cycle/ns、放置与频率门槛均通过。近期源状态获得支持，固定位置价格被反证。接下来补齐存储局部域的工作映射，使模型按访问序列更新源状态。
 
-[动态缓存开发](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-gemm-source-development-001/README.md)的完全相联及 8/16/32 路候选尚未重现实测 GPC 分布；独立校准的 tensor 慢路径价格在 Q2 上仍有 16.33% 残差。746619 已确认 A/B 相距 22 MiB，746632 确认十次暖机的 CTA→SM 放置保持相同。随后[按域重排工作判别 746641](../../../../../../results/gh200_resource_campaign/access_rules/20261015-tma-domain-layout-discrimination-001/README.md)保持 264 个输出坐标与 34 MiB A/B，把候选每域副本需求从 30 MiB 降至 28.5 MiB：GPC2/3 的暖机次序响应从 −37.50%/−38.10% 降至 −9.38%/0，未插桩响应降至约 ±1.3%。局部域候选通过这两个预定端点，全局有效容量候选被反证。新布局的 GPC5 仍有较大响应，完整缓存规则继续辨识；输入状态与 D 写入接回 G3 后，stage 与空间响应仍未通过；[同卡复测](../../../../../../results/gh200_resource_campaign/access_rules/20261015-g3-phase-reproduction-001/README.md)确认目标现象可复现。已核实[原程序 scratch 清零](../../../../../../results/gh200_resource_campaign/access_rules/20261015-g3-allocation-query-001/README.md)的准备访问，按归属域写分配加入后仍未修复反例；释放与缓存替换候选的结果在开发入口维护。下一步按746720辨识本地计算与请求推进的耦合。
+
+[局部域验证 746596](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-numa-affinity-heldout-001/README.md)在三次新分配的 192 对新页上支持 GPC{0,4,5,6}/{1,2,3,7} 的两域映射，每域66个SM。新模型按此映射维护缓存与未完成填充，令命中、同源等待和每CTA推进共同决定就绪时刻；先回放暖机次序及匹配源条件，再接回GEMM。
+
+[动态缓存开发](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-development-001/README.md)的完全相联及 8/16/32 路候选尚未重现实测 GPC 分布；独立校准的 tensor 慢路径价格在 Q2 上仍有 16.33% 残差。746619 已确认 A/B 相距 22 MiB，746632 确认十次暖机的 CTA→SM 放置保持相同。随后[按域重排工作判别 746641](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/source-state-candidates/20261015-tma-domain-layout-discrimination-001/README.md)保持 264 个输出坐标与 34 MiB A/B，把候选每域副本需求从 30 MiB 降至 28.5 MiB：GPC2/3 的暖机次序响应从 −37.50%/−38.10% 降至 −9.38%/0，未插桩响应降至约 ±1.3%。局部域候选通过这两个预定端点，全局有效容量候选被反证。新布局的 GPC5 仍有较大响应，完整缓存规则继续辨识；输入状态与 D 写入接回 G3 后，stage 与空间响应仍未通过；[同卡复测](../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-g3-phase-reproduction-001/README.md)确认目标现象可复现。已核实[原程序 scratch 清零](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-g3-allocation-query-001/README.md)的准备访问，按归属域写分配加入后仍未修复反例；释放与缓存替换候选的结果在开发入口维护。下一步按746720辨识本地计算与请求推进的耦合。
+
+[零耗时同刻排序核对](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261019-Q02-zero-time-order-001/README.md)发现，多CTA结束分布会随同刻请求线性化显著改变，单CTA结果保持；替代排序的stage响应方向仍错。当前producer发出与共享受理的次序尚缺局部约束，默认排序及价格保持，先补此连接再扩大共享组合。
+
+[四组预填间隔775199](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261022-Q02-prefill-gap-unrolled-001/README.md)在同一binary上取得377→0cycle的A16预填增量，三个seed均过冻结资格；支持请求间隔可隐藏该差异，排除本条件的保留增量形式。当前采用受请求推进状态影响的发布反馈工作假设；源服务、前端与目的投递的反馈位置尚待区分，量化规则保留Q1/Q2/Q4与GEMM持续增长约束。

@@ -1,6 +1,6 @@
 # COMPUTE-01：cfg_b 驻留计算短链
 
-更新：2026-10-17。A的开发及留出完成，驻留窗口长度外推通过；B/C零额外控制具体形式在开发响应失败后停止；D原生TMA及E真实三输出完成有限开发数值／路径观测。各版资格与结果分别见下文。原[CPU准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-preparation-001/README.md)保留；当前假设及接入位置见[计算服务](../../../model/mechanism/hardware_rules/COMPUTE-SERVICE.md)，本轮预算见[PLAN](../../../PLAN.md#stage-2-compute-a)。
+更新：2026-10-18。A的开发及留出完成，驻留窗口长度外推通过；Q05两wait对照的每组完成滞后形式通过冻结长度验证，固定截距形式未通过；B/C零额外控制具体形式在开发响应失败后停止；D原生TMA及E真实三输出完成有限开发数值／路径观测。各版资格与结果分别见下文。原[CPU准备包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-preparation-001/README.md)保留；当前假设及接入位置见[计算服务](../../../model/mechanism/hardware_rules/COMPUTE-SERVICE.md)，本轮预算见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)。
 
 ## 1. 条件与生成程序
 
@@ -51,7 +51,7 @@ plain不含循环内打点。trace只在最后Ktile记录`issue_before`、`commi
 ```bash
 python microbench/gh200_resource_campaign/access_rules/cfg_b_compute_chain.py prepare \
   --output /tmp/cfg-b-compute-preparation \
-  --cutlass-root results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/source/cutlass
+  --cutlass-root results/gh200_resource_campaign/access_rules/Q05-wgmma/R00-anchor-target/20261006-r00-job734996/formal-v1/source/cutlass
 python /tmp/cfg-b-compute-preparation/source/cfg_b_compute_chain.py compile \
   --output /tmp/cfg-b-compute-preparation --nvcc nvcc
 python microbench/gh200_resource_campaign/access_rules/test_cfg_b_compute_chain.py -v
@@ -68,11 +68,11 @@ python /tmp/cfg-b-compute-preparation/source/cfg_b_compute_chain.py run \
 
 冻结文件schema为`gh200-cfg-b-compute-chain-freeze/1`，绑定`plan_sha256`、`build_identity_sha256`、`dev_summary_sha256`。`candidate_parameters`按`nominal`／`conditional`保存`a_cycle`、`q_cycle`，`predictions_cycle`保存对应的`k32_plain=a+32q`；`criterion`固定`unit=clock64_cycle/CTA`、`max_abs_relative_error=0.05`、`statistic=median_of_3_eligible_processes`。runner复用L2的命令收据、分配身份与单卡锁；首个留出进程前写入冻结身份，恢复时核对同一身份。旧成功采样只重放校验，不重新执行。
 
-准备包中的源码直接通过9项CPU检查。本地CUDA13诊断编译及[静态审查](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-preparation-001/local-static-review/static-review.json)通过：plain／trace分别154／162寄存器，512 B静态SMEM，无stack／spill；每版本8条HGMMA均带`.tnspB`，保留首组跳过wait1及末尾wait0。构建采用临时glibc／libstdc++兼容头，完整命令、两次源码定向修复与环境错误记录已保存。实际目标CUDA12.9.41构建、数值与窗口核对已完成，结果如下。
+准备包中的源码直接通过9项CPU检查。本地CUDA13诊断编译及[静态审查](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-preparation-001/local-static-review/static-review.json)通过：plain／trace分别154／162寄存器，512 B静态SMEM，无stack／spill；每版本8条HGMMA均带`.tnspB`，保留首组跳过wait1及末尾wait0。构建采用临时glibc／libstdc++兼容头，完整命令、两次源码定向修复与环境错误记录已保存。实际目标CUDA12.9.41构建、数值与窗口核对已完成，结果如下。
 
 ### A实测与长度留出
 
-[开发12进程](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-execution-002/dev/summary.json)与[留出6进程](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-execution-002/heldout/summary.json)使用同一GH200，全部性能资格通过。每进程的16384个输出由独立整数参考核对；活动SM保持，plain／trace分别154／162寄存器、196608 B动态SMEM、512 B静态SMEM、零local。下表周期与ns分别取各条件三个合格进程的中位数；trace扰动按同seed配对的周期相对变化取中位数。
+[开发12进程](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-execution-002/dev/summary.json)与[留出6进程](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-execution-002/heldout/summary.json)使用同一GH200，全部性能资格通过。每进程的16384个输出由独立整数参考核对；活动SM保持，plain／trace分别154／162寄存器、196608 B动态SMEM、512 B静态SMEM、零local。下表周期与ns分别取各条件三个合格进程的中位数；trace扰动按同seed配对的周期相对变化取中位数。
 
 | Ktile | 用途 | plain周期 | plain ns | trace周期 | trace扰动 |
 |---:|---|---:|---:|---:|---:|
@@ -80,21 +80,25 @@ python /tmp/cfg-b-compute-preparation/source/cfg_b_compute_chain.py run \
 | 13 | 开发 | 7425 | 4192 | 7469 | +44 cycle／0.593% |
 | 32 | 留出 | 17159 | 9536 | 17197 | +38 cycle／0.221% |
 
-仅用4／13 plain中位窗口，[开发分析](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-fit-001/fit.json)及[冻结](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-fit-001/dev-freeze.json)得到两解释共同的`a=769、q=512 cycle`，32 plain预测均为17153 cycle。[留出评分](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-heldout-001/score.json)只读取该冻结，未重拟合或重选；相对实测中位17159 cycle的误差为−6 cycle／−0.034967%，满足原绝对相对误差≤5%。这支持该驻留窗口的4／13→32长度外推；两个解释预测重合，留出不能区分它们。
+仅用4／13 plain中位窗口，[开发分析](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-fit-001/fit.json)及[冻结](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-fit-001/dev-freeze.json)得到两解释共同的`a=769、q=512 cycle`，32 plain预测均为17153 cycle。[留出评分](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-01-heldout-001/score.json)只读取该冻结，未重拟合或重选；相对实测中位17159 cycle的误差为−6 cycle／−0.034967%，满足原绝对相对误差≤5%。这支持该驻留窗口的4／13→32长度外推；两个解释预测重合，留出不能区分它们。
 
 三种长度最后Ktile的trace软件段中位数均为：issue_before→commit_after 429 cycle、commit_after→wait1_after 28 cycle、wait1_after→tail_wait0_after 448 cycle、tail_wait0_after→窗口结束579 cycle。trace配对均在原5%扰动限内；这些区间包含打点及对应软件过程，wait返回只给计算完成上界，不作为裸MMA延迟或直接物理完成时间。
 
 512 cycle/Ktile作为匹配驻留计算体的条件循环量保存；769 cycle的A复合固定项不接入GEMM，256 cycle提交提前量仍是原工作假设。原组合价格保持；独立长度外推通过不代表全GEMM C2/C3通过。B–E的实测与迁移继续按其登记推进。
 
+后续[Q05开发](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q05-compute-wait-001/EXECUTION.md)只改中间各组wait0／wait1，保留首组无wait、末尾wait0，4／13 Ktile的12个plain进程全部合格。目标SASS中旧wait1指令流不变，wait0只改一处DEPBar立即数，资源相同。wait1／wait0的长度增量为512／607 cycle/Ktile；[预列形式](../../../model/mechanism/hardware_rules/COMPUTE-SERVICE.md#2-两个有限解释与观测对应)中的每组滞后形式得到d95、a677.5 cycle，开发最大误差0.124246%。[冻结32 Ktile六进程](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q05-compute-wait-002/EXECUTION.md)复用同一构建且未重拟合，wait0／wait1预测20006.5／17156.5、实测中位20010／17153 cycle，误差0.017491%／0.020405%，均通过原5%标准；固定截距形式的wait0误差11.156922%，未通过。
+
+该结果验证匹配驻留窗口的完成连接长度响应，a保留在探针窗口。[固定CPU迁移筛查](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q05-compute-wait-001/transfer-check.json)保留原lead256，普通wait1与槽释放时刻不变，Q04延迟响应仍为预测1792、实测2067 cycle，未通过原5%标准。
+
 ## 5. B/C匹配交接准备
 
-本轮[有限登记](../../../PLAN.md#compute-bc-preparation)接续A计算体，使用256线程、一个producer WG与一个数学WG；固定物理六槽196608 B，逻辑S4／S6。full采用普通arrival、到达数1，empty到达数128。首`min(stages,ktiles)`组在窗口前发布；后续producer等待对应empty后写入绝对代次并发布full。消费者完成full等待后核对代次，执行8条WGMMA、commit和wait1，128名消费者各贡献一次较早组的empty arrival，tail wait0后释放最后组。循环内无CTA会合。
+本轮[有限登记](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)接续A计算体，使用256线程、一个producer WG与一个数学WG；固定物理六槽196608 B，逻辑S4／S6。full采用普通arrival、到达数1，empty到达数128。首`min(stages,ktiles)`组在窗口前发布；后续producer等待对应empty后写入绝对代次并发布full。消费者完成full等待后核对代次，执行8条WGMMA、commit和wait1，128名消费者各贡献一次较早组的empty arrival，tail wait0后释放最后组。循环内无CTA会合。
 
 B正常推进；同一二进制的C只在`tile=stages`第一次取得复用槽后延迟D个clock64周期。首批槽有预就绪依据，复用后的B与C分别由实际信号和等待区间判断路径。驻留操作数保持不变，输入数值按§2公式的`tile%stages`取槽；代次sideband检查控制交接。每进程另核1／2／`stages+1` Ktile的完整输出及代次。
 
 trace保存逐组producer acquire／full信号前后、consumer线程0的wait／发出／commit／wait1及release，并记录四个warp的first-try成功位图。各128名消费者的arrival前后戳分别取最大值，最后必要信号位于`[max(before),max(after)]`；再取得槽的返回应不早于该区间下界。`try_wait`可能自行等待，其成功位保留为调用结果；线程0的进入状态由full信号与wait入口的括号判断，重叠记为`overlap`，语义见[PTX ISA 8.8](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-mbarrier-try-wait)。打点在共享存储中暂存，窗口结束后导出；plain不含循环打点，数值和代次检查保留。
 
-入口：[派生探针](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/cfg_b_handoff_chain.cu)、[准备／构建／离线校验](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_handoff_chain.py)。[B/C准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-02-handoff-preparation-001/README.md)保存14个条件形状、42个未执行命令、无硬件时间价格的程序与计数见证及本地静态证据；D=2048为CPU示例。当时尚未冻结正式延迟和预测；实测轮已固定D=4096 cycle，并在开发前保存[完整预测](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-02-prediction-001/prediction.json)。
+入口：[派生探针](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/cfg_b_handoff_chain.cu)、[准备／构建／离线校验](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_handoff_chain.py)。[B/C准备包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-02-handoff-preparation-001/README.md)保存14个条件形状、42个未执行命令、无硬件时间价格的程序与计数见证及本地静态证据；D=2048为CPU示例。当时尚未冻结正式延迟和预测；实测轮已固定D=4096 cycle，并在开发前保存[完整预测](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-02-prediction-001/prediction.json)。
 
 本地CUDA13诊断构建的plain／trace分别167／220寄存器、1152／12800 B静态SMEM，无stack／spill。首版因角色分歧后的累加器定义触发C7515，将8条WGMMA逐条排空；一次定向修复把初始化移到共同路径，恢复每组8条HGMMA、末条group提交、普通wait1与尾wait0。失败构建与修复版本均保存。B/C的线程数及资源与A分别登记，差值先作为程序组合响应；准备轮尚无GPU数值与窗口观测；后续实测结果如下，当前组合的计算与同步价格保持原版。
 
@@ -102,7 +106,7 @@ trace保存逐组producer acquire／full信号前后、consumer线程0的wait／
 
 ### B/C实测与停止
 
-[执行包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-02-execution-001/README.md)的30个开发进程与A同卡，目标构建、完整输出、代次和性能资格全部通过；[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-02-score-001/score.json)重新核对491520个输出元素及90份短长度检查。正式D=8q=4096 cycle只作用于首次复用，冻结形式使用q512、commit_lead256及零额外控制价格，不迁移A的769 cycle固定项。
+[执行包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-02-execution-001/README.md)的30个开发进程与A同卡，目标构建、完整输出、代次和性能资格全部通过；[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-02-score-001/score.json)重新核对491520个输出元素及90份短长度检查。正式D=8q=4096 cycle只作用于首次复用，冻结形式使用q512、commit_lead256及零额外控制价格，不迁移A的769 cycle固定项。
 
 | plain响应 | 实测cycle | 冻结预测cycle | 原5%响应判别 |
 |---|---:|---:|---|
@@ -114,13 +118,13 @@ trace保存逐组producer acquire／full信号前后、consumer线程0的wait／
 
 ## 6. D原生TMA短链准备
 
-D沿用B/C的256线程与消费者计算／释放顺序，固定六个物理槽196608 B、逻辑S4／S6。producer等待empty后执行一次`arrive_and_expect_tx(32768)`，再发A16 KiB和B0/B1各8 KiB；full到达数1，empty到达数128。采用CUTLASS 3.9.2的StageCount6工厂，CPU逐一比较应用pointer swizzle后的98304个half地址，与B/C布局零差异、无重复地址。每槽A覆盖8192 half，B0/B1各4096且无重叠；请求形状与地址见[准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-03-tma-preparation-001/README.md)。
+D沿用B/C的256线程与消费者计算／释放顺序，固定六个物理槽196608 B、逻辑S4／S6。producer等待empty后执行一次`arrive_and_expect_tx(32768)`，再发A16 KiB和B0/B1各8 KiB；full到达数1，empty到达数128。采用CUTLASS 3.9.2的StageCount6工厂，CPU逐一比较应用pointer swizzle后的98304个half地址，与B/C布局零差异、无重复地址。每槽A覆盖8192 half，B0/B1各4096且无重叠；请求形状与地址见[准备包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-03-tma-preparation-001/README.md)。
 
 唯一主窗口覆盖首个acquire／事务登记／TMA到tail wait0、末槽释放、累加器消费与CTA会合；所有Ktile搬运均在窗口内，4 Ktile含12次请求。性能输入按`tile%stages`沿用B/C的环；独立正确性调用用`source_tile=tile`及逐代增加的正dyadic值，分别核1／2／S+1／正式长度的完整16384输出和128人代次。缓存协议为同一环的重复调用暖机；本轮未增加P0，D与B/C之差按完整程序响应保存。
 
 trace保存事务登记、A发出、B两笔共同发出区间、consumer wait返回、8条WGMMA／commit／wait1与全部128人释放。每组full完成区间取B pair发出前戳到consumer wait返回，producer的pair后戳可晚于返回；first-try保存调用结果，进入状态只报告早于B pair发出或尚无法区分。首等待返回／首计算前缀直接由同次时间戳给出。
 
-入口：[派生探针](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/cfg_b_tma_chain.cu)、[准备／构建／记录校验](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_tma_chain.py)。有限形状与预算见[PLAN](../../../PLAN.md#compute-d-preparation)；[D准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-03-tma-preparation-001/README.md)保存未执行命令、请求／程序见证、两种独立整数参考、15项CPU检查与完整构建记录。本地CUDA13诊断构建plain／trace分别167／246寄存器、1152／14848 B静态SMEM，无stack／spill；每组8条HGMMA，普通wait1及尾wait0，producer循环体为3条UTMALDG.3D。首次B分区断言失败及两次定向修复均已保存。
+入口：[派生探针](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/cfg_b_tma_chain.cu)、[准备／构建／记录校验](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_tma_chain.py)。有限形状与预算见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)；[D准备包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-03-tma-preparation-001/README.md)保存未执行命令、请求／程序见证、两种独立整数参考、15项CPU检查与完整构建记录。本地CUDA13诊断构建plain／trace分别167／246寄存器、1152／14848 B静态SMEM，无stack／spill；每组8条HGMMA，普通wait1及尾wait0，producer循环体为3条UTMALDG.3D。首次B分区断言失败及两次定向修复均已保存。
 
 CPU准备轮GPU执行0次。后续实测仅执行原清单开发部分，结果如下；计算、同步与输入价格未替换。
 
@@ -128,7 +132,7 @@ CPU准备轮GPU执行0次。后续实测仅执行原清单开发部分，结果�
 
 ### D开发实测
 
-[执行包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-03-execution-001/README.md)的18个开发进程与A／B/C同卡，目标构建、布局、数值与性能资格通过；[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-03-score-001/score.json)核对ring与独立source代次输入共589824个完整输出元素、72份代次正确性报告。保存每进程descriptor编码输入与目标driver生成的128 B opaque hex；本轮核对源字段与实例身份，没有在CPU上重新编码或解码TensorMap位。
+[执行包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-03-execution-001/README.md)的18个开发进程与A／B/C同卡，目标构建、布局、数值与性能资格通过；[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-03-score-001/score.json)核对ring与独立source代次输入共589824个完整输出元素、72份代次正确性报告。保存每进程descriptor编码输入与目标driver生成的128 B opaque hex；本轮核对源字段与实例身份，没有在CPU上重新编码或解码TensorMap位。
 
 | 条件 | plain中位cycle | plain中位ns | 相同B条件的D−B cycle |
 |---|---:|---:|---:|
@@ -146,7 +150,7 @@ E薄封装真实CUTLASS 3.9.2 cfg_b工厂，固定S6、M384×N128×K832、调度
 
 plain使用原工厂；trace复用冻结kernel／collective overlay，仅加四处调用边界，保存FIRST、mma返回、数学arrival后、MAIN_END、epilogue许可、store返回、store_tail返回及输出arrival后。下一WG可在上一WG的MAIN_END之前开始，leader的arrival后戳也可晚于对方推进；校验只采用真实必要前驱。`store_tail`的`.read`等待约束输出源复用，全局D在stream完成后完整检查。性能为整个kernel的CUDA event窗口，另报cycle/ns软件端点；E包含真实启动、调度和13组global源，与D分别按各自输入解释。
 
-入口：[薄封装探针](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/cfg_b_pingpong_chain.cu)、[准备／构建／记录校验](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_pingpong_chain.py)。有限条件见[PLAN](../../../PLAN.md#compute-e-preparation)，[E准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-04-pingpong-preparation-001/README.md)保存源码、原overlay及四处插入、完整参考和14项CPU检查。本地CUDA13诊断的plain／trace均168寄存器、无stack／spill，两个CPU工厂查询一致；初编失败、两次定向修复及独立包回放缺工作列表依赖的失败均已保留，补齐后回放通过。
+入口：[薄封装探针](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/cfg_b_pingpong_chain.cu)、[准备／构建／记录校验](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_pingpong_chain.py)。有限条件见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，[E准备包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-04-pingpong-preparation-001/README.md)保存源码、原overlay及四处插入、完整参考和14项CPU检查。本地CUDA13诊断的plain／trace均168寄存器、无stack／spill，两个CPU工厂查询一致；初编失败、两次定向修复及独立包回放缺工作列表依赖的失败均已保留，补齐后回放通过。
 
 CPU准备轮GPU执行0次；后续实测沿原两形状执行，结果如下。
 
@@ -154,8 +158,14 @@ CPU准备轮GPU执行0次；后续实测沿原两形状执行，结果如下。
 
 ### E开发实测
 
-[执行包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-04-execution-001/README.md)的6个开发进程与A–D同卡；[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-04-score-001/score.json)核对真实工厂、overlay重建、实际grid／资源、完整294912个输出元素及192个guard值，数值与性能资格全部通过。冻结工作列表为39输入组、117逻辑输入请求、312条WGMMA、24输出子块；这些是由程序和输出／工作列表核对的动态需求，不是硬件动态计数器读数。
+[执行包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-04-execution-001/README.md)的6个开发进程与A–D同卡；[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/COMPUTE-01-04-resident-chain/20261017-COMPUTE-04-score-001/score.json)核对真实工厂、overlay重建、实际grid／资源、完整294912个输出元素及192个guard值，数值与性能资格全部通过。冻结工作列表为39输入组、117逻辑输入请求、312条WGMMA、24输出子块；这些是由程序和输出／工作列表核对的动态需求，不是硬件动态计数器读数。
 
 完整kernel的CUDA event中位时间为plain **22.495999932 µs**、trace **23.104000837 µs**。三个同seed配对中2个扰动超过原5%界限，因此八端点只解释trace程序，不能用两个中位数的约2.70%差替代配对门槛。三个seed中，output1的FIRST都早于output0的MAIN_END 47 cycle／32 ns，同时晚于其mma_return 421–430 cycle／224 ns；实际观察支持区分数学交接与尾部完成边界。`MAIN_END`是mma_tail后的软件完成上界，`store_tail_return`约束输出源读取／复用，stream完成后才核完整global输出；leader的arrival后戳不是最后128次arrival的完成戳。
 
 E包含真实调度、连续global输入和输出整理，D使用六源环；E−D不能直接定价输出。本轮无正式完整时间预测、拟合或独立留出，未替换组合价格。A的q512仍仅支持匹配驻留计算体，B/C具体形式的失败及D/E诊断不能改写为全GEMM独立C2/C3通过。
+
+## a044 复测（2026-10-23～26）
+
+四层 72 个计时进程全部通过原数值、资源、计时与暖机资格。A：K32 冻结预测 17,153 cycle，a044 观测也为 17,153。B/C：三条冻结交接预测再次失败（误差 −884、−448、+436 cycle），停止结论不变。D：S4−S6 的 plain 响应为 74 cycle / 32 ns。E：真实 pingpong plain 中位 20.288 µs，trace 扰动 3/3 在 5% 内。见[逐层报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resident-compute-stage-report.md)。
+
+NCU：cfg_b 在 K=1024/4096 下，TMA 类指令 28,044/90,252 条、GMMA 类 warp 指令 221,184/884,736 条，与程序图精确一致。见[cfg_b NCU](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/ncu-cfg-b-report.md)。

@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parent
-FROZEN = ROOT.parents[2] / 'results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2'
+FROZEN = ROOT.parents[2] / 'results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
 
 
 def run_python(source, program, *arguments):

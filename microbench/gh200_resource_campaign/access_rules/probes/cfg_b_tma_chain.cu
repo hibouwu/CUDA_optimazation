@@ -19,6 +19,18 @@ using U32 = uint32_t;
 constexpr int Threads = 256, ConsumerThreads = 128, Slots = 6, MaxTiles = 32, FragmentRegisters = 64;
 using Barrier = cutlass::arch::ClusterBarrier;
 using Transaction = cutlass::arch::ClusterTransactionBarrier;
+#ifdef GH200_NATIVE_TMA
+constexpr bool PerformanceGeneration = true;
+struct RingIndex {
+  int slot, generation;
+  __device__ __forceinline__ void advance(int stages) {
+    ++slot;
+    if (slot == stages) { slot = 0; ++generation; }
+  }
+};
+#else
+constexpr bool PerformanceGeneration = false;
+#endif
 using Mainloop = typename cutlass::gemm::collective::CollectiveBuilder<
     cutlass::arch::Sm90, cutlass::arch::OpClassTensorOp,
     cutlass::half_t, cutlass::layout::RowMajor, 8,
@@ -131,17 +143,48 @@ __device__ __forceinline__ void issue_tile(TensorA a, TensorB b, int slot, bool 
 }
 template <bool Trace>
 __global__ __launch_bounds__(Threads, 1) void tma_chain(const __grid_constant__ Mainloop::Params params, int ktiles, int stages,
-    int source_tiles, bool witness, Record* records, TileTrace* exported_trace, float* output) {
+    int source_tiles, bool witness,
+#ifdef GH200_FIRST_WAIT_ENTRY
+    U64 consumer_entry_delay_cycles,
+#endif
+    Record* records, TileTrace* exported_trace, float* output
+#ifdef GH200_BATCH_SOURCE
+    , int source_mode = 0
+#endif
+#ifdef GH200_SM_SOURCE_BINDING
+    , int source_binding = 0
+#endif
+    ) {
+#ifdef GH200_MULTI_CTA_TMA
+  records += blockIdx.x;
+  if constexpr (Trace) exported_trace += blockIdx.x * MaxTiles;
+  output += blockIdx.x * OutputElements;
+#endif
   using namespace cute;
   extern __shared__ __align__(128) unsigned char storage[];
   auto& tensors = *reinterpret_cast<Mainloop::TensorStorage*>(storage);
   auto a = make_tensor(make_smem_ptr(tensors.smem_A.data()), Mainloop::SmemLayoutA{});
   auto b = make_tensor(make_smem_ptr(tensors.smem_B.data()), Mainloop::SmemLayoutB{});
+#ifdef GH200_BATCH_SOURCE
+#ifdef GH200_SM_SOURCE_BINDING
+  int source_batch = source_mode ? (source_binding ? int(smid()) : int(blockIdx.x)) : 0;
+  asm volatile("" : "+r"(source_batch) :: "memory");
+#else
+  int source_batch = source_mode ? int(blockIdx.x) : 0;
+#endif
+  auto inputs = Mainloop{}.load_init(make_shape(128, 128, source_tiles * 64, 132), params);
+#else
   auto inputs = Mainloop{}.load_init(make_shape(128, 128, source_tiles * 64, 1), params);
+#endif
   auto a_slice = params.tma_load_a.get_slice(0);
   auto b_slice = params.tma_load_b.get_slice(0);
+#ifdef GH200_BATCH_SOURCE
+  auto gA = get<0>(inputs)(_, _, 0, _, source_batch);
+  auto gB = get<1>(inputs)(_, _, 0, _, source_batch);
+#else
   auto gA = get<0>(inputs)(_, _, 0, _, 0);
   auto gB = get<1>(inputs)(_, _, 0, _, 0);
+#endif
   auto tAgA = a_slice.partition_S(gA);
   auto tBgB = b_slice.partition_S(gB);
   auto tAsA = a_slice.partition_D(a);
@@ -197,10 +240,18 @@ __global__ __launch_bounds__(Threads, 1) void tma_chain(const __grid_constant__ 
   }
   __syncthreads(); // only the start and final rendezvous involve the whole CTA
   if (threadIdx.x == ConsumerThreads) {
+#ifdef GH200_NATIVE_TMA
+    RingIndex index{0, 0};
+#endif
 #pragma unroll 1
     for (int tile = 0; tile < ktiles; ++tile) {
+#ifdef GH200_NATIVE_TMA
+      int slot = index.slot, gen = index.generation;
+      int source_tile = tile;
+#else
       int slot = tile % stages, gen = tile / stages;
       int source_tile = witness ? tile : slot;
+#endif
       ProducerTrace stamp;
       if constexpr (Trace) stamp.acquire_before = clocks();
       Barrier::wait(empty + slot, (gen + 1) & 1);
@@ -226,10 +277,30 @@ __global__ __launch_bounds__(Threads, 1) void tma_chain(const __grid_constant__ 
         stamp.request_B_pair_after = clocks();
         trace[tile].producer = stamp;
       }
+#ifdef GH200_NATIVE_TMA
+      index.advance(stages);
+#endif
     }
   } else if (threadIdx.x < ConsumerThreads) {
+#ifdef GH200_FIRST_WAIT_ENTRY
+    if (consumer_entry_delay_cycles) {
+      U64 start = 0, now = 0;
+      asm volatile("mov.u64 %0, %%clock64;" : "=l"(start) :: "memory");
+      do {
+        asm volatile("mov.u64 %0, %%clock64;" : "=l"(now) :: "memory");
+      } while (now - start < consumer_entry_delay_cycles);
+    }
+#endif
+#ifdef GH200_NATIVE_TMA
+    RingIndex index{0, 0};
+    int previous_slot = 0;
+#endif
     for (int tile = 0; tile < ktiles; ++tile) {
+#ifdef GH200_NATIVE_TMA
+      int slot = index.slot, gen = index.generation;
+#else
       int slot = tile % stages, gen = tile / stages;
+#endif
       ConsumerTrace stamp;
       if constexpr (Trace) if (threadIdx.x == 0) stamp.wait_before = clocks();
       bool first_try_success = Barrier::try_wait(full + slot, gen & 1);
@@ -264,7 +335,11 @@ __global__ __launch_bounds__(Threads, 1) void tma_chain(const __grid_constant__ 
           release.before = clocks();
         }
         // wait1 after committing tile proves the previous tile's operands consumed.
+#ifdef GH200_NATIVE_TMA
+        Barrier::arrive(empty + previous_slot, 0, 1);
+#else
         Barrier::arrive(empty + (tile - 1) % stages, 0, 1);
+#endif
         if constexpr (Trace) {
           release.after = clocks();
           if (threadIdx.x == 0) {
@@ -288,6 +363,10 @@ __global__ __launch_bounds__(Threads, 1) void tma_chain(const __grid_constant__ 
         destination.release_after = stamp.release_after;
         destination.first_try_success = stamp.first_try_success;
       }
+#ifdef GH200_NATIVE_TMA
+      previous_slot = slot;
+      index.advance(stages);
+#endif
     }
     asm volatile("wgmma.wait_group.sync.aligned 0;" ::: "memory");
     ReleaseInterval tail_release;
@@ -295,7 +374,11 @@ __global__ __launch_bounds__(Threads, 1) void tma_chain(const __grid_constant__ 
       if (threadIdx.x == 0) record.tail_wait0_after = clocks();
       tail_release.before = clocks();
     }
+#ifdef GH200_NATIVE_TMA
+    Barrier::arrive(empty + previous_slot, 0, 1);
+#else
     Barrier::arrive(empty + (ktiles - 1) % stages, 0, 1);
+#endif
     if constexpr (Trace) {
       tail_release.after = clocks();
       if (threadIdx.x == 0) {
@@ -382,6 +465,9 @@ U64 integer(const std::string& value, U64 maximum) {
 }
 struct ChainOptions {
   int stages = 6, ktiles = 4, warmup_limit = 30;
+#ifdef GH200_FIRST_WAIT_ENTRY
+  U64 consumer_entry_delay_cycles = 0;
+#endif
   U32 seed = 17;
   bool trace = false;
   ChainOptions(int argc, char** argv) {
@@ -393,6 +479,10 @@ struct ChainOptions {
       else if (key == "--seed") seed = U32(integer(value, std::numeric_limits<U32>::max()));
       else if (key == "--trace") trace = bool(integer(value, 1));
       else if (key == "--warmup-limit") warmup_limit = int(integer(value, 60));
+#ifdef GH200_FIRST_WAIT_ENTRY
+      else if (key == "--consumer-entry-delay-cycles")
+        consumer_entry_delay_cycles = integer(value, std::numeric_limits<U64>::max());
+#endif
       else throw std::runtime_error("unknown option: " + key);
     }
     if (stages != 4 && stages != 6) throw std::runtime_error("stages must be 4 or 6");
@@ -568,14 +658,15 @@ int run_chain(const ChainOptions& options) {
   DeviceBuffer<Record> records(1);
   DeviceBuffer<TileTrace> trace_records(MaxTiles);
   DeviceBuffer<float> output(OutputElements);
+  int performance_source_tiles = PerformanceGeneration ? MaxTiles : options.stages;
   int maximum_source_tiles = std::max(options.ktiles, options.stages + 1);
-  DeviceBuffer<cutlass::half_t> performance_a(size_t(128) * options.stages * 64);
-  DeviceBuffer<cutlass::half_t> performance_b(size_t(128) * options.stages * 64);
+  DeviceBuffer<cutlass::half_t> performance_a(size_t(128) * performance_source_tiles * 64);
+  DeviceBuffer<cutlass::half_t> performance_b(size_t(128) * performance_source_tiles * 64);
   DeviceBuffer<cutlass::half_t> witness_a(size_t(128) * maximum_source_tiles * 64);
   DeviceBuffer<cutlass::half_t> witness_b(size_t(128) * maximum_source_tiles * 64);
   std::vector<cutlass::half_t> host_a, host_b;
   auto make_params = [&](int source_tiles, bool witness) {
-    fill_sources(host_a, host_b, source_tiles, options.seed, witness);
+    fill_sources(host_a, host_b, source_tiles, options.seed, witness || PerformanceGeneration);
     auto* a_pointer = witness ? witness_a.pointer : performance_a.pointer;
     auto* b_pointer = witness ? witness_b.pointer : performance_b.pointer;
     CUDA_CHECK(cudaMemcpy(a_pointer, host_a.data(), host_a.size() * sizeof(cutlass::half_t), cudaMemcpyHostToDevice));
@@ -584,18 +675,28 @@ int run_chain(const ChainOptions& options) {
                             b_pointer, cute::make_stride(cute::_1{}, int64_t(128), int64_t(128) * source_tiles * 64)};
     return Mainloop::to_underlying_arguments(cute::make_shape(128, 128, source_tiles * 64, 1), args, nullptr);
   };
-  auto performance_params = make_params(options.stages, false);
+  auto performance_params = make_params(performance_source_tiles, false);
   cudaEvent_t event_begin, event_end;
   CUDA_CHECK(cudaEventCreate(&event_begin));
   CUDA_CHECK(cudaEventCreate(&event_end));
   auto execute = [&](int ktiles, const std::vector<float>& expected, bool witness) {
-    int source_tiles = witness ? ktiles : options.stages;
+    int source_tiles = witness ? ktiles : performance_source_tiles;
     auto params = witness ? make_params(source_tiles, true) : performance_params;
     CUDA_CHECK(cudaMemset(records.pointer, 0xff, sizeof(Record)));
     CUDA_CHECK(cudaMemset(output.pointer, 0xff, OutputElements * sizeof(float)));
     CUDA_CHECK(cudaEventRecord(event_begin));
     kernel<<<1, Threads, SmemBytes>>>(params, ktiles, options.stages, source_tiles, witness,
-        records.pointer, trace_records.pointer, output.pointer);
+#ifdef GH200_FIRST_WAIT_ENTRY
+        options.consumer_entry_delay_cycles,
+#endif
+        records.pointer, trace_records.pointer, output.pointer
+#ifdef GH200_BATCH_SOURCE
+        , 0
+#endif
+#ifdef GH200_SM_SOURCE_BINDING
+        , 0
+#endif
+        );
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaEventRecord(event_end));
     CUDA_CHECK(cudaEventSynchronize(event_end));
@@ -660,7 +761,7 @@ int run_chain(const ChainOptions& options) {
   witness_file.write(reinterpret_cast<const char*>(witness_trial.values.data()), OutputElements * sizeof(float));
   witness_file.close();
   if (!witness_file) throw std::runtime_error("could not save witness_output.f32");
-  auto expected = reference(options.ktiles, options.stages, options.seed, false);
+  auto expected = reference(options.ktiles, options.stages, options.seed, PerformanceGeneration);
   std::vector<U64> warmup_ns, warmup_cycles;
   bool converged = false;
   double cv = 0;
@@ -685,8 +786,9 @@ int run_chain(const ChainOptions& options) {
   std::cout << std::setprecision(17)
       << "{\"schema\":\"gh200-cfg-b-tma-chain/1\",\"status\":\""
       << ((trial.errors || trial.record.generation_errors) ? "correctness_error" : "measured") << "\",\"ktiles\":" << options.ktiles
-      << ",\"stages\":" << options.stages << ",\"source_profile\":\"ring\",\"source_tiles\":" << options.stages
-      << ",\"source_k\":" << options.stages * 64
+      << ",\"stages\":" << options.stages << ",\"source_profile\":" << quote(PerformanceGeneration ? "generation" : "ring")
+      << ",\"index_mode\":" << quote(PerformanceGeneration ? "incremental" : "runtime")
+      << ",\"source_tiles\":" << performance_source_tiles << ",\"source_k\":" << performance_source_tiles * 64
       << ",\"seed\":" << options.seed << ",\"trace\":" << (Trace ? "true" : "false")
       << ",\"samples\":1,\"work_flop\":" << U64(2) * 128 * 128 * 64 * options.ktiles
       << ",\"wgmma_count\":" << 8 * options.ktiles
@@ -704,15 +806,20 @@ int run_chain(const ChainOptions& options) {
       << ",\"conditions\":{\"slots\":6,\"active_slots\":" << options.stages
       << ",\"producer_threads\":128,\"consumer_threads\":128,\"full_arrivals\":1,\"empty_arrivals\":128,"
       << "\"initial_barrier_phase\":0,\"signal_kind\":\"arrive_and_expect_tx_then_native_tma\",\"transaction_bytes\":32768,"
-      << "\"prefilled_tiles\":0,\"source_k\":" << options.stages * 64
-      << ",\"source_profile\":\"slot_coordinate_dyadic\",\"tma_requests_per_tile\":3,\"b_pair_request_count\":2"
+      << "\"prefilled_tiles\":0,\"source_k\":" << performance_source_tiles * 64
+#ifdef GH200_FIRST_WAIT_ENTRY
+      << ",\"consumer_entry_delay_cycles\":" << options.consumer_entry_delay_cycles
+      << ",\"consumer_entry_delay_boundary\":\"one clock64 spin after start rendezvous and before first consumer full wait\""
+#endif
+      << ",\"source_profile\":" << quote(PerformanceGeneration ? "generation_coordinate_dyadic" : "slot_coordinate_dyadic")
+      << ",\"tma_requests_per_tile\":3,\"b_pair_request_count\":2"
       << ",\"tma_request_bytes\":[16384,8192,8192],\"logical_tma_bytes\":" << U64(options.ktiles) * 32768
       << ",\"software_tile\":[128,128,64],\"instruction_shape\":[64,128,16],"
       << "\"a_major\":\"K\",\"b_major\":\"MN\",\"smem_swizzle_bytes\":128,"
       << "\"commit_per_ktile\":1,\"wait_groups\":1,\"tail_wait_groups\":0,"
       << "\"prologue_wait\":false,\"instruction_order\":\"q_then_m64\","
-      << "\"input_profile\":\"slot_coordinate_dyadic\",\"mathematical_c0\":0,"
-      << "\"ring_policy\":\"native TMA loads source_tile=tile%stages into destination_slot=tile%stages; performance source values repeat\","
+      << "\"input_profile\":" << quote(PerformanceGeneration ? "generation_coordinate_dyadic" : "slot_coordinate_dyadic") << ",\"mathematical_c0\":0,"
+      << "\"ring_policy\":" << quote(PerformanceGeneration ? "source_tile=tile; destination uses incremental ring" : "native TMA loads source_tile=tile%stages into destination_slot=tile%stages; performance source values repeat") << ','
       << "\"window\":\"post-poison start rendezvous through all TMA supply, wait0, last empty arrival, accumulator consumers and CTA rendezvous\","
       << "\"event_window\":\"whole kernel including preparation and global export\","
       << "\"trace_issue_boundary\":\"before eight WGMMA; local SASS ordering requires static audit\","
@@ -750,7 +857,7 @@ int run_chain(const ChainOptions& options) {
       const auto& p = trial.trace[tile].producer;
       const auto& c = trial.trace[tile].consumer;
       std::cout << (tile ? "," : "") << "{\"tile\":" << tile << ",\"slot\":" << tile % options.stages
-          << ",\"source_tile\":" << tile % options.stages
+          << ",\"source_tile\":" << (PerformanceGeneration ? tile : tile % options.stages)
           << ",\"generation\":" << tile / options.stages
           << ",\"full_wait_phase\":" << (tile / options.stages) % 2
           << ",\"empty_wait_phase\":" << (tile / options.stages + 1) % 2

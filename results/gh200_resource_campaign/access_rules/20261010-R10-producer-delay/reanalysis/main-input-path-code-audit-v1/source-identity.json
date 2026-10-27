@@ -1,8 +1,0 @@
-{
-  "old_commit": "043d06b8",
-  "old_sha256": "d6d3158b900f99414319d069f6b4c37e7563c3c4d0b8b0827ba1ce1cd527f45f",
-  "new_sha256": "ee50edee7c3b3f2d908d431cca159ec5bfabcab285584bfb6e2e04ef114c5b7a",
-  "new_origin": "Read-only snapshot of B worktree; uncommitted at capture. Not integrated or adopted.",
-  "final_commit": "fad0d6b1d5d8f2228467c98b2479b919e45358e1",
-  "final_committed_source_matches_snapshot": true
-}

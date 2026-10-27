@@ -4,14 +4,14 @@ import argparse,hashlib,json,os,shutil,subprocess,sys,time
 from pathlib import Path
 SOURCE=Path(__file__).resolve().parent
 RUNS={
- 'r16_quota':'20261008-R16-quota-job737122-v2',
- 'r02_frame':'20261008-R02-frame-job737122-v1',
- 'r18':'20261008-R18-job737122-v1',
- 'r18_lite':'20261008-R18-lite-job737122-v1',
- 'r19':'20261008-R19-job737122-v1',
- 'b01':'20261008-B01-job737122-v4',
- 'b01_cache':'20261008-B01-cache-job737122-v1',
- 'v07':'20261008-V07-job737122-v1',
+ 'r16_quota':'Q08-register-residency/R16-residency-quota/20261008-R16-quota-job737122-v2',
+ 'r02_frame':'Q08-register-residency/R02-register-service/20261008-R02-frame-job737122-v1',
+ 'r18':'Q01-scheduling/R18-cluster-boundary/20261008-R18-job737122-v1',
+ 'r18_lite':'Q01-scheduling/R18-cluster-boundary/20261008-R18-lite-job737122-v1',
+ 'r19':'Q01-scheduling/R19-critical-cta-tail/20261008-R19-job737122-v1',
+ 'b01':'Q03-source-service/B01-bandwidth-cache/20261008-B01-job737122-v4',
+ 'b01_cache':'Q03-source-service/B01-bandwidth-cache/20261008-B01-cache-job737122-v1',
+ 'v07':'Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1',
 }
 
 def main():

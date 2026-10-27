@@ -20,7 +20,7 @@ class LedgerIntegrationTests(unittest.TestCase):
                         model.predict_components(row, setup, {})
 
     def test_frozen_clock_inputs_are_preserved(self):
-        root = Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011'
+        root = Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
         if not root.exists():
             self.skipTest('local frozen V09 archive required')
         frozen = json.loads((root/'frozen/predictions.json').read_text())['predictions']

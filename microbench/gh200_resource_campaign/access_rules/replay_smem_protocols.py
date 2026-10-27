@@ -12,8 +12,8 @@ import statistics
 import sys
 
 
-R03 = Path('gh200_resource_campaign/access_rules/20261006-c-job735059/r03-formal-v1')
-R12 = Path('gh200_resource_campaign/access_rules/20261008-R12-job736989-v3')
+R03 = Path('gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r03-formal-v1')
+R12 = Path('gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3')
 R03_IDENTITIES = {
     'source_hashes.json': 'a5bed452e623fd422d96b4eacea395864ddee28e484953336a0c9fac25dc7317',
     'cases.json': '935b9d9273ae7e0499c3bd41dc36d32a60dce560c75f18d7f228f8b222ecf60e',

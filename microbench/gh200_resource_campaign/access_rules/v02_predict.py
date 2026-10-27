@@ -36,8 +36,8 @@ import statistics
 
 REPO = Path(__file__).resolve().parents[3]
 RESULTS = REPO / "results/gh200_resource_campaign/access_rules"
-R09 = RESULTS / "20261007-r09-clock-stages"
-R08 = RESULTS / "20261007-r08-waves-l2"
+R09 = RESULTS / "Q09-frequency/R07-R09-inkernel-clock/20261007-r09-clock-stages"
+R08 = RESULTS / "Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2"
 
 TILE_M, TILE_N, TILE_K = 128, 256, 64
 CLUSTER_M = 2

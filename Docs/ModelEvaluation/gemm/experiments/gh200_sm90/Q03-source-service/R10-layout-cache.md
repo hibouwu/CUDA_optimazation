@@ -6,7 +6,7 @@
 
 A/B 行距的时间响应依赖配置、执行方向、规模和起步状态，不能只按地址覆盖加一个共同罚项。局部冻结两候选均失败；V09 行距失败保持原成绩。当前没有接入正式预测的新行距价格。
 
-静态账本已区分名义 payload、有效源地址、覆盖并集、源身份、目的投递与输出义务。AlongM/N 的局部完整工作张量可以相同而实测响应不同；single36/126 的前36个 CTA 工作相同而响应不同。因此局部覆盖计数本身不足以定价，源身份和其他 CTA 如何改变状态仍是缺口。[完整工作审查](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-request-work-audit-v3/B-request-work-audit.json)。
+静态账本已区分名义 payload、有效源地址、覆盖并集、源身份、目的投递与输出义务。AlongM/N 的局部完整工作张量可以相同而实测响应不同；single36/126 的前36个 CTA 工作相同而响应不同。因此局部覆盖计数本身不足以定价，源身份和其他 CTA 如何改变状态仍是缺口。[完整工作审查](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-request-work-audit-v3/B-request-work-audit.json)。
 
 源共享、独立请求路径和共享队列的具体候选没有同时通过 first/later、方向、规模及空间约束；闭区间证书只排除声明的固定图与价格域，不排除全部共享服务模型。原始尾部的 fill、完整 MMA、释放和目的完成义务保留，不能按有效源量删掉实际工作。
 
@@ -17,17 +17,17 @@ A/B 行距的时间响应依赖配置、执行方向、规模和起步状态，�
 
 | 作业 | 固定对象 | 结果入口 |
 |---|---|---|
-| 735876 | 三配置，2600×3000×2000，B 行距 6000/6016/6144 B | [v2 完整时间](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v2/analysis-formal/summary.json)、[v4 cfg_b 局部周期](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/analysis-formal/summary.json)、[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.md) |
-| 737322，V08F | A/B/D 行距、K/N 尾部；84 个解释性条件 | [原汇总](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)、[供给残差](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-v3/summary.json) |
-| 738101 | cfg_a、2304×3072×4096，grid 32/64/96/132 × 三种行距 | [独立回放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-sm-job738101/reanalysis/manager-formal-replay/summary.json) |
-| 738169 | cfg_b h03 四角，2400×3000×1000，同容量 | [逐 trial 联合项与扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738169/reanalysis/B-20261009-matched-joint-final/joint-pitch.json) |
-| 738203 | cfg_b B 行距五点，2304×3072×1024，局部冻结检验 | [冻结](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json)、[原评分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/b-pitch-score-v1/b-pitch-score.json)、[位置与扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/B-20261009-frozen-negative/localization.json) |
-| 739011，V09 | 新几何 A16/B32/B80/B112 与 stage4 | [完整留出](../Q15-full-time/V09-component-validation.md)、[逐例复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv) |
-| 739571 | 同几何AlongM/N×B0/B32 | [方向与行距差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json) |
-| 739585 | 同输入map，36/126单输出CTA与132持久CTA，各配B0/B32 | [同源组压力对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json) |
-| 739598 | B基址+0/+256 B × 行距+0/+32 B，分配容量相同 | [位置与相邻面板对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-base-shift.json) |
-| 739608 | CTA55/91整条工作序列交换 × B0/B32，逐轮工作集合不变 | [工作与物理位置对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-work-swap.json) |
-| 739619 | 固定CTA55工作与SM，producer起步0/512 ns × B0/B32 | [实际时移与行距交互](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json) |
+| 735876 | 三配置，2600×3000×2000，B 行距 6000/6016/6144 B | [v2 完整时间](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261007-R10-job735876-v2/analysis-formal/summary.json)、[v4 cfg_b 局部周期](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261007-R10-job735876-v4/analysis-formal/summary.json)、[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261007-R10-job735876-v4/reviews/ROOT-independent.md) |
+| 737322，V08F | A/B/D 行距、K/N 尾部；84 个解释性条件 | [原汇总](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)、[供给残差](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-v3/summary.json) |
+| 738101 | cfg_a、2304×3072×4096，grid 32/64/96/132 × 三种行距 | [独立回放](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-sm-job738101/reanalysis/manager-formal-replay/summary.json) |
+| 738169 | cfg_b h03 四角，2400×3000×1000，同容量 | [逐 trial 联合项与扰动](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-joint-pitch-job738169/reanalysis/B-20261009-matched-joint-final/joint-pitch.json) |
+| 738203 | cfg_b B 行距五点，2304×3072×1024，局部冻结检验 | [冻结](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json)、[原评分](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/b-pitch-score-v1/b-pitch-score.json)、[位置与扰动](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/B-20261009-frozen-negative/localization.json) |
+| 739011，V09 | 新几何 A16/B32/B80/B112 与 stage4 | [完整留出](../Q15-full-time/V09-component-validation.md)、[逐例复核](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv) |
+| 739571 | 同几何AlongM/N×B0/B32 | [方向与行距差分](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json) |
+| 739585 | 同输入map，36/126单输出CTA与132持久CTA，各配B0/B32 | [同源组压力对照](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json) |
+| 739598 | B基址+0/+256 B × 行距+0/+32 B，分配容量相同 | [位置与相邻面板对应](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-base-shift.json) |
+| 739608 | CTA55/91整条工作序列交换 × B0/B32，逐轮工作集合不变 | [工作与物理位置对应](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-work-swap.json) |
+| 739619 | 固定CTA55工作与SM，producer起步0/512 ns × B0/B32 | [实际时移与行距交互](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json) |
 
 <a id="source-event-transfer"></a>
 
@@ -71,3 +71,12 @@ A/B 行距的时间响应依赖配置、执行方向、规模和起步状态，�
 | <a id="work-swap"></a><a id="交换工作序列后响应仍留在原物理位置"></a>交换工作序列后，响应仍留在原物理位置 | [原推导与证据](reanalysis/20261012-consolidation/R10/README.md#交换工作序列后响应仍留在原物理位置) |
 | <a id="producer-delay"></a><a id="固定工作与sm起步状态仍改变行距代价"></a>固定工作与SM，起步状态仍改变行距代价 | [原推导与证据](reanalysis/20261012-consolidation/R10/README.md#固定工作与sm起步状态仍改变行距代价) |
 | <a id="producer-delay-median-estimands"></a><a id="局部中位数保留联合端点与配对定义"></a>局部中位数保留联合端点与配对定义 | [原推导与证据](reanalysis/20261012-consolidation/R10/README.md#局部中位数保留联合端点与配对定义) |
+
+## 相关轮次
+
+以下各轮原登记在访问规则索引，按日期排列；全部结果目录见[Q03-source-service/R10-layout-cache](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/README.md)。
+
+| 研究轮次与检验主张 | 固定与改变的条件 | 改变的判定 | 证据与相关产物 |
+|---|---|---|---|
+| 739585：固定目标源组，改变其它执行需求：同一B源组及其使用者是否足以决定行距代价？ | 输入map/容量和前36CTA当前工作固定；比较36/126单输出CTA，并同期对照132持久CTA的B0/B32。 | 目标L的配对行距增量由36档未分辨变为126档约1200ns；本源组计数不足，跨输出预取不是必要条件，未定位物理瓶颈。 | [原结果目录](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261010-R10-source-pressure)、[原页判定](#相同b源组在不同执行规模下的代价不同) |
+| 739598：B基址平移：局部行距响应是否整体跟随相邻B面板？ | 固定几何、工作/CTA映射、stage6、容量与输入；B相对基址0/256B×行距增量0/32B。 | 响应更接近同工作位置而非相邻B面板，未出现整体地址跟随；不排除局部地址影响，也未分开源身份与执行位置。 | [原结果目录](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261010-R10-base-shift)、[原页判定](#base-shift) |

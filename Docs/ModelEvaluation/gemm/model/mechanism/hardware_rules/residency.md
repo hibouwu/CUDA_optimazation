@@ -26,6 +26,6 @@
 - 后续消费：本组的192次依赖FADD与其输入/输出边界明确，仅作为活跃值和分配后执行见证，不替代CUTLASS实际consumer计算服务。
 - 未得到物理RF bank、端口容量、池仲裁公式，也未验证其他配额比例或tile形状。
 
-`sm_residency.cfg_b_capacity(program, device=GH200_DEVICE_CONDITIONS)`使用显式设备条件和实际构建需求。cfg_b S4/S6均为384线程、168 reg/thread，初始分配64512个32-bit寄存器；完整SMEM分别为149504／215040 B，已含epilogue。按GH200的65536寄存器、233472 B SMEM及保留量／分配粒度核算，两构建的register／SMEM／thread／block容量分别为1／1／5／32 CTA/SM，寄存器与SMEM均独立限制到1。总上限与旧CUDA查询一致；逐因素分解采用本地SDK的算法，来源及限定保存在[核对包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-SM-01-replay-001/examples/capacity-audit/capacity-audit.json)。`setup.smem`优先，缺省采用冻结构建需求；launch bound中的`MinBlocksPerMultiprocessor=1`用于编译。
+`sm_residency.cfg_b_capacity(program, device=GH200_DEVICE_CONDITIONS)`使用显式设备条件和实际构建需求。cfg_b S4/S6均为384线程、168 reg/thread，初始分配64512个32-bit寄存器；完整SMEM分别为149504／215040 B，已含epilogue。按GH200的65536寄存器、233472 B SMEM及保留量／分配粒度核算，两构建的register／SMEM／thread／block容量分别为1／1／5／32 CTA/SM，寄存器与SMEM均独立限制到1。总上限与旧CUDA查询一致；逐因素分解采用本地SDK的算法，来源及限定保存在[核对包](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/REG-01-SM-01-replay/20261017-SM-01-replay-001/examples/capacity-audit/capacity-audit.json)。`setup.smem`优先，缺省采用冻结构建需求；launch bound中的`MinBlocksPerMultiprocessor=1`用于编译。
 
 旧G3 S6/S4各一份dual调用的132个CTA分别落在132个SMID；记录的共同`ENTRY→consumer exit`区间为45152／48960 ns，窗口与完整CTA生命周期的边界见SM-01。请求级组合的`sm_activity=True`保存复合计算实际服务段、输出准备／写块、输入在途和它们的重叠；计算排队不计入服务占用。该报告读取已求解时间线，保留原价格与端点。当前CTA入口仍用共同模型起点，物理SM分配及启动离散未建模。

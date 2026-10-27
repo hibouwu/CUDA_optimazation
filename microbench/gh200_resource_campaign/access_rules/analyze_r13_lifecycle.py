@@ -88,8 +88,8 @@ def audit_events(model, kt, stages, parameters):
 
 def analyze(root, output):
     output.mkdir(parents=True, exist_ok=False)
-    previous = root/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
-    rotation = root/'20261011-R13-a-row-rotation'
+    previous = root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
+    rotation = root/'Q02-tma-request/R13-async-retirement/20261011-R13-a-row-rotation'
     inputs = {}
     manifest = read(rotation/'handoff-manifest.json')
     for item in manifest['files']:
@@ -103,7 +103,7 @@ def analyze(root, output):
         path = previous/name
         inputs[str(path)] = sha(path)
         shutil.copy2(path, replay_dir/name)
-    prefill = root/'20261010-R13-second-prefill'
+    prefill = root/'Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill'
     candidate = stage_source_candidate_diagnostics(prefill, replay_dir)
     exclusion = local_epilogue_exclusion_diagnostics(prefill, replay_dir)
     rotated = a_source_rotation_diagnostics(rotation, replay_dir)
@@ -122,10 +122,10 @@ def analyze(root, output):
             replay_checks.append(name+'/'+field)
 
     ledgers = []
-    for run_name in ('20261009-R13-R15-R18-composition-job738496',
-        '20261009-R18-first-fill-job738707', '20261009-R18-first-fill-job738865',
-        '20261010-R10-raster-pitch', '20261010-R10-source-pressure',
-        '20261010-R13-second-prefill'):
+    for run_name in ('Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496',
+        'Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738707', 'Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738865',
+        'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch', 'Q03-source-service/R10-layout-cache/20261010-R10-source-pressure',
+        'Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill'):
         run = root/run_name
         cases_path, setup_path = run/'cases.json', run/'static_setup.json'
         cases = read(cases_path)

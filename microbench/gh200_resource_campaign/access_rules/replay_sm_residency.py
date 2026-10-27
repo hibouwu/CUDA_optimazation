@@ -14,8 +14,8 @@ import sys
 
 
 BASE = Path('gh200_resource_campaign/access_rules')
-R06 = BASE / '20261006-r01r06-unrolled/r06'
-R16 = BASE / '20261008-R16-residency-job736989-v1'
+R06 = BASE / 'Q08-register-residency/R01-R06-readiness/20261006-r01r06-unrolled/r06'
+R16 = BASE / 'Q08-register-residency/R16-residency-quota/20261008-R16-residency-job736989-v1'
 ANCHORS = {
     R06: {
         'source_hashes.json': '38f30ff4b0b97732339a66af03a91b156b31f09698d83ef08ce3f0c7e25d2e2b',

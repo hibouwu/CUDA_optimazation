@@ -46,9 +46,9 @@ def cost(x, data, base):
 
 
 def load(base):
-    files=[base/'20261014-tma-tensor-development/banked-001/fit-p16.json',
-           base/'20261014-tma-tensor-heldout-002/score.json',
-           base/'20261015-tma-footprint-discrimination-001/score.json']
+    files=[base/'Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-development/banked-001/fit-p16.json',
+           base/'Q02-tma-request/TRANSFER-01-tensor-2d/20261014-tma-tensor-heldout-002/score.json',
+           base/'Q03-source-service/source-state-candidates/20261015-tma-footprint-discrimination-001/score.json']
     prior=json.loads(files[0].read_text())
     data=[dict(id=row['id'],program=row['program'],release_ns=row['observed_ns'])
           for row in prior['observations']]

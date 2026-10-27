@@ -1,7 +1,0 @@
-# 主集成独立回放：cfg_c源/full端口
-
-26静态条件、150个历史双时钟调用、18960CTA、614400抽样值全部复核。327个当前输入SHA匹配；12个源模板、6个本地输出模板和完整源绑定共19个gzip与B原交付逐字节相同。报告除input_sha256来源记录外逐字段相同。cfg_a原22份规范化绑定逐字节相同；cfg_c七项和cfg_a九项针对性测试通过。
-
-来源差异不全部是路径：主线analyze_r18.py与B版本SHA不同（主线已有额外release/prefix/rank路径），其他重新定位的模块SHA一致。本次普通dual提取的全部结果与B一致；保留真实当前版本身份，不改写为同一版本。
-
-每cluster/K-group保留六源请求64KiB、八目的atom96KiB，各rank full名义48KiB。输出OOB的rank仍可能提供伙伴A16KiB；不随D的valid=0删除。arrive_expect_tx/acquire_return端口尚未给出前驱，不可按零成本根求时间；cfg_c的empty、安全release、finite-stage与complete待C源码闭合。没有新增价格、GPU、V09重评或新留出资格。

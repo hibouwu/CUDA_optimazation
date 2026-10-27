@@ -1,6 +1,6 @@
 # 长 K：局部主循环与完整时间
 
-目前缺参考卡上新长 K 形状的后续 L 和匹配的 ends/dual 桥接。校准作业 741159 只采到冻结参照，540 个开发槽位没有执行；参数能否不依赖 G6 独立确定，尚无结论。[测量结果](../../../../../results/gh200_resource_campaign/access_rules/20261012-R09-long-k-calibration/README.md)与[已结束的测量安排](#measurement-20261012)保留。
+目前缺参考卡上新长 K 形状的后续 L 和匹配的 ends/dual 桥接。校准作业 741159 只采到冻结参照，540 个开发槽位没有执行；参数能否不依赖 G6 独立确定，尚无结论。[测量结果](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261012-R09-long-k-calibration/README.md)与[已结束的测量安排](#measurement-20261012)保留。
 
 本页维护长 K 在频率之外的残差（局部成本不足或组合偏差）及已结束任务的记录。cfg_b G6 完整时间 +35.46% 的主因是有效频率（预测 0.90 GHz、实测约 1.20 GHz，代入实测频率后为 +1.71%），频率的运行前预测与机制由[有效频率任务](../mechanism/hardware_rules/FREQUENCY-MECHANISM.md)负责。
 
@@ -15,9 +15,9 @@ cfg_a G6 的冻结频率和完整时间都低估，提高频率会进一步缩�
 
 | 开发任务 | 结果 | 证据 |
 |---|---|---|
-| 任务 A：时钟训练扩展与首轮填充项，GPU 0 | 60 点拟合使 cfg_b G6 绝对误差 35.46%→19.52%，cfg_a 3.70%→13.85%；组件留形状诊断失败。首轮填充项对 P2 和 G6 三配置恒为零 | [交付](../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/README.md) |
-| 长 K 八小时任务，GPU 0 | 第一形式使 cfg_a G6 误差 −3.698%→−16.739%，未采用；第二形式移除 G6 后缺同协议 later L 价格，未实现或回填全数据参数 | [交付与必要测量方案](../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/README.md) |
-| 必要校准，GPU 1/1 | 四条 event−dual 包络增量 0.688–0.848 µs 超过旧 0.5 µs 门槛；其他相对检查通过。未采到新的开发条件，不能称新修正被反证 | [参照检查](../../../../../results/gh200_resource_campaign/access_rules/20261012-R09-long-k-calibration/reference-check.json) |
+| 任务 A：时钟训练扩展与首轮填充项，GPU 0 | 60 点拟合使 cfg_b G6 绝对误差 35.46%→19.52%，cfg_a 3.70%→13.85%；组件留形状诊断失败。首轮填充项对 P2 和 G6 三配置恒为零 | [交付](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-V10-taskA/README.md) |
+| 长 K 八小时任务，GPU 0 | 第一形式使 cfg_a G6 误差 −3.698%→−16.739%，未采用；第二形式移除 G6 后缺同协议 later L 价格，未实现或回填全数据参数 | [交付与必要测量方案](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-long-k-event-bounded/README.md) |
+| 必要校准，GPU 1/1 | 四条 event−dual 包络增量 0.688–0.848 µs 超过旧 0.5 µs 门槛；其他相对检查通过。未采到新的开发条件，不能称新修正被反证 | [参照检查](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261012-R09-long-k-calibration/reference-check.json) |
 
 ## 已结束的八小时任务规则
 
@@ -38,9 +38,9 @@ cfg_a G6 的冻结频率和完整时间都低估，提高频率会进一步缩�
 
 ## 2026-10-12 必要校准：已结束
 
-原安排为参考卡 GPU-43269fbc / romeo-a057、V09 协议，18 个新条件、12 组 ends/dual 桥接、冻结参照和 G6 开发复现，共 660 进程；上限 1 个 GPU 提交、wall≤60 分钟，不换卡、不混用其他卡数据。CPU 用 CUDA 12.9.41 完成九个原 plain/dual/ends 构建、最终 SASS／资源与协议检查后提交。[原方案](../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/measurement-v2/README.md)
+原安排为参考卡 GPU-43269fbc / romeo-a057、V09 协议，18 个新条件、12 组 ends/dual 桥接、冻结参照和 G6 开发复现，共 660 进程；上限 1 个 GPU 提交、wall≤60 分钟，不换卡、不混用其他卡数据。CPU 用 CUDA 12.9.41 完成九个原 plain/dual/ends 构建、最终 SASS／资源与协议检查后提交。[原方案](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-long-k-event-bounded/measurement-v2/README.md)
 
-实际 741159 用时 1 分 52 秒，27 个 setup 和 120 个参照进程正常返回；四条 event−包络增量触发原停止门槛，540 个开发槽位未启动。新参数独立定价和固定 29 条件的采用比较未执行。已用提交 1/1，无恢复；失败终点保留，不是 V10。正常采样故障原可按既有规则恢复一次，其余超预算需另经批准，本次没有恢复。[执行记录](../../../../../results/gh200_resource_campaign/access_rules/20261012-R09-long-k-calibration/README.md)
+实际 741159 用时 1 分 52 秒，27 个 setup 和 120 个参照进程正常返回；四条 event−包络增量触发原停止门槛，540 个开发槽位未启动。新参数独立定价和固定 29 条件的采用比较未执行。已用提交 1/1，无恢复；失败终点保留，不是 V10。正常采样故障原可按既有规则恢复一次，其余超预算需另经批准，本次没有恢复。[执行记录](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261012-R09-long-k-calibration/README.md)
 
 ## 下一次测量应怎样限定用途
 

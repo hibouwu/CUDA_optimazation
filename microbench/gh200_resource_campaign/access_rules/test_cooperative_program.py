@@ -12,8 +12,8 @@ import supply_model
 
 
 ROOT = Path(__file__).resolve().parents[3]
-RUN = ROOT/'results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011'
-OLD = ROOT/'results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-rank-dependencies-v2'
+RUN = ROOT/'results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
+OLD = ROOT/'results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-rank-dependencies-v2'
 CASE = 'cfg_c_r13_comp_k1024_aligned'
 
 
@@ -141,7 +141,7 @@ class CfgAProgramTests(unittest.TestCase):
         self.assertEqual(len(self.graph['output_subtiles']), 32)
 
     def test_stage4_carries_slots_across_outputs(self):
-        run = ROOT/'results/gh200_resource_campaign/access_rules/20261015-c1-graph-protocol-expansion-001/returned'
+        run = ROOT/'results/gh200_resource_campaign/access_rules/Q10-time-mapping/c1-timing-protocol/20261015-c1-graph-protocol-expansion-001/returned'
         row = next(r for r in json.loads((run/'cases.json').read_text()) if r['id'] == 'd014_cfg_a_s4')
         setup = next(r['setup'] for r in json.loads((run/'static_setup.json').read_text()) if r['case'] == row['id'])
         bound = program.build_program(row, setup)

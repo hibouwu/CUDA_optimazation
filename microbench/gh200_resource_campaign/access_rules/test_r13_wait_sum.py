@@ -85,7 +85,7 @@ class WaitSumTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'independent GEMM'):decode([setup,call,witness,check],'test-gpu')
 
     def test_actual_archived_off_record_format(self):
-        archive=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/output.tar.gz'
+        archive=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261011-R13-early-wait-sum-correctness/output.tar.gz'
         self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(),
             '313d844177db6d8757eb5315e122a3c1d6b0c4dfccdce247daf8c829c3053e84')
         with tarfile.open(archive) as bundle:

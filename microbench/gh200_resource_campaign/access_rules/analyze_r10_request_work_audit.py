@@ -33,12 +33,12 @@ def analyze(root,output):
         value=hashlib.sha256(path.read_bytes()).hexdigest();inputs[str(path.resolve())]=value
         return value
     def read(path):sha(path);return json.loads(path.read_text())
-    current=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json')
-    contexts=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')['contexts']
-    clock=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-clock-consistency-v1/B-r10-clock-consistency.json')
-    old=read(root/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-summary.json')
-    prior=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-granule-overlap-v1/B-source-granule-overlap.json')
-    legacy=read(root/'20261007-R10-job735876-v4/protocol-formal.json')
+    current=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json')
+    contexts=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')['contexts']
+    clock=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-clock-consistency-v1/B-r10-clock-consistency.json')
+    old=read(root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-summary.json')
+    prior=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-granule-overlap-v1/B-source-granule-overlap.json')
+    legacy=read(root/'Q03-source-service/R10-layout-cache/20261007-R10-job735876-v4/protocol-formal.json')
     rehashed=set()
     for previous in (current,clock,prior):
         for name,value in previous['input_sha256'].items():
@@ -52,8 +52,8 @@ def analyze(root,output):
             if sha(path)!=value:raise ValueError('old evidence changed: '+name)
             rehashed.add(name)
     for run,names in (
-        ('20261009-R10-b-coverage-job738203',('cfg_b_bcurve_p0','cfg_b_bcurve_p32')),
-        ('20261009-V09-heldout-job739011',('v09d_cfg_b_G5_base','v09d_cfg_b_G5_B32'))):
+        ('Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203',('cfg_b_bcurve_p0','cfg_b_bcurve_p32')),
+        ('Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011',('v09d_cfg_b_G5_base','v09d_cfg_b_G5_B32'))):
         rows={row['id']:row for row in read(root/run/'cases.json')}
         setups={row['case']:row['setup'] for row in read(root/run/'static_setup.json')}
         contexts.update({name:dict(row=rows[name],setup=setups[name]) for name in names})

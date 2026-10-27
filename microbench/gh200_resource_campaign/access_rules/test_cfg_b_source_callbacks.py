@@ -1,5 +1,6 @@
 """同步源／输出观察回调透传和JSON声明；使用真实HBM适配器，CPU only。"""
 import json
+import copy
 import unittest
 
 import cfg_b_program
@@ -11,6 +12,86 @@ from tma_stateful_source import ProgramGemmSource
 
 
 class SourceCallbackTests(unittest.TestCase):
+    def test_private_source_offsets_split_cache_and_service_identity(self):
+        row = dict(config='cfg_b', m=256, n=128, k=256, stages=4)
+        setup = dict(grid=[1, 2, 1], stages=4)
+        for private in (0, 1):
+            program = cfg_b_program.build_program(row, dict(setup, private_source=private))
+            source = ProgramGemmSource(program, [0, 0], [1., 10., 1.],
+                output_base=64*1024*1024, cache_bytes=8*1024*1024, hit_ns=5.,
+                home_ns=20., link_ns=10., hbm_service_ns=128.)
+            source.begin(0, 0.)
+            first = source.input(0., 0, 0, 1, .5)
+            before = source.hbm_lines
+            second = source.input(0., 1, 0, 1, .5)
+            self.assertEqual(first['source_key'] == second['source_key'], not private)
+            self.assertEqual(source.hbm_lines-before, 64 if private else 0)
+
+    def test_fold_uses_program_source_identity_and_keeps_warm_state(self):
+        case = dict(config='cfg_b',m=2816,n=1536,k=4096,input_mode='dyadic',seed=17)
+        setup = dict(grid=[1,132,1],stages=6,swizzle=1)
+        warm = cfg_b_program.build_program(case,setup)
+        target = cfg_b_program.build_program(case,dict(setup,fold_a_source=1,store_target_ctas=1))
+        source = ProgramGemmSource(warm,[0]*132,[1.,10.,1.],
+            output_base=64*1024*1024,cache_bytes=8*1024*1024,hit_ns=5.,
+            home_ns=20.,link_ns=10.,hbm_service_ns=128.)
+        source.begin(0,0.)
+        first = source.input(0.,0,0,0,1.)
+        source.use_program(target)
+        source.begin(0,10000.)
+        before = source.hbm_lines
+        folded = source.input(0.,72,64,0,1.)
+        self.assertEqual(first['source_key'],folded['source_key'])
+        self.assertEqual(folded['source_key'],('A',0,0))
+        self.assertEqual(source.hbm_lines,before)
+        self.assertEqual(source.coordinates[72][1],(17,0))
+        graph = cfg_b_program.expand_cta(target,72)
+        request = next(r for r in graph['requests'] if r['output']==1 and r['atom']=='A')
+        self.assertEqual(request['source']['origin'],[0,0])
+        source.use_program(warm)
+        self.assertEqual(source.atom_templates[72][1][0]['origin'],[2176,0])
+
+    def test_positive_first_entry_preserves_prefix_float_bits(self):
+        time, prefix = 3008.1879500193613, 1608.
+        service = ConditionSyncService(4, 0., 0.)
+        wrapped = model.PrefixSyncService(service, prefix)
+        window = wrapped.full_wait(time, time-8., 0, 0)
+        self.assertEqual(window['path'], 'ready')
+        self.assertEqual(window['enter_ns'], time)
+        self.assertEqual(window['eligibility_ns'], time)
+        self.assertEqual(window['wait_return_ns'], time)
+        self.assertEqual(wrapped.release(time, 0, 0), time)
+
+    def test_explicit_first_entry_survives_common_prefix(self):
+        for stages in (4, 6):
+            for entry in (0., 8., 4096.):
+                with self.subTest(stages=stages, entry=entry):
+                    program = cfg_b_program.build_program(
+                        dict(config='cfg_b', m=128, n=128, k=13*64, stages=stages),
+                        dict(grid=[1, 1, 1], stages=stages))
+                    parameters = dict(service_ns=0., read_latency_ns=64., compute_ns=64.,
+                        commit_lead_ns=32., consumer_entry_delay_ns=entry,
+                        epilogue_prepare_ns=3., epilogue_write_ns=4.)
+                    prefix = 1608.
+                    baseline = model.simulate(program, parameters, producer_prefix_ns=prefix,
+                        detailed_ctas=(0,))
+                    zero = model.simulate(program, parameters, producer_prefix_ns=prefix,
+                        input_sync_service=ConditionSyncService(stages, 0., 0.), detailed_ctas=(0,))
+                    stripped = copy.deepcopy(zero)
+                    del stripped['modules']['sync']
+                    del stripped['details'][0]['full_wait_windows']
+                    self.assertEqual(stripped, baseline)
+                    priced = model.simulate(program, parameters, producer_prefix_ns=prefix,
+                        input_sync_service=ConditionSyncService(stages, 3., 5.), detailed_ctas=(0,))
+                    window = priced['details'][0]['full_wait_windows'][0]
+                    entered = prefix+entry if entry else 0.
+                    ready = prefix+64.
+                    path = 'ready' if entered >= ready else 'blocked'
+                    self.assertEqual(window['enter_ns'], entered)
+                    self.assertEqual(window['ready_ns'], ready)
+                    self.assertEqual(window['path'], path)
+                    self.assertEqual(window['wait_return_ns'], max(entered, ready)+(3. if path=='ready' else 5.))
+
     def test_zero_price_prefix_wait_and_release_keep_real_float_bits(self):
         # The G3 full-request regression exposed this exact time/prefix pair.
         time, prefix = 3008.1879500193613, 1608.

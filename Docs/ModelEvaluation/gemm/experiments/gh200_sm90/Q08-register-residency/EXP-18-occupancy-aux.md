@@ -40,3 +40,7 @@
 ## 数据
 
 [完整表](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/compute_onchip/s18-integration-v2/operations-v1/job733338-results/published-v1/TABLE.md)、[条件参数](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/compute_onchip/s18-integration-v2/operations-v1/job733338-results/published-v1/qualified-parameters.json)、[四组图说明](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/compute_onchip/s18-integration-v2/operations-v1/job733338-results/published-v1/EXPERIMENT.md)、[复现](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/compute_onchip/s18-integration-v2/operations-v1/job733338-results/published-v1/REPRODUCE.md)。
+
+## a044 复测（2026-10-23～26）
+
+270 次调用全部通过原审计，27 个条件稳定，周期/迭代变化 −0.000309%～+0.102725%；同址与独立地址原子的差别保留。见[辅助服务报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-auxiliary-report.md)。

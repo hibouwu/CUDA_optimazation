@@ -21,12 +21,28 @@ using Mma = G::MMA_64x128x16_F32F16F16_SS<G::Major::K, G::Major::MN>;
 
 struct ClockPair { U64 cycle = 0, ns = 0; };
 struct TraceDetail {
-  ClockPair issue_before, commit_after, wait1_after, tail_wait0_after;
+  ClockPair issue_before, commit_after, loop_wait_after, tail_wait0_after;
 };
+#ifdef GH200_COMMIT_LEAD_CONTROL
+struct DelaySpan { U64 begin, end; };
+__device__ __noinline__ DelaySpan spin_delay(U64 cycles) {
+  DelaySpan value{0, 0};
+  if (cycles) {
+    asm volatile("mov.u64 %0, %%clock64;" : "=l"(value.begin) :: "memory");
+    do {
+      asm volatile("mov.u64 %0, %%clock64;" : "=l"(value.end) :: "memory");
+    } while (U32(value.end) - U32(value.begin) < U32(cycles));
+  }
+  return value;
+}
+#endif
 struct Record {
   ClockPair begin, end;
   U32 smid_start = 0, smid_end = 0;
   TraceDetail trace;
+#ifdef GH200_COMMIT_LEAD_CONTROL
+  DelaySpan delay[4];
+#endif
 };
 __device__ __forceinline__ ClockPair clocks() {
   ClockPair value;
@@ -81,9 +97,14 @@ __device__ __forceinline__ void issue_tile(TensorA a, TensorB b, int slot, bool 
     }
   }
 }
-template <bool Trace>
+template <bool Trace, int WaitRetain = 1>
+#ifdef GH200_COMMIT_LEAD_CONTROL
+__global__ __launch_bounds__(Threads, 1) void compute_chain(int ktiles, U32 seed,
+    Record* records, float* output, U64 delay_cycles, int delay_placement) {
+#else
 __global__ __launch_bounds__(Threads, 1) void compute_chain(int ktiles, U32 seed,
     Record* records, float* output) {
+#endif
   using namespace cute;
   auto la = tile_to_shape(G::Layout_K_SW128_Atom<__half>{},
       Shape<_128, _64, Int<Slots>>{}, Step<_1, _2, _3>{});
@@ -117,6 +138,10 @@ __global__ __launch_bounds__(Threads, 1) void compute_chain(int ktiles, U32 seed
     record.begin = clocks();
   }
   __syncthreads();  // timed start rendezvous, after all operand preparation
+#ifdef GH200_COMMIT_LEAD_CONTROL
+  DelaySpan delay{0, 0};
+  if (delay_placement == 0) delay = spin_delay(delay_cycles);
+#endif
 #pragma unroll 1
   for (int tile = 0; tile < ktiles; ++tile) {
 #pragma unroll
@@ -129,13 +154,16 @@ __global__ __launch_bounds__(Threads, 1) void compute_chain(int ktiles, U32 seed
       if (tile == ktiles - 1 && threadIdx.x == 0) record.trace.issue_before = clocks();
     issue_tile(a, b, tile % Slots, tile == 0, d);
     asm volatile("wgmma.commit_group.sync.aligned;" ::: "memory");
+#ifdef GH200_COMMIT_LEAD_CONTROL
+    if (tile == 0 && delay_placement == 1) delay = spin_delay(delay_cycles);
+#endif
     if constexpr (Trace)
       if (tile == ktiles - 1 && threadIdx.x == 0) record.trace.commit_after = clocks();
-    // The prologue commits tile zero without wait1, matching K_PIPE_MMAS=1.
+    // The prologue commits tile zero without a loop wait, matching K_PIPE_MMAS=1.
     if (tile != 0) {
-      asm volatile("wgmma.wait_group.sync.aligned 1;" ::: "memory");
+      asm volatile("wgmma.wait_group.sync.aligned %0;" :: "n"(WaitRetain) : "memory");
       if constexpr (Trace)
-        if (tile == ktiles - 1 && threadIdx.x == 0) record.trace.wait1_after = clocks();
+        if (tile == ktiles - 1 && threadIdx.x == 0) record.trace.loop_wait_after = clocks();
     }
   }
   asm volatile("wgmma.wait_group.sync.aligned 0;" ::: "memory");
@@ -157,6 +185,13 @@ __global__ __launch_bounds__(Threads, 1) void compute_chain(int ktiles, U32 seed
     record.smid_end = smid();
   }
   __syncthreads();  // all global export follows the leader's end timestamp
+#ifdef GH200_COMMIT_LEAD_CONTROL
+  __shared__ DelaySpan delay_spans[4];
+  if (threadIdx.x % 32 == 0) delay_spans[threadIdx.x / 32] = delay;
+  __syncthreads();
+  if (threadIdx.x == 0)
+    for (int warp = 0; warp < 4; ++warp) record.delay[warp] = delay_spans[warp];
+#endif
   if (threadIdx.x == 0) records[0] = record;
 #pragma unroll
   for (int m = 0; m < 2; ++m) {
@@ -187,9 +222,13 @@ U64 integer(const std::string& value, U64 maximum) {
   return result;
 }
 struct ChainOptions {
-  int ktiles = 4, warmup_limit = 30;
+  int ktiles = 4, warmup_limit = 30, wait_retain = 1;
   U32 seed = 17;
   bool trace = false;
+#ifdef GH200_COMMIT_LEAD_CONTROL
+  U64 delay_cycles = 0;
+  int delay_placement = 0;
+#endif
   ChainOptions(int argc, char** argv) {
     for (int i = 1; i < argc; i += 2) {
       if (i + 1 == argc) throw std::runtime_error("missing option value");
@@ -197,11 +236,16 @@ struct ChainOptions {
       if (key == "--ktiles") ktiles = int(integer(value, 32));
       else if (key == "--seed") seed = U32(integer(value, std::numeric_limits<U32>::max()));
       else if (key == "--trace") trace = bool(integer(value, 1));
+      else if (key == "--wait-retain") wait_retain = int(integer(value, 1));
       else if (key == "--warmup-limit") warmup_limit = int(integer(value, 60));
+#ifdef GH200_COMMIT_LEAD_CONTROL
+      else if (key == "--delay-cycles") delay_cycles = integer(value, 1048576);
+      else if (key == "--delay-placement") delay_placement = int(integer(value, 1));
+#endif
       else throw std::runtime_error("unknown option: " + key);
     }
-    if (ktiles != 4 && ktiles != 13 && ktiles != 32)
-      throw std::runtime_error("formal ktiles must be 4, 13, or 32");
+    if (ktiles != 1 && ktiles != 2 && ktiles != 4 && ktiles != 13 && ktiles != 32)
+      throw std::runtime_error("formal ktiles must be 1, 2, 4, 13, or 32");
     if (warmup_limit < 8) throw std::runtime_error("warmup-limit must be 8..60");
   }
 };
@@ -246,7 +290,7 @@ void print_correctness(const Trial& trial) {
   std::cout << "{\"checked_elements\":" << trial.values.size() << ",\"errors\":" << trial.errors
       << ",\"max_abs_error\":" << trial.max_abs_error << '}';
 }
-template <bool Trace>
+template <bool Trace, int WaitRetain = 1>
 int run_chain(const ChainOptions& options) {
   const U32 endian_check = 1;
   if (*reinterpret_cast<const unsigned char*>(&endian_check) != 1)
@@ -258,7 +302,7 @@ int run_chain(const ChainOptions& options) {
   CUDA_CHECK(cudaGetDeviceProperties(&device, 0));
   if (device.major != 9 || device.minor != 0 || std::string(device.name).find("GH200") == std::string::npos)
     throw std::runtime_error("GH200 CC9.0 required");
-  auto kernel = compute_chain<Trace>;
+  auto kernel = compute_chain<Trace, WaitRetain>;
   CUDA_CHECK(cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, SmemBytes));
   cudaFuncAttributes attributes{};
   CUDA_CHECK(cudaFuncGetAttributes(&attributes, kernel));
@@ -285,7 +329,12 @@ int run_chain(const ChainOptions& options) {
     CUDA_CHECK(cudaMemset(records.pointer, 0xff, sizeof(Record)));
     CUDA_CHECK(cudaMemset(output.pointer, 0xff, OutputElements * sizeof(float)));
     CUDA_CHECK(cudaEventRecord(event_begin));
+#ifdef GH200_COMMIT_LEAD_CONTROL
+    kernel<<<1, Threads, SmemBytes>>>(ktiles, options.seed, records.pointer, output.pointer,
+        options.delay_cycles, options.delay_placement);
+#else
     kernel<<<1, Threads, SmemBytes>>>(ktiles, options.seed, records.pointer, output.pointer);
+#endif
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaEventRecord(event_end));
     CUDA_CHECK(cudaEventSynchronize(event_end));
@@ -306,9 +355,9 @@ int run_chain(const ChainOptions& options) {
           t.commit_after.cycle > t.tail_wait0_after.cycle || t.tail_wait0_after.cycle > r.end.cycle ||
           r.begin.ns > t.issue_before.ns || t.issue_before.ns > t.commit_after.ns ||
           t.commit_after.ns > t.tail_wait0_after.ns || t.tail_wait0_after.ns > r.end.ns ||
-          (ktiles > 1 && (t.commit_after.cycle > t.wait1_after.cycle ||
-              t.wait1_after.cycle > t.tail_wait0_after.cycle || t.commit_after.ns > t.wait1_after.ns ||
-              t.wait1_after.ns > t.tail_wait0_after.ns)))
+          (ktiles > 1 && (t.commit_after.cycle > t.loop_wait_after.cycle ||
+              t.loop_wait_after.cycle > t.tail_wait0_after.cycle || t.commit_after.ns > t.loop_wait_after.ns ||
+              t.loop_wait_after.ns > t.tail_wait0_after.ns)))
         throw std::runtime_error("invalid trace order");
     }
     for (int i = 0; i < OutputElements; ++i) {
@@ -369,7 +418,7 @@ int run_chain(const ChainOptions& options) {
       << ",\"occupancy_ctas_per_sm\":" << occupancy << '}'
       << ",\"conditions\":{\"slots\":6,\"software_tile\":[128,128,64],\"instruction_shape\":[64,128,16],"
       << "\"a_major\":\"K\",\"b_major\":\"MN\",\"smem_swizzle_bytes\":128,"
-      << "\"commit_per_ktile\":1,\"wait_groups\":1,\"tail_wait_groups\":0,"
+      << "\"commit_per_ktile\":1,\"wait_groups\":" << WaitRetain << ",\"tail_wait_groups\":0,"
       << "\"prologue_wait\":false,\"instruction_order\":\"q_then_m64\","
       << "\"input_profile\":\"slot_coordinate_dyadic\",\"mathematical_c0\":0,"
       << "\"ring_policy\":\"immutable slot=tile%6; no generation-dependent refill\","
@@ -397,10 +446,19 @@ int run_chain(const ChainOptions& options) {
   if constexpr (Trace) {
     std::cout << "{\"k_tile_index\":" << options.ktiles - 1 << ",\"issue_before\":";
     print_pair(r.trace.issue_before); std::cout << ",\"commit_after\":";
-    print_pair(r.trace.commit_after); std::cout << ",\"wait1_after\":";
-    print_pair(r.trace.wait1_after); std::cout << ",\"tail_wait0_after\":";
+    print_pair(r.trace.commit_after);
+    std::cout << (WaitRetain == 1 ? ",\"wait1_after\":" : ",\"wait0_after\":");
+    print_pair(r.trace.loop_wait_after); std::cout << ",\"tail_wait0_after\":";
     print_pair(r.trace.tail_wait0_after); std::cout << '}';
   } else std::cout << "null";
+#ifdef GH200_COMMIT_LEAD_CONTROL
+  std::cout << ",\"commit_delay\":{\"cycles\":" << options.delay_cycles
+      << ",\"placement\":" << options.delay_placement << ",\"warp_spans\":[";
+  for (int warp = 0; warp < 4; ++warp)
+    std::cout << (warp ? "," : "") << "{\"begin_cycle\":" << r.delay[warp].begin
+        << ",\"end_cycle\":" << r.delay[warp].end << '}';
+  std::cout << "]}";
+#endif
   std::cout << ",\"correctness\":";
   print_correctness(trial);
   std::cout << ",\"output_file\":\"output.f32\",\"output_elements\":" << OutputElements
@@ -410,6 +468,8 @@ int run_chain(const ChainOptions& options) {
 }
 int main(int argc, char** argv) try {
   ChainOptions options(argc, argv);
+  if (options.wait_retain == 0)
+    return options.trace ? run_chain<true, 0>(options) : run_chain<false, 0>(options);
   return options.trace ? run_chain<true>(options) : run_chain<false>(options);
 } catch (const std::exception& error) {
   std::cout << "{\"schema\":\"gh200-cfg-b-compute-chain/1\",\"status\":\"error\",\"error\":"

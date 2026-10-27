@@ -1,7 +1,0 @@
-# cfg_c输出结构与legacy八子tile独立复核
-
-f0c3674合入主线f6e27c4，26项专用测试通过。主集成执行analyze_r15_lifecycle.py，以20261007-R14-job735985-v9-output为archive、20261010-R18-cluster-fill-discrimination为source-reference、baseline为config、20261009-V09-heldout-job739011为cfg-c-reference，输出本目录。两个CSV与完整JSON均与C-20261011-eight-subtile-lifecycle-v2逐字节相同。
-
-40进程、23592960个保存值精确复核；20trace、90个源保证和70个中间窗口保留。旧baseline中间本permit到保证71695.5cycle、下一permit到同保证1146cycle；这些时间不迁入cfg_c。静态P2输出512tile、有效36700160bytes守恒，M/N同面积边界分别给两个buffer分配64/0和32/32KiB有效字节。只描述逻辑输出，不代表物理流量或已知服务价。
-
-另以8834d4a旧output_model完整源码动态加载，逐字段比较cfg_a的T1/T2/T8完整rank图，全部相同。cfg_c新增的是本CTA输出子图，输入cluster和kernel completion仍未组合。

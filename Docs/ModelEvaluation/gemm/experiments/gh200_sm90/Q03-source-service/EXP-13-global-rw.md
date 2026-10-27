@@ -53,3 +53,9 @@
 | 依赖复制，各 128 MiB（读+写） | 3411 | 0.2% |
 
 [samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/samples.csv)、[global 图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/global.png)。SMEM 部分迁至 [EXP-09](../Q07-smem/EXP-09-smem.md#exp-04)，计时空窗口迁至 [R09](../Q09-frequency/R09-inkernel-clock-stages.md#empty-window)。
+
+## a044 复测（2026-10-23～26）
+
+180 次调用、18 个原吞吐条件全部通过原审计；读写逻辑载荷之和的变化：小工作集 −0.734%～+2.714%，大工作集 −0.313%～+1.061%，随读写比例变化的曲线保留。见[global 读写报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-global-duplex-report.md)。
+
+“`.cg` 小工作集只经 L2”已得到 NCU 支持：单 pass 下 8 MiB 读的 DRAM 读量为 768 B（见 [EXP-04](EXP-04-memory-baseline.md#a044-复测2026-10-2326)）。`.ca` 差额是否来自 L1 命中仍没有计数器证据。

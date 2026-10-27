@@ -1,5 +1,0 @@
-{
-  "returncode": 0,
-  "stdout": "",
-  "stderr": "test_exact_tail_by_full_sign_enumeration (test_analysis.JointDiagnosticTests.test_exact_tail_by_full_sign_enumeration) ... ok\ntest_joint_median_not_sum_of_component_medians (test_analysis.JointDiagnosticTests.test_joint_median_not_sum_of_component_medians) ... ok\ntest_real_smoke_arithmetic_not_effect_estimate (test_analysis.JointDiagnosticTests.test_real_smoke_arithmetic_not_effect_estimate) ... ok\ntest_reject_missing_duplicate_sm_and_missingness (test_analysis.JointDiagnosticTests.test_reject_missing_duplicate_sm_and_missingness) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.020s\n\nOK\n"
-}

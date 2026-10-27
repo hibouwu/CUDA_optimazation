@@ -9,7 +9,7 @@ import unittest
 from analyze_r16_quota import replay, sass
 
 ROOT = Path(__file__).resolve().parents[3]
-ARCHIVE = ROOT / 'results/gh200_resource_campaign/access_rules/20261008-R16-quota-dev-job736989'
+ARCHIVE = ROOT / 'results/gh200_resource_campaign/access_rules/Q08-register-residency/R16-residency-quota/20261008-R16-quota-dev-job736989'
 
 
 @unittest.skipUnless(ARCHIVE.exists(), 'legacy evidence archive required')

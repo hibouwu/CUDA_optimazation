@@ -220,7 +220,7 @@ def main():
     parser.add_argument('--base',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args();base=args.base.resolve()
-    previous=base/'20261010-R09-R13-R18-failure-controls/reanalysis/A-local-clock-consistency-v1'
+    previous=base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls/reanalysis/A-local-clock-consistency-v1'
     source=previous/'local-clock-consistency.json';data=json.loads(source.read_text())
     cap_path=previous/'cap-evidence.json';cap_evidence=json.loads(cap_path.read_text())
     inputs={str(source):hashlib.sha256(source.read_bytes()).hexdigest(),

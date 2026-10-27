@@ -93,7 +93,7 @@ cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`
 
 手算：8192³ 工作量 1099511627776 FLOP，除以 1.538160 ms 得 714.8 TFLOP/s。
 
-[原始报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/report.md) · [CPU 重算与图](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r00-job734996/offline-replay-v1/report.md)。频率遥测未取得，按未知处理。
+[原始报告](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/R00-anchor-target/20261006-r00-job734996/formal-v1/report.md) · [CPU 重算与图](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/R00-anchor-target/20261006-r00-job734996/offline-replay-v1/report.md)。频率遥测未取得，按未知处理。
 
 <a id="ndebug"></a>
 
@@ -115,7 +115,7 @@ cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`
 
 **结论**：固定 CUTLASS 的锚点应使用 NDEBUG 构建：2048³ 587、4096³ 688、8192³ 657 TFLOP/s。以 debug 版标定的规则或预测需要按此修正。
 
-数据：[修正后的统计 analysis-r2](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/summary.json)、[cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/cases.csv)；完整归档、代码和离线重放见 [R09 中的原 R07 小节](../Q09-frequency/R09-inkernel-clock-stages.md#r07)。
+数据：[修正后的统计 analysis-r2](../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261007-ndebug-clock-fixedcost/analysis-r2/summary.json)、[cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261007-ndebug-clock-fixedcost/analysis-r2/cases.csv)；完整归档、代码和离线重放见 [R09 中的原 R07 小节](../Q09-frequency/R09-inkernel-clock-stages.md#r07)。
 
 ## 输出
 
@@ -127,7 +127,7 @@ cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`
 
 ## K/MN布局成对补充（2026-10-06）
 
-[结果与复现报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-v01-followup/report.md)。补充4个条件、26个正式进程，不扩大默认矩阵：FP16 SS m64n256k16、2 warpgroup、128个累加寄存器/线程，分别用B Major::K和Major::MN，单CTA各3进程、整卡各10进程。每相邻一对只改变B布局，公共源入口为`r00_wgmma.cu --b-major K/MN`，配对采样入口为`run_layout_pair.py`。
+[结果与复现报告](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261006-v01-followup/report.md)。补充4个条件、26个正式进程，不扩大默认矩阵：FP16 SS m64n256k16、2 warpgroup、128个累加寄存器/线程，分别用B Major::K和Major::MN，单CTA各3进程、整卡各10进程。每相邻一对只改变B布局，公共源入口为`r00_wgmma.cu --b-major K/MN`，配对采样入口为`run_layout_pair.py`。
 
 两版均154 registers/thread、动态SMEM49152 B、无local；正式循环为1024轮，每轮16条MMA、commit/wait1、最后wait0。K/MN的单CTA中位数分别4195097/4195107 cycle，整卡中位数均2311808 ns。MN机器码的16条HGMMA均带`.tnspB`；非均匀1/2轮短检查通过，26个正式输出已逐值独立复核。
 

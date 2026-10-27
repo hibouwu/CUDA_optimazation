@@ -20,7 +20,7 @@ PROBLEM = ('m', 'n', 'k')
 PROGRAM = ('config', 'stages')
 # 固定调用次数实验构建的运行协议字段。
 PROTOCOL_FIELDS = ('warmup_fixed_calls',)
-BOOKKEEPING = ('id', 'set', 'kind', 'group', 'cond', 'candidate', 'original_experiment', 'purpose')
+BOOKKEEPING = ('id', 'set', 'kind', 'group', 'cond', 'candidate', 'original_experiment', 'original_reference', 'purpose')
 # 历史 case 中的注记：静态信息以构建查询为准，标签与采样安排属于任务协议，均不作为模型输入。
 ANNOTATIONS = ('tile', 'cluster', 'schedule', 'grid_ctas', 'ktiles', 'scheduled_units', 'scheduler_status', 'original_m',
                'label', 'pitch', 'input_path', 'ready_generation_bound', 'sampling_order', 'variants', 'repeats')

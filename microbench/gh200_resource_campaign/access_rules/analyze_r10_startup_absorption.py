@@ -35,9 +35,9 @@ def analyze(root, output):
     def read(path):
         sha(path)
         return json.loads(path.read_text())
-    dev = root/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
-    prior = read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
-    feedback = read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-address-feedback-v3/B-address-feedback.json')
+    dev = root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
+    prior = read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
+    feedback = read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-address-feedback-v3/B-address-feedback.json')
     observed = read(dev/'R10-producer-delay.json')
     ready_observed = read(dev/'R13-ready-release.json')
     data_rechecked = set()

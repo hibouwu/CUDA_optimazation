@@ -35,3 +35,7 @@ fence 只测了没有未完成访存的情形；有在途 store 或 TMA 时的�
 ## 数据
 
 [samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s11-main-execution/analysis-v2/samples.csv)、[parameters.json](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s11-main-execution/analysis-v2/parameters.json)、[fence 图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s11-main-execution/analysis-v2/fence.png)。原始 run：`implementation/s11-main-execution/`。
+
+## a044 复测（2026-10-23～26）
+
+130 次调用全部通过原审计，11 个条件稳定，中位数最大变化 +0.00041719%；原 SASS 的 WARPSYNC 数仍为 0。见[同步与 fence 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-synchronization-report.md)。

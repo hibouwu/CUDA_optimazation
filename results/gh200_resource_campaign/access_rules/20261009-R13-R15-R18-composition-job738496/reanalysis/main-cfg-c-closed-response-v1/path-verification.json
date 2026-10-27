@@ -1,8 +1,0 @@
-{
-  "queries": 126,
-  "shortest_paths_verified": 100,
-  "distinct_graphs": 5,
-  "method": "Topological minimum edge-distance propagation, independent of analyzer BFS",
-  "report_sha256": "24ed4d88c72cc2e7d6824b18a82e10c3efe67fa244782710a6c1a1dfa78f9abc",
-  "observation_qualified": false
-}

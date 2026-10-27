@@ -52,7 +52,7 @@ R12揭示相同结果的两次归约可能被复用。R11存在同类情况，�
 
 仍分别报告原始T_A+T_B、max及扣共同空单元的和；空单元只是该实现的控制对照，不是任意操作图的可加常数。精确数值见结构化规则，跨组使用匹配B角色的单独基线。
 
-![匹配消费者后的服务窗口](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R11-job736989-v6/analysis/plots/r11-joint-service.png)
+![匹配消费者后的服务窗口](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261008-R11-job736989-v6/analysis/plots/r11-joint-service.png)
 
 图为进程中位数，不绘误差条；全部CV和原始样本保留。WGMMA逐8条提交、部分等待1和阶段末等待0，已排除逐条完整等待；每个TC组织的静态服务体8个HGMMA，按16批/单元动态计量。
 
@@ -69,7 +69,7 @@ python3 microbench/gh200_resource_campaign/access_rules/run_r11.py \
   --cutlass-root <CUTLASS3.9.2> --output <新目录>
 ```
 
-`--plan-only`列18条件，`--smoke-only`只完成编译/SASS/数值检查，`--resume`在同一分配和UUID恢复。[正式归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R11-job736989-v6/)含冻结源码、CUTLASS、二进制、SASS和全部样本；[条件规则](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R11-job736989-v6/analysis/rules.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R11-job736989-v6/analysis/cases.csv)、[独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R11-job736989-v6/analysis/checks.json)。CPU重放：`python3 <归档>/source/analyze_r11.py --input <归档> --output <新分析目录>`。
+`--plan-only`列18条件，`--smoke-only`只完成编译/SASS/数值检查，`--resume`在同一分配和UUID恢复。[正式归档](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261008-R11-job736989-v6/)含冻结源码、CUTLASS、二进制、SASS和全部样本；[条件规则](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261008-R11-job736989-v6/analysis/rules.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261008-R11-job736989-v6/analysis/cases.csv)、[独立重算](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261008-R11-job736989-v6/analysis/checks.json)。CPU重放：`python3 <归档>/source/analyze_r11.py --input <归档> --output <新分析目录>`。
 
 <a id="r04"></a>
 
@@ -142,8 +142,8 @@ R04 是本页的前序实验，2026-10-08 并入本页；原文保留，只把�
 
 ### 数据
 
-- 跨 warpgroup 异步版：[报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-async-v01-r04/r04-offline-review/report.md)（作业 735203）。
-- 同 warpgroup 与首版：[报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-A-job735062/r04-final-review/combined_report.md)；LDS/CVT 修订版：`20261006-A-fix-job735138/r04-volatile-review/`。
+- 跨 warpgroup 异步版：[报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261007-async-v01-r04/r04-offline-review/report.md)（作业 735203）。
+- 同 warpgroup 与首版：[报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261006-A-job735062/r04-final-review/combined_report.md)；LDS/CVT 修订版：`20261006-A-fix-job735138/r04-volatile-review/`。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/run_r04.py --cutlass-root <R00 source>/cutlass --output <新目录>/r04

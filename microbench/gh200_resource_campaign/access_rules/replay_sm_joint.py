@@ -11,9 +11,9 @@ import sys
 
 from sm_joint_service import joint_service
 
-R11 = Path('gh200_resource_campaign/access_rules/20261008-R11-job736989-v6')
-R12 = Path('gh200_resource_campaign/access_rules/20261008-R12-job736989-v3')
-SMEM = Path('gh200_resource_campaign/access_rules/20261017-SMEM-01-replay-001/protocol-replay')
+R11 = Path('gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261008-R11-job736989-v6')
+R12 = Path('gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3')
+SMEM = Path('gh200_resource_campaign/access_rules/Q07-smem/SMEM-01-replay/20261017-SMEM-01-replay-001/protocol-replay')
 R11_FILES = {
     'source_hashes.json': '4c87d7628aec0db08911fad2928789970720311e0fec4d1b3e4e94d806318cb9',
     'cases.json': 'ef0b3c991fedf86e208957a40328a5829388a0f855e846b5aa2a5edd536a6b46',

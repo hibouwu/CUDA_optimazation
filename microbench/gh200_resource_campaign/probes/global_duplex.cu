@@ -19,7 +19,7 @@ template<int Ratio> __device__ __forceinline__ gh::u64 gd_slot(gh::u64 group,uns
   for(int wrap=0;wrap<Ratio-1;++wrap)if(slot>=groups)slot-=groups;
   return slot;
 }
-template<int Reads,int Writes,bool CacheAll,bool Copy>
+template<int Reads,int Writes,bool CacheAll,bool Copy,bool Serial=false>
 __device__ __forceinline__ void gd_body(const uint4* input,uint4* output,gh::u64 vectors,
     int iterations,unsigned seed,gh::Stamp* stamps,unsigned* sums) {
   __shared__ volatile unsigned drain[gd_threads];
@@ -36,6 +36,25 @@ __device__ __forceinline__ void gd_body(const uint4* input,uint4* output,gh::u64
   unsigned sum=0;
   #pragma unroll 1
   for(int iteration=0;iteration<iterations;++iteration) {
+    if constexpr(Serial) {
+      static_assert(Reads==1&&Writes==1&&!CacheAll&&!Copy,"Q03 finite 1:1 organization");
+      // CTA-local issue order only: no grid barrier or global read/write phase.
+      #pragma unroll 1
+      for(gh::u64 group=0;group<groups;++group) {
+        const gh::u64 index=group*total_threads+thread;
+        const uint4 value=gd_load(input+index,false);
+        sum+=value.x+value.y+value.z+value.w;
+      }
+      __syncthreads();
+      #pragma unroll 1
+      for(gh::u64 group=0;group<groups;++group) {
+        const gh::u64 index=group*total_threads+thread;
+        const unsigned word=unsigned(index*4);
+        const uint4 value=make_uint4(29u*word+seed,29u*(word+1)+seed,29u*(word+2)+seed,29u*(word+3)+seed);
+        gd_store(output+index,value);
+      }
+      __syncthreads();
+    } else {
     #pragma unroll 1
     for(gh::u64 group=0;group<groups;++group) {
       // The frozen issue order is r reads, then w independent writes. Copy
@@ -56,6 +75,7 @@ __device__ __forceinline__ void gd_body(const uint4* input,uint4* output,gh::u64
           gd_store(output+index,value);
         }
       }
+    }
     }
   }
   drain[threadIdx.x]=sum;
@@ -79,6 +99,10 @@ GD_KERNEL(gd_independent_cg_r2_w1,2,1,false,false)
 GD_KERNEL(gd_independent_cg_r4_w1,4,1,false,false)
 GD_KERNEL(gd_independent_cg_r1_w2,1,2,false,false)
 GD_KERNEL(gd_independent_cg_r1_w4,1,4,false,false)
+extern "C" __global__ void gd_independent_serial_cg_r1_w1(const uint4* input,uint4* output,
+    gh::u64 vectors,int iterations,unsigned seed,gh::Stamp* stamps,unsigned* sums) {
+  gd_body<1,1,false,false,true>(input,output,vectors,iterations,seed,stamps,sums);
+}
 
 struct GdCase {const char* id;int reads,writes;bool large,copy;const char* symbol;const void* function;};
 #define GD_CASES(ID,NAME,R,W,COPY) \
@@ -94,6 +118,10 @@ static const GdCase gd_cases[]={
  GD_CASES("independent_r4_w1",gd_independent_cg_r4_w1,4,1,false),
  GD_CASES("independent_r1_w2",gd_independent_cg_r1_w2,1,2,false),
  GD_CASES("independent_r1_w4",gd_independent_cg_r1_w4,1,4,false)
+#ifdef __CUDACC__
+ ,{"independent_serial_r1_w1_large",1,1,true,false,"gd_independent_serial_cg_r1_w1",
+  reinterpret_cast<const void*>(gd_independent_serial_cg_r1_w1)}
+#endif
 };
 struct GdCheck {int iterations;gh::Observation observation;bool completed=false;std::vector<unsigned> verified_ctas;};
 static void gd_resource(const GdCase& c,const cudaFuncAttributes& attr,int occupancy,
@@ -129,21 +157,26 @@ int main(int argc,char** argv) try {
   const auto device=gh::device();gh::emit_device(device);
   if(argc==2&&std::string(argv[1])=="device")return 0;
   const bool short_check=argc>1&&std::string(argv[1])=="validate-only";
-  if(argc!=(short_check?5:4))throw std::runtime_error("CASE_ID 16 SEED | validate-only CASE_ID short_global_duplex_1_2 SEED");
+  const bool order_probe=argc>1&&std::string(argv[1])=="order-probe";
+  if(argc!=((short_check||order_probe)?5:4))throw std::runtime_error("CASE_ID 16 SEED | validate-only CASE_ID short_global_duplex_1_2 SEED | order-probe CASE_ID 16 SEED");
   if(short_check&&std::string(argv[3])!="short_global_duplex_1_2")throw std::runtime_error("unknown S13 short profile");
-  const int iterations=short_check?1:gh::integer(argv[2],16,16);
-  unsigned seed=gh::integer(argv[short_check?4:3],0,4294967295ull);
+  const int iterations=short_check?1:gh::integer(argv[order_probe?3:2],16,16);
+  unsigned seed=gh::integer(argv[(short_check||order_probe)?4:3],0,4294967295ull);
   const GdCase* selected=nullptr;
-  for(const auto& c:gd_cases)if(std::string(argv[short_check?2:1])==c.id)selected=&c;
+  for(const auto& c:gd_cases)if(std::string(argv[(short_check||order_probe)?2:1])==c.id)selected=&c;
   if(!selected)throw std::runtime_error("unknown S13 case");const auto& c=*selected;
+  if(order_probe&&std::string(c.id)!="independent_r1_w1_large"&&std::string(c.id)!="independent_serial_r1_w1_large")
+    throw std::runtime_error("Q03 order-probe has only two fixed large 1:1 organizations");
   cudaFuncAttributes attr{};GH_CUDA(cudaFuncGetAttributes(&attr,c.function));int occupancy=0;
   GH_CUDA(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&occupancy,c.function,gd_threads,0));
   if(occupancy<1||attr.sharedSizeBytes!=1024||attr.localSizeBytes!=0)throw std::runtime_error("S13 unexpected drain allocation/spill/occupancy");
-  const unsigned blocks=std::min(4,occupancy)*device.prop.multiProcessorCount;
+  if(order_probe&&(device.prop.multiProcessorCount!=132||occupancy<4))throw std::runtime_error("Q03 fixed 528 CTA launch unavailable");
+  const unsigned blocks=order_probe?528:std::min(4,occupancy)*device.prop.multiProcessorCount;
   const gh::u64 total_threads=gh::u64(blocks)*gd_threads;
   const gh::u64 l2=device.prop.l2CacheSize;
   const gh::u64 requested=c.large?4*l2:l2/4;
   const gh::u64 bytes=global_duplex_reference::aligned_array_bytes(requested,total_threads);
+  if(order_probe&&bytes!=253034496ull)throw std::runtime_error("Q03 fixed large array differs");
   const gh::u64 aggregate=bytes*((c.reads>0)+(c.writes>0));
   if(!c.large&&aggregate>=l2)throw std::runtime_error("S13 small aggregate is not below L2");
   size_t free_bytes=0,total_bytes=0;GH_CUDA(cudaMemGetInfo(&free_bytes,&total_bytes));
@@ -209,11 +242,12 @@ int main(int argc,char** argv) try {
     if(result.errors)throw std::runtime_error("S13 correctness/completion errors="+std::to_string(result.errors));
     return result;
   };
-  if(short_check) {
+  if(short_check||order_probe) {
     try {for(int length:{1,2}){checks.push_back(GdCheck{length});execute(length,true);}}
     catch(const std::exception& error){gd_validation(c,seed,blocks,attr,occupancy,requested,bytes,aggregate,checks,true);std::cerr<<error.what()<<'\n';return 2;}
     gd_validation(c,seed,blocks,attr,occupancy,requested,bytes,aggregate,checks,false);
-  } else {
+  }
+  if(!short_check) {
     auto measured=[&](){return execute(iterations,false);};const auto warmup=gh::warmup(measured);const auto result=measured();
     const gh::u64 read=gh::u64(iterations)*bytes*c.reads,write=gh::u64(iterations)*bytes*c.writes;
     std::ostringstream extra;
@@ -222,6 +256,7 @@ int main(int argc,char** argv) try {
       <<",\"registers_per_thread\":"<<attr.numRegs<<",\"static_smem_bytes\":"<<attr.sharedSizeBytes
       <<",\"dynamic_smem_bytes\":0,\"local_size_bytes\":"<<attr.localSizeBytes<<",\"occupancy_limit_ctas_per_sm\":"<<occupancy
       <<",\"kernel_symbol\":"<<gh::quote(c.symbol);
+    if(order_probe)extra<<",\"issue_organization\":"<<gh::quote(std::string(c.id)=="independent_r1_w1_large"?"interleaved_group":"cta_serial_sweeps");
     gh::emit_trial(c.id,iterations,seed,gd_threads,"all_gpu","byte",read+write,read,write,result,warmup,extra.str());
   }
   GH_CUDA(cudaEventDestroy(begin));GH_CUDA(cudaEventDestroy(end));

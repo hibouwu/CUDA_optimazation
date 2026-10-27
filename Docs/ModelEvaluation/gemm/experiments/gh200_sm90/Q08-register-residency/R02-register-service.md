@@ -74,7 +74,7 @@ SASS两条循环每轮均为64 FFMA，源对数量1/8；乘数包含普通与uni
 
 82进程（2短检查＋80正式plain/trace/位置记录）、514,304个见证字已独立重算正确。正式CV最大约0.010%，trace相对plain最大扰动约0.010%；两处代码位置复现差异。这里只收紧条件规则，不继续为了命名未公开端口而扩扫。
 
-[固定帧归档与冻结源码](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-frame-job737122-v1/)、[独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-frame-job737122-v1/reanalysis/local-independent/rules.json)、[两条循环及依赖证据](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-frame-job737122-v1/reanalysis/local-independent/sass-check.json)。新运行入口：`python3 microbench/gh200_resource_campaign/access_rules/run_r02_source_frame.py prepare --output <新目录>`，节点内执行相同脚本的`sample --output <目录>`；离线用`analyze --output <归档> --analysis-output <新分析目录>`。历史v1的修正运行器位于`reanalysis/runner-chain-check.py`，未覆盖冻结脚本。
+[固定帧归档与冻结源码](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-frame-job737122-v1/)、[独立重算](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-frame-job737122-v1/reanalysis/local-independent/rules.json)、[两条循环及依赖证据](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-frame-job737122-v1/reanalysis/local-independent/sass-check.json)。新运行入口：`python3 microbench/gh200_resource_campaign/access_rules/run_r02_source_frame.py prepare --output <新目录>`，节点内执行相同脚本的`sample --output <目录>`；离线用`analyze --output <归档> --analysis-output <新分析目录>`。历史v1的修正运行器位于`reanalysis/runner-chain-check.py`，未覆盖冻结脚本。
 
 ## 保留目的数：多出的消费时间可以直接算
 
@@ -108,7 +108,7 @@ FADD+LDS.128 使用同一份机器码改变地址参数：每次 16 B/lane，32 
 
 连续地址下，相对预装消费者，同 warp 的额外尾部约 46–49 cycle，两 warp 约 118 cycle。它包含最后一批 LDS 尚未可用及后续取值时序；改变 warp 分工也改变发出与消费的相对时间，不能只凭这个差值给 LDS 加一个固定 RF 返回系数。
 
-![源服务、目的消费与地址控制](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/plots/r02-service.png)
+![源服务、目的消费与地址控制](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-job736989-v8/analysis/plots/r02-service.png)
 
 图的误差条为独立进程标准差；部分条件周期完全相同，因此误差条不可见。第二图是消费尾部，第三图是完整窗口，两个分母不能互换。
 
@@ -118,7 +118,7 @@ FADD+LDS.128 使用同一份机器码改变地址参数：每次 16 B/lane，32 
 
 ## 数据与复现
 
-[正式归档 v8](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/)：冻结 `source/`、`build/`、`samples/`；[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/rules.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/cases.csv)、[SASS及独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/checks.json)、图及其数据入口。[消费公式及使用条件](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/conditional-formulas.json)。本环境独立NCU能力检查返回 `ERR_NVGPUCTRPERM`，之后不逐点重试；无物理流量/端口计数证据。CUDA12.9正式编译28个测量 specialization，plain/trace采用相同 kernel 标识和资源。生产者打点扰动最大约0.009%，plain 最大CV约2.26%（包含短消费者控制）。
+[正式归档 v8](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-job736989-v8/)：冻结 `source/`、`build/`、`samples/`；[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-job736989-v8/analysis/rules.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-job736989-v8/analysis/cases.csv)、[SASS及独立重算](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-job736989-v8/analysis/checks.json)、图及其数据入口。[消费公式及使用条件](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/R02-register-service/20261008-R02-job736989-v8/analysis/conditional-formulas.json)。本环境独立NCU能力检查返回 `ERR_NVGPUCTRPERM`，之后不逐点重试；无物理流量/端口计数证据。CUDA12.9正式编译28个测量 specialization，plain/trace采用相同 kernel 标识和资源。生产者打点扰动最大约0.009%，plain 最大CV约2.26%（包含短消费者控制）。
 
 一次运行（有效单GPU Slurm分配内）：
 

@@ -89,7 +89,7 @@ WGMMA 的累加器只在覆盖该操作的 wait 之后读取。R05-C 在源读�
 
 ## 数据与复现
 
-- [B/C/D/E 报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/report.md)、[A 修正版报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-a-formal-v5/report.md)；`cases.csv`、`rules.json`、图在同目录。
+- [B/C/D/E 报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-formal-v2/report.md)、[A 修正版报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-a-formal-v5/report.md)；`cases.csv`、`rules.json`、图在同目录。
 - 首版 A（96 进程）因编译器合并整数链、把等待提前，计量无效，保留在 `r05-formal-v2/` 并标为 `invalid_sass_schedule`。
 
 ```bash

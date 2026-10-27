@@ -1,6 +1,6 @@
 # HBM-01：global读写旧证据回放
 
-更新：2026-10-17。本页记录阶段5的固定证据、窗口重算与两种纯端点外推；共享资源定义见[HBM服务](../../../model/mechanism/hardware_rules/HBM-SERVICE.md)，有限登记见[PLAN](../../../PLAN.md#stage-5-hbm)。本轮没有新增GPU采样或价格拟合。
+更新：2026-10-17。本页记录阶段5的固定证据、窗口重算与两种纯端点外推；共享资源定义见[HBM服务](../../../model/mechanism/hardware_rules/HBM-SERVICE.md)，有限登记见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)。本轮没有新增GPU采样或价格拟合。
 
 ## 1. 条件、源码与原资格
 
@@ -30,7 +30,7 @@
 
 ## 3. 复现、接线与剩余范围
 
-[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-HBM-01-replay-001/)保存源码身份、180份逐进程重算、两种外推及服务接线检查。在仓库根目录执行，输出目录须尚不存在：
+[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/20261017-HBM-01-replay-001/)保存源码身份、180份逐进程重算、两种外推及服务接线检查。在仓库根目录执行，输出目录须尚不存在：
 
 ```bash
 python -B microbench/gh200_resource_campaign/access_rules/replay_hbm_evidence.py \
@@ -41,3 +41,18 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
 ```
 
 25项CPU检查通过，六个4／13／32 Ktile×S4／S6默认请求图新旧结果逐对象相同。服务例子使用调用方声明的价格和字节，未将上述复合窗口率接为裸HBM参数。剩余实测缺口是匹配程序的真实miss字节、写回时点与读写并发平台，以及global窗口到TMA源服务的迁移；本轮没有新增独立C2成绩。
+
+后续[固定1:1两组织轮](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/20261018-Q03-hbm-order-001/README.md)仅比较CTA内交错／读写分阶段窗口，保留实际控制及同步变化；不会把原纯端点外推重新称为已支持形式。
+
+751916的[两组织结果](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/20261018-Q03-hbm-order-001/EXECUTION.md)6进程通过资格，CTA分阶段窗口比交错慢4.144951%，落在冻结5%响应门槛内；保留无额外组织修正项的工作假设，机制判定信息不足。本轮收口，不拆方向或同步价格，原纯端点外推失败保持。
+
+## 相关轮次
+
+以下各轮原登记在访问规则索引，按日期排列；全部结果目录见[Q03-source-service/HBM-01-backend](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/README.md)。
+
+| 研究轮次与检验主张 | 固定与改变的条件 | 改变的判定 | 证据与相关产物 |
+|---|---|---|---|
+| 源状态是否已抹去stage推进差（CPU） | 固定原数据服务，独立回放两个保存请求流；核每域并集、miss及HBM忙段 | 10296就绪端点精确复现；现版本两stage均全miss持续忙，末组就绪相同；12模块回放、两地一致，GPU0 | [独立模块、定位与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/20261019-Q03-data-service-isolation-001/README.md) |
+| 只改变外存共享范围能否修复局部S6（CPU） | 按home／请求域各设两个半速FIFO，固定总能力及缓存／价格／计算／释放；先S6必要检查 | 两固定接法均未过原5%窗口与结束跨度门，S4未运行；45输入及五输出两地一致，66调用、一处复现输出修复、拟合／GPU0 | [两候选、计账与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/20261019-Q03-backend-scope-001/README.md) |
+| 取消接收副本是否兼容旧近期源响应（CPU） | 只在home保留行，固定完全相联30MiB／域、映射／初始化／价格；先核全访问并集及两次序就绪 | 并集约17.33MiB／域，无淘汰，0响应未过旧±5个百分点，停止固定形式；12模块流、两地一致、GPU0。758367零GPU只读核NCU仍为管理员专用 | [容量界、旧约束与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/HBM-01-backend/20261019-Q03-home-only-screen-001/README.md) |
+| a044 跨卡复核（mechanism-r3，780769） | CTA 内交错/串行组织各 3 进程 | 串行相对交错 +4.8804%（旧卡 +4.1450%），仍在 5% 内，零组织响应未被反证；距门槛约 0.12 个百分点。节点 NCU 现已可用（RmProfilingAdminOnly:0） | [内存服务报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-storage-stage-report.md) |

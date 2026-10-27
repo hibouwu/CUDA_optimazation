@@ -88,7 +88,7 @@
 - 4 B 访问在 8 warp 时只有 56–62 B/cycle，低于 EXP-09 中同为 8 warp 的 4 B 写（128）。两者访问组织不同（这里每次访问后都参与 checksum 并轮转槽位），4 B 访问的服务依赖访问组织，应按实际方案的访问方式引用。
 - 1 warp 的值与 EXP-10 一致（`ldmatrix.x4` 约 32–35），属于单 warp 的延迟受限情形。
 
-[报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r03-formal-v1/report.md)、`cases.csv`、`rules.json`、`plots/service.svg` 在同目录。
+[报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r03-formal-v1/report.md)、`cases.csv`、`rules.json`、`plots/service.svg` 在同目录。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/run_r03.py --output <新目录>/r03
@@ -111,7 +111,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r03.py --sectors
 
 以上同步边界指源码中的 `bar.warp.sync`。后续对实际 ARM ELF 与 CPU 产物的十四目标/Op2内核逐一审查发现，最终 SASS 均无显式 WARPSYNC，主循环内也无 CTA barrier；二者均保留相同三个无条件 CTA会合。原Op2与0轮112 cycle只能作为循环、消费和CTA会合的组合控制，不能提取单独warp同步的物理成本。二进制与协议没有因这项澄清而修改。
 
-准备、失败构建、逐 kernel 动态指令审查与修正版源码保存在 `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z`；续做授权、CUDA 12.9 CPU 证据及新数据在其 `continuation-20261012` 子目录。原准备、旧 R03/EXP-09 和失败包保持只读。
+准备、失败构建、逐 kernel 动态指令审查与修正版源码保存在 `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-m11-lds-sts-bounded/run-20261011T210745Z`；续做授权、CUDA 12.9 CPU 证据及新数据在其 `continuation-20261012` 子目录。原准备、旧 R03/EXP-09 和失败包保持只读。
 
 ### 开发反证（2026-10-12）
 
@@ -128,16 +128,16 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r03.py --sectors
 
 同 SM 计数器读差值的 cycle GCD 与最小间距都是 2；正 globaltimer 差值 GCD 为 32 ns，640 对中 608 对 ns 差为零。0 轮窗口在 1/4/8 warp 都为 112 cycle，拟合固定项为 54.126–1020.763 cycle；这些是声明协议内的观测与聚合项，不是固有计时分辨率或裸硬件服务开销。
 
-本轮达到反证终点：未冻结，第三提交保留，66 条预列留出未执行，真实 CUTLASS 仅取得静态 SASS 资格，未执行其数值重放，不向主线接入参数。[完整报告](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、`development-analysis/counterexample.json` 和全部原始条件可离线复核。
+本轮达到反证终点：未冻结，第三提交保留，66 条预列留出未执行，真实 CUTLASS 仅取得静态 SASS 资格，未执行其数值重放，不向主线接入参数。[完整报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、`development-analysis/counterexample.json` 和全部原始条件可离线复核。
 
 
 ## m11 后续离线需求诊断（2026-10-12）
 
-第一轮普通 LDS/STS 开发作业740961及反证见[原交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)。本次用户批准GPU预算0，复用全部540开发条件，终点为没有满足原联合要求的可冻结候选；没有冻结或执行66条留出。
+第一轮普通 LDS/STS 开发作业740961及反证见[原交付](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)。本次用户批准GPU预算0，复用全部540开发条件，终点为没有满足原联合要求的可冻结候选；没有冻结或执行66条留出。
 
 全warp内按bank去重不同32bit地址字后，连续16B与广播不再具有相同需求。保留原时间包络、改用最大相对误差拟合，开发中位/最大误差为0.49113%/9.61986%；加性发射形式为6.27053%/25.03275%。前者仍有20/27组不存在同时满足原绝对周期容差及最大10%误差的参数，不能用相对误差覆盖局部失败。全部旧条件保留，需求批次仍非实测。
 
-三个直接结论：原非广播连续读的一部分误差来自共同拟合；移除宽广播后，其他布局不能唯一确定广播的时间下限；已有依赖读三点违反两个公式共有的凸性约束，即使各取原±64cycle边界，仍差63293.94cycle。因此不继续第三种形式，不以当前拟合宣布bank机制通过。推导、训练参数见证、完整误差与留布局诊断见[本轮报告](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)。
+三个直接结论：原非广播连续读的一部分误差来自共同拟合；移除宽广播后，其他布局不能唯一确定广播的时间下限；已有依赖读三点违反两个公式共有的凸性约束，即使各取原±64cycle边界，仍差63293.94cycle。因此不继续第三种形式，不以当前拟合宣布bank机制通过。推导、训练参数见证、完整误差与留布局诊断见[本轮报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-demand-offline-v1/README.md)。
 
 后续48条件/144进程提案只用于区分完整warp地址集合与lane子组排列效应；同址复制的向量连续或交错排列，保持完整bank地址集合和逻辑返回字节不变。该提案在离线交付时未获授权、没有提交。用户现已批准整理后补开发对照并追加独立留出预算；授权变化见 [后续测量合同](../access_rules/PLAN.md#measurement-next)，原提案与旧预算记录保持只读。
 
@@ -159,7 +159,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 仅评估预列旧预测，没有拟合：全warp F1相对误差中位/最大为3.68695%/75.07986%，原子组非广播诊断为0.37531%/84.64517%；原局部绝对容差分别失败28/48、24/48。新16 B、8 warp依赖控制没有覆盖旧8 B、1 warp凸性反例，旧±64 cycle后63293.94 cycle缺口仍在。
 
-本轮新预算使用开发1/1、总1/2，没有合格候选，不冻结或提交条件留出，剩余预算不转作另一开发；历史740708/740961及旧66条留出状态保留。结论只支持原完整单CTA窗口对lane组织敏感，不能据时间比例推断物理wavefront、事务或端口数。[完整报告](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)、全部条件CSV、14对原容差反证、原始144进程及最终交付清单均在同一目录。
+本轮新预算使用开发1/1、总1/2，没有合格候选，不冻结或提交条件留出，剩余预算不转作另一开发；历史740708/740961及旧66条留出状态保留。结论只支持原完整单CTA窗口对lane组织敏感，不能据时间比例推断物理wavefront、事务或端口数。[完整报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)、全部条件CSV、14对原容差反证、原始144进程及最终交付清单均在同一目录。
 
 <a id="m11-bank-vector"></a>
 
@@ -167,7 +167,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 令 n[g,b] 为一条 warp LDS 指令中，原 lane 子组 g 对 bank b 请求的不同 32 bit word 数；4/8/16 B 访问分别使用 32/16/8 lane 子组。旧模型用 D=Σg maxb n[g,b]，丢掉了各组忙的是同一 bank 还是不同 bank。检验一个由地址直接生成的新标量 B=maxb Σg n[g,b]：假设不同 bank 上的子组需求可重叠，窗口受最忙 bank 限制。这个重叠是假设，不是实测 wavefront。
 
-直接复算[原地址](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/package/minimal-measurement-cases.json)；下表为8192轮、8 warp独立读，每条 warp 指令的需求与窗口均摊周期。周期用完整窗口除以8192×8×8，含循环和消费，不是裸LDS延迟。
+直接复算[原地址](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/package/minimal-measurement-cases.json)；下表为8192轮、8 warp独立读，每条 warp 指令的需求与窗口均摊周期。周期用完整窗口除以8192×8×8，含循环和消费，不是裸LDS延迟。
 
 | 宽度与地址 | 连续／交错的旧 D | 连续／交错的新 B | 连续／交错的均摊 cycle |
 |---|---:|---:|---:|
@@ -179,7 +179,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 新 B 能区分旧 D 丢失的密集排列，尚不足以确定时间：8 B 全广播与密集交错的 B 都是2，周期为711622／1048796，原绝对容差各4419；16 B 两点的 B 都是4，周期1135930／2097378，容差各6825。周期差337174／961448分别超过两边容差之和8838／13650，共同预测不存在；最小最大相对误差分别为19.1531%／29.7357%，也超过10%。因此只用 B、宽度、warp、依赖、轮数及逻辑返回字节的时间函数仍失败，加同组统一下限也无效。完整 bank 向量和不同地址数量并不相同，本反证不排除使用这些信息的模型。
 
-新的参数无关约束是：同宽密集连续与全广播的实测窗口周期逐位相同，密集交错与stride1也逐位相同；8 B为711622／1048796，16 B为1135930／2097378。[全部条件与原容差](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/analysis/conditions.json)保留全部三个进程。这是该协议下的等价观察，不是任意组织的硬件保证。
+新的参数无关约束是：同宽密集连续与全广播的实测窗口周期逐位相同，密集交错与stride1也逐位相同；8 B为711622／1048796，16 B为1135930／2097378。[全部条件与原容差](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/analysis/conditions.json)保留全部三个进程。这是该协议下的等价观察，不是任意组织的硬件保证。
 
 公开的[NVIDIA技术答复](https://forums.developer.nvidia.com/t/shared-memory-bank-conflicts-with-64-bit-data-type/293904)说明连续64 bit访问通常为两个wavefront，广播是返回带宽行为的例外；跨子组的具体重叠仍需检验。下一种描述须同时保留 bank 分布和同址复制关系，先解释上述等价与反例，再决定是否拟合。旧依赖执行缺口仍在。本次只检验一个静态汇总形式，没有拟合、新脚本、新数据文件或GPU提交，公共预测器与旧成绩不变。
 
@@ -187,7 +187,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 ## m11 离线推导：同址合并与两线时间形式（2026-10-12）
 
-**需求描述的缺口已基本补上，剩下的失败来自时间形式。** 本次只用 740961 与 741153 的 588 个开发条件，GPU 作业 0，没有冻结或留出成绩。[复现与输出](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-phase-merge-offline/README.md)。
+**需求描述的缺口已基本补上，剩下的失败来自时间形式。** 本次只用 740961 与 741153 的 588 个开发条件，GPU 作业 0，没有冻结或留出成绩。[复现与输出](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-phase-merge-offline/README.md)。
 
 **需求：** 在上节的 B 上只加一条：整个 warp 读同一地址时记 1 次。这与上节引用的 NVIDIA 答复相符，即广播属于例外。超过 10% 或两倍原容差的同需求碰撞从 38 个降到 2 个，剩余两个只差 0.38%。沿用原每组 `max(下限, 截距+斜率×D)` 时间形式时，588 条的中位/最大相对误差为 0.51%/9.62%，但 416 条超出原绝对周期容差，所以仍不满足原门槛。现有数据没有"部分跨子组共享"的布局，这条特例与其他可能的合并规则无法区分；留出必须包含这类布局。
 
@@ -225,7 +225,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 **交叉检验后选定的候选。** 排队网络均值分析（MVA）形式在全部 588 条上拟合更差，中位 2.5%、最大 19.2%，淘汰。单 warp 链加硬 max 在插值检验中中位误差 0.2–0.4%，但最大误差暴露了推广边界：留掉 4 warp 时为 26%，拐点失败；逐个留掉布局时为 62%，留掉写的 stride1 后 SM 下限失去依据；留掉 256 轮时为 40%，固定开销失去依据。所以支持范围只覆盖训练里出现过的 warp 数、轮数和 D 范围，并排除 4 warp 的拐点区间。
 
-**冻结内容，时间 2026-10-12 19:57:29。** [冻结目录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout/freeze/)，清单 `manifest.sha256` 的 SHA256 为 `f117c1d2c356e34091f59b24e0c65916ad24cf7a702997a846751880d1c0aa20`。
+**冻结内容，时间 2026-10-12 19:57:29。** [冻结目录](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout/freeze/)，清单 `manifest.sha256` 的 SHA256 为 `f117c1d2c356e34091f59b24e0c65916ad24cf7a702997a846751880d1c0aa20`。
 
 - **模型：** 需求按上文“同址合并”规则计算；每条指令周期为 `max(D, P1(D)/W, f_SM)`，`P1(D)=max(F, c+s·D)`；参数按（操作、宽度、依赖）分组，用全部 588 个开发条件拟合。
 - **支持规则：** 训练过的组；W 为 1/4/8；2048 轮；D 在该组训练范围内；排除 `W=4` 且 `0.67 ≤ (P1/W)/D ≤ 1.5` 的条件。开发数据上，排除拐点后最大误差 10.31%，出现在 256 轮的短窗口。
@@ -235,7 +235,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 ### 留出结果：未通过（作业 741915）
 
-50 个受支持条件的相对误差中位 4.55%、最大 34.82%，15 个超过 10%，全部为负。4 B 和高冲突布局基本在 10% 以内；8/16 B 的随机与部分共享布局为 −10% 到 −35%。180 个进程全部成功，卡、二进制和冻结清单与冻结时一致。[评分与原始样本](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout/README.md)。
+50 个受支持条件的相对误差中位 4.55%、最大 34.82%，15 个超过 10%，全部为负。4 B 和高冲突布局基本在 10% 以内；8/16 B 的随机与部分共享布局为 −10% 到 −35%。180 个进程全部成功，卡、二进制和冻结清单与冻结时一致。[评分与原始样本](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout/README.md)。
 
 **测后诊断，不改成绩。** 8 warp 时实测周期与一个无参数规则逐位吻合：子组之间只有在所用 bank 两两不相交时才合并成一次服务，否则每个子组按自身冲突计数后相加，整个 warp 同址记 1 次。例如 16 B 随机互异地址实测 10.329 cycle/指令，该规则给 10.328，冻结规则给 6.844。冻结时的“按 bank 累加”低估了随机宽访问的冲突。
 
@@ -245,7 +245,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 ## m11 第二次冻结与留出（2026-10-12，用户批准 1 个作业）
 
-**冻结时间 2026-10-12 23:57:07，早于任何 v2 留出样本。** [冻结目录](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout-v2/freeze/)，清单 `manifest.sha256` 的 SHA256 为 `de37020d415bf2ee382b75dff5565e9956af191fe3f7d712bd7fce262c43970f`。
+**冻结时间 2026-10-12 23:57:07，早于任何 v2 留出样本。** [冻结目录](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout-v2/freeze/)，清单 `manifest.sha256` 的 SHA256 为 `de37020d415bf2ee382b75dff5565e9956af191fe3f7d712bd7fce262c43970f`。
 
 - **需求：** 子组所用 bank 两两不相交时合并为一次服务，否则子组冲突相加；整个 warp 同址记 1 次。这条规则来自 741915 的测后诊断，所以 741915 的 60 个条件转为开发数据，开发集共 648 个条件，其中包含随机布局。
 - **时间：** 形式不变，`max(D, P1(D)/W, f_SM)`；参数在 648 个条件上重新拟合。开发全体中位 0.24%、最大 19.0%；最大值来自 4 warp 拐点。
@@ -257,7 +257,7 @@ job741153 在同一 romeo-a048、同一GPU UUID及原ARM二进制/协议上完�
 
 ### 留出 v2 结果：未通过（作业 742266）
 
-**未通过。** 47 个受支持条件全部计分，相对误差中位 0.44%，满足 5%；最大 11.60%，超过 10%。超标的只有 1 个：8 B、1 warp、独立读、random 布局，D=3.625，预测 242,445 cycle，实测 217,250，预测比实测多 11.60%。其余 46 个在 −5.84% 到 +7.52% 之间。绝对误差中位 2,704 cycle、最大 65,334 cycle，只报告。198 个进程全部成功，每个条件的 3 个进程周期逐位相同，正确性、预热和身份检查全部通过。GPU-009a8880、romeo-a048、二进制、协议和冻结清单 `de37020d…` 均与冻结时一致，测量全部晚于冻结。冻结预测可由冻结代码和参数逐位复算。[评分、原始样本与复核命令](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout-v2/README.md)。
+**未通过。** 47 个受支持条件全部计分，相对误差中位 0.44%，满足 5%；最大 11.60%，超过 10%。超标的只有 1 个：8 B、1 warp、独立读、random 布局，D=3.625，预测 242,445 cycle，实测 217,250，预测比实测多 11.60%。其余 46 个在 −5.84% 到 +7.52% 之间。绝对误差中位 2,704 cycle、最大 65,334 cycle，只报告。198 个进程全部成功，每个条件的 3 个进程周期逐位相同，正确性、预热和身份检查全部通过。GPU-009a8880、romeo-a048、二进制、协议和冻结清单 `de37020d…` 均与冻结时一致，测量全部晚于冻结。冻结预测可由冻结代码和参数逐位复算。[评分、原始样本与复核命令](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout-v2/README.md)。
 
 | 分组 | 超标 / 条件数 | 最大误差 |
 |---|---:|---:|

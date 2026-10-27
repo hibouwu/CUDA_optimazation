@@ -25,7 +25,7 @@
 
 17 组资源实验共有 754 条条件观测，另有 24 条排除记录保留。各实验的结果、图、真实手算和限制统一见[结果总览](../../experiments/gh200_sm90/README.md)，结构化数值与来源见[参数来源索引](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-seventeen-family-index-v1/index.json)。原参数文件中的历史 draft 标签保留，不影响数值使用。
 
-后续[访问与供给规则](../../experiments/gh200_sm90/access_rules/README.md)补充163个默认资源条件及20个组合观测，包含旧坐标重测，不与上述754条直接相加。展开版依赖序列、WGMMA major对照、异步完成与完整输出边界均保留具体条件；固定CUTLASS的[聚合阶段模型](../../../../../results/gh200_resource_campaign/access_rules/20261006-cutlass-wait-matching/published/parameters.json)属于特定实现/输入下的条件预测，未填成通用硬件端口或裸延迟参数。
+后续[访问与供给规则](../../experiments/gh200_sm90/access_rules/README.md)补充163个默认资源条件及20个组合观测，包含旧坐标重测，不与上述754条直接相加。展开版依赖序列、WGMMA major对照、异步完成与完整输出边界均保留具体条件；固定CUTLASS的[聚合阶段模型](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261006-cutlass-wait-matching/published/parameters.json)属于特定实现/输入下的条件预测，未填成通用硬件端口或裸延迟参数。
 
 | 资源 | 代表实验 | 使用时必须保留的条件 |
 |---|---|---|

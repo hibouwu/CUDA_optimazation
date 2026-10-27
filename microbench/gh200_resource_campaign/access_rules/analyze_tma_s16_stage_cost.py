@@ -46,7 +46,7 @@ def windows(code):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--baseline', type=Path, default=ROOT/'results/gh200_resource_campaign/access_rules/20261013-tma-input-events-v2/analysis.json')
+    parser.add_argument('--baseline', type=Path, default=ROOT/'results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-input-events-v2/analysis.json')
     args = parser.parse_args()
     if args.output.exists() and any(args.output.iterdir()):
         parser.error('output directory must be new or empty')

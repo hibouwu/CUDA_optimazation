@@ -58,12 +58,44 @@ def verify_output(path, ktiles, seed):
     return dict(checked_elements=len(actual), sha256=digest(path), max_abs_error=0.)
 
 
+def compute_timeline(input_ready_cycles, *, wait_retain=1, compute_cycles=512.,
+                     commit_lead_cycles=256., completion_lag_cycles=0.,
+                     issue_floor_cycles=0., wait_overhead_cycles=0.,
+                     loop_advance_cycles=0., return_overhead_cycles=0.,
+                     initial_service_end_cycles=0.):
+    """逐组许可的计算链；跨输出传入已有服务进度，首次不等待，末尾排空。"""
+    from supply_model import wgmma_compute_step
+    rows = []
+    available = 0.
+    frontier = initial_service_end_cycles
+    for ready in input_ready_cycles:
+        start = max(ready, available)
+        frontier, commit, complete, returned = wgmma_compute_step(
+            start, frontier, None if not rows else rows[-1]['complete_cycle'],
+            compute_duration=compute_cycles, commit_lead=commit_lead_cycles,
+            completion_lag=completion_lag_cycles, issue_floor=issue_floor_cycles,
+            wait_overhead=wait_overhead_cycles, wait_retain=wait_retain)
+        rows.append(dict(input_ready_cycle=ready, start_cycle=start,
+            service_end_cycle=frontier, commit_cycle=commit, complete_cycle=complete,
+            normal_wait_executed=bool(rows), wait_retain=wait_retain,
+            wait_return_cycle=returned))
+        available = returned + loop_advance_cycles
+    mma_return = returned + return_overhead_cycles
+    return dict(unit='SM clock64 cycle', qualification='调用方显式给价的条件计算服务',
+                timeline=rows, mma_return_cycle=mma_return,
+                tail_wait0_return_cycle=max(mma_return, complete))
+
+
 def resident_hypothesis(ktiles):
-    """复用当前引擎：零供给成本、一个输出、1 GHz数值坐标转成cycle。"""
-    import supply_model
-    result = supply_model.shared_stage_events(ktiles, 6, 1, service_ns=0.,
-        read_latency_ns=0., compute_ns=512., commit_lead_ns=256., output_counts=[1])
-    actor = result["ctas"][0]
+    """输入全部驻留就绪；由独立计算服务导出原有接口。"""
+    result = compute_timeline([0.]*ktiles)
+    rows = result['timeline']
+    actor = dict(starts=[r['start_cycle'] for r in rows],
+        commits=[r['commit_cycle'] for r in rows],
+        completed=[r['complete_cycle'] for r in rows],
+        wait1_return=[r['wait_return_cycle'] for r in rows],
+        released=[r['wait_return_cycle'] for r in rows[1:]]+[result['tail_wait0_return_cycle']],
+        mma_returns=[result['mma_return_cycle']], main_ends=[result['tail_wait0_return_cycle']])
     return dict(qualification="工作假设，未由实际短链辨识", unit="cycle",
                 compute_cycles=512., commit_lead_cycles=256.,
                 cycle_timeline={key: actor[key] for key in
@@ -156,7 +188,7 @@ def validate(folder, row, case, seed):
     trace = row["trace_detail"]
     if case["trace"]:
         require(trace["k_tile_index"] == case["ktiles"]-1, "trace位置不符")
-        names = ("issue_before", "commit_after", "wait1_after", "tail_wait0_after")
+        names = ("issue_before", "commit_after") + (("wait1_after",) if case["ktiles"] > 1 else ()) + ("tail_wait0_after",)
         for unit in ("cycle", "ns"):
             points = [timing[f"begin_{unit}"]] + [trace[n][unit] for n in names] + [timing[f"end_{unit}"]]
             require(all(type(v) is int for v in points) and points == sorted(points),

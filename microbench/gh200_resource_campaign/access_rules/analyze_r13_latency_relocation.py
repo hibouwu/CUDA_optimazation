@@ -14,10 +14,10 @@ def analyze(root,output):
     def read(path):
         inputs[str(path.resolve())]=hashlib.sha256(path.read_bytes()).hexdigest()
         return json.loads(path.read_text())
-    dev=root/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
+    dev=root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
     params=read(dev/'B-source-candidate-examples.json')['examples']['shared']['parameters']
     prior=read(dev/'B-source-join-boundary.json')
-    run=root/'20261010-R13-second-prefill'
+    run=root/'Q02-tma-request/R13-async-retirement/20261010-R13-second-prefill'
     rows=read(run/'cases.json');setups={v['case']:v['setup'] for v in read(run/'static_setup.json')}
     row=next(r for r in rows if r.get('set')!='reference');setup=setups[row['id']]
     program=cfg_b_source_program(row,setup)

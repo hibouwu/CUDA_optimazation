@@ -33,10 +33,10 @@ def analyze(root,output):
         inputs[str(path)]=digest
         return digest
     def read(path):sha(path);return json.loads(path.read_text())
-    dev=root/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
-    prefix=read(root/'20261010-R10-producer-delay/reanalysis/B-20261011-shared-path-prefix-v1/B-shared-path-prefix.json')
-    feedback=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-address-feedback-v3/B-address-feedback.json')
-    original=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
+    dev=root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1'
+    prefix=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-producer-delay/reanalysis/B-20261011-shared-path-prefix-v1/B-shared-path-prefix.json')
+    feedback=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-address-feedback-v3/B-address-feedback.json')
+    original=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
     delay=read(dev/'R10-producer-delay.json');prefill=read(dev/'B-second-prefill.json')
     stage_windows=read(dev/'B-source-join-boundary.json')
     rehashed=set()

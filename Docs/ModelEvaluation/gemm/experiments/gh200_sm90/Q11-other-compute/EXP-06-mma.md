@@ -35,3 +35,7 @@
 ## 数据
 
 [cases.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-mma-formal-v3-b/cases.csv)（55 点）、[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-mma-formal-v3-b/samples.csv)、[固定长度拟合](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-mma-formal-v3-b/fixed_length_fits.json)、[全部图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/legacy-mma-formal-v3-b/index.md)、[SASS 审查](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/legacy_mma/formal-v3-b/build/sass_audit.json)。原始 run：`legacy_mma/formal-v3-b`。
+
+## a044 复测（2026-10-23～26）
+
+550 次调用全部通过原审计。39 个单 CTA 条件的 FLOP/cycle 中位数与旧值逐位相同；15 个全 GPU 条件的 GFLOP/s 变化为 +0.000016%～+2.09772%；空窗口 687 cycle 不变。见[mma.sync 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-mma-report.md)。

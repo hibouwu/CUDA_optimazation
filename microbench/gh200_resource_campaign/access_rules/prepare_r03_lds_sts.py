@@ -11,8 +11,8 @@ from r03_lds_sts_model import demand, validate_map
 
 BASE = Path('/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign')
 OLD_EXP = BASE/'20261001-resource-suite-v2/implementation/s09-main-execution/device-revalidation-v2/repo/microbench/gh200_resource_campaign'
-OLD_R03 = BASE/'access_rules/20261006-c-job735059/r03-formal-v1/source'
-CUTLASS = BASE/'access_rules/20261009-V09-freeze-job738972-r2/source/cutlass'
+OLD_R03 = BASE/'access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r03-formal-v1/source'
+CUTLASS = BASE/'access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/source/cutlass'
 
 
 def write(path, value):

@@ -50,3 +50,7 @@
 [results.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/results.csv)、[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/samples.csv)、[整卡图](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/all_gpu.png)。脚本：[families/s16](../../../../../../microbench/gh200_resource_campaign/families/s16/README.md)。
 
 发布资格由 [最终状态](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-main-execution/published-v1/publication-final-state.json)绑定独立审查：32个限定条件下的运输服务、4个容量排除。CSV保留原报告字节和`qualified=false`字段，数值资格须连同发布封套读取；原`actual-report-v2`与失败作业终态保留。物理HBM流量与硬件队列深度未获辨识。
+
+## a044 复测（2026-10-23～26）
+
+a044（GPU-7473147b，管理员设置 1980 MHz）尚未复测本家族：它属于后 6 个资源家族，需要先解决节点输出空间与回传带宽问题。剩余排期见[重测说明](../Q10-time-mapping/A044-REMEASUREMENT.md)。

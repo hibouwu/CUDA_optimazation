@@ -10,7 +10,7 @@
 - 27个当前卡校准形状各10组plain/trace，其中24个满足计时检查要求并用于拟合。`cfg_a_c3_shortk`、`cfg_b_c8_tail`、`cfg_c_c3_shortk`的扰动7.83%、5.36%、5.82%，原记录保留，退出拟合。
 - 新留出480进程全部数值正确，1,966,080个抽样输出值独立重算；每进程4096位置含边界尾块。24个plain及trace均通过本组的稳定性与5%扰动标准，没有丢弃有效慢样本。
 
-[冻结预测](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/v07-predictions.json)、[测量前校准绑定](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/calibration_binding.json)、[采样入口绑定](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/prediction_binding.json)、[历史查重](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/novelty.json)。1097个校准/身份文件哈希再次核验；冻结和校准绑定均早于首个目标进程。
+[冻结预测](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/v07-predictions.json)、[测量前校准绑定](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/calibration_binding.json)、[采样入口绑定](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/prediction_binding.json)、[历史查重](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/novelty.json)。1097个校准/身份文件哈希再次核验；冻结和校准绑定均早于首个目标进程。
 
 ## 模型实际使用了什么
 
@@ -87,7 +87,7 @@ T = F + C_max/(1000*f_GHz)
 
 最大误差例`cfg_b_near_short`为1536×1536×768：`(16.2628−14.9600)/14.9600≈8.71%`。有效工作`2×1536×1536×768=3,623,878,656 FLOP`；实测速率约242.24 TFLOP/s。该形状只略超过一波，不能用整卡长GEMM峰值替代其完整服务。
 
-![完整误差与独立分项误差](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/validation-v2/v07-errors.png)
+![完整误差与独立分项误差](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/reanalysis/validation-v2/v07-errors.png)
 
 左图使用冻结点预测与进程中位实测，虚线为±10%单例门槛、点线为±5%参考线；中位误差门槛仍对全部绝对误差计算，不能逐点套5%。右图为分项绝对误差的中位/最大值，不是样本误差条。每个条件的CV和trace扰动在机器记录中。
 
@@ -112,7 +112,7 @@ T = F + C_max/(1000*f_GHz)
 
 ## 事后诊断：总时间为何接近（离线，不改判定）
 
-只用 V07 已有进程与 R18 归档，无新测量。[脚本](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_v07_posthoc.py)，[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/posthoc-v1/posthoc.json)。
+只用 V07 已有进程与 R18 归档，无新测量。[脚本](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_v07_posthoc.py)，[结果](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/reanalysis/posthoc-v1/posthoc.json)。
 
 **1. 共同偏长主要来自打点开销。** 模型的 F、C、f 全部取自打点（stamped）进程，评分却对 plain 进程。打点进程比 plain 慢，中位 1.6%、最大 4.8%，约 1 µs。在打点进程内，事件时间减去 CTA 窗口为 cfg_a 4.3–4.8、cfg_b 3.8–4.1、cfg_c 4.7 µs，与冻结 F（4.68/4.06/4.66）一致，F 本身没有错。
 
@@ -148,13 +148,13 @@ T = F + C_max/(1000*f_GHz)
 
 ### 只用 V07 校准数据的修正候选
 
-[`v07_candidate.py`](../../../../../../microbench/gh200_resource_campaign/access_rules/v07_candidate.py) 复用 V07 校准进程，按校准留一选择两处改动（[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/v08-candidate-v1/candidate.json)）：主循环斜率加入首 tile 联合拟合只被 cfg_b 采用；时间换算对 plain 校准时 cfg_a 保持原方式，cfg_b 用 F=3.10 µs，cfg_c 用 4.26+0.992·W µs。在 V07 留出点上事后检查为 2.29% / 7.63%、18/24 偏长，cfg_a 不变。现有校准数据能支持的改动有限，后续改为扩大校准后重测，见 [V08](V08-wider-validation.md)。
+[`v07_candidate.py`](../../../../../../microbench/gh200_resource_campaign/access_rules/v07_candidate.py) 复用 V07 校准进程，按校准留一选择两处改动（[结果](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/reanalysis/v08-candidate-v1/candidate.json)）：主循环斜率加入首 tile 联合拟合只被 cfg_b 采用；时间换算对 plain 校准时 cfg_a 保持原方式，cfg_b 用 F=3.10 µs，cfg_c 用 4.26+0.992·W µs。在 V07 留出点上事后检查为 2.29% / 7.63%、18/24 偏长，cfg_a 不变。现有校准数据能支持的改动有限，后续改为扩大校准后重测，见 [V08](V08-wider-validation.md)。
 
 ## 适用范围与复现
 
 本卡所列24个留出条件的完整时间达到目标；主循环累计窗口、最大CTA周期量，以及所列17个大交接窗口也通过各自误差检查。初始供给与末次输出未通过，关键CTA定位仍有偏差；任意边界/形状/卡的迁移，以及物理RF或缓存机制识别尚未验证。
 
-未根据V07重新拟合或更换留出点。后续若修供给、边界输出或关键CTA定位，必须冻结新模型并使用新留出；本次24点的判定保持不变。[完整验证数据](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/validation-v2/validation.json)、[分项判定](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/validation-v2/qualification.json)、[归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/)。v1与v2的全部原有误差完全一致，v2只补充CTA定位诊断，原v1未覆盖。
+未根据V07重新拟合或更换留出点。后续若修供给、边界输出或关键CTA定位，必须冻结新模型并使用新留出；本次24点的判定保持不变。[完整验证数据](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/reanalysis/validation-v2/validation.json)、[分项判定](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/reanalysis/validation-v2/qualification.json)、[归档](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V07-job737122-v1/)。v1与v2的全部原有误差完全一致，v2只补充CTA定位诊断，原v1未覆盖。
 
 ```bash
 # 离线评分：只读冻结预测与原始样本，不运行GPU或重新拟合。

@@ -24,13 +24,13 @@ def load_profile(repo):
     """读取现用服务及运行前频率版本；不读取待预测条件的观测。"""
     base = Path(repo)/'results/gh200_resource_campaign/access_rules'
     paths = dict(
-        reference=base/'20261015-tma-gemm-source-development-001/gemm-phase-state-001/replay.json',
-        state=base/'20261015-tma-gemm-source-development-001/domain-layout/replay.json',
-        group=base/'20261015-tma-source-sharing-development-001/predictions.json',
-        clock_reference=base/'20261015-tma-clock-scaling-heldout-001/plan.json',
-        frequency=base/'20261015-cfg-b-time-heldout-002/frequency_model.json',
-        phase_frequency=base/'20261015-phase-frequency-development-001/fit-001/model.json',
-        calibration=base/'20261009-V09-heldout-job739011/frozen/calibration.json')
+        reference=base/'Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-development-001/gemm-phase-state-001/replay.json',
+        state=base/'Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-development-001/domain-layout/replay.json',
+        group=base/'Q02-tma-request/gemm-source-candidates/20261015-tma-source-sharing-development-001/predictions.json',
+        clock_reference=base/'Q09-frequency/frequency-mechanism/20261015-tma-clock-scaling-heldout-001/plan.json',
+        frequency=base/'Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002/frequency_model.json',
+        phase_frequency=base/'Q09-frequency/frequency-mechanism/20261015-phase-frequency-development-001/fit-001/model.json',
+        calibration=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/frozen/calibration.json')
     contents = {key:read(path) for key,path in paths.items()}
     return dict(other_parameters=contents['reference']['other_parameters'],
         state_prices=contents['state']['prices'],group_prices=contents['group']['prices_ns'],
@@ -58,7 +58,17 @@ def prepare(item, profile):
     state = dict(profile['state_prices'])
     state['hit_ns'] *= ratio
     state['home_ns'] += state['hit_ns']-profile['state_prices']['hit_ns']
-    source = ProgramGemmSource(program,item['cta_groups'],prices,**state,trace_stores=False,
+    source_type, source_parameters = ProgramGemmSource, {}
+    if 'input_network' in profile:
+        from cfg_b_input_network import CfgBInputNetwork, AddressRoutedInputNetwork, ReadSharedInputNetwork, JointLocalInputNetwork, PortOrderedInputNetwork, FormationFirstInputNetwork
+        source_type = {'address_banks': AddressRoutedInputNetwork,
+                       'address_banks_inflight_merge': ReadSharedInputNetwork,
+                       'address_banks_local_joint': JointLocalInputNetwork,
+                       'address_banks_port_lookup': PortOrderedInputNetwork,
+                       'address_banks_formation_first': FormationFirstInputNetwork}.get(
+                           profile['input_network'].get('routing'), CfgBInputNetwork)
+        source_parameters = dict(network=profile['input_network'], phase_frequency_ghz=phases)
+    source = source_type(program,item['cta_groups'],prices,**state,**source_parameters,trace_stores=False,
         addresses=item['addresses'],b_base_bytes=item['addresses']['B'],
         output_base=item['addresses']['D'],record_diagnostics=False)
     for name in ('A','B','D'):
@@ -67,6 +77,25 @@ def prepare(item, profile):
         compute_phases_ns=[dict(compute_ns=512/f,commit_lead_ns=256/f) for f in phases],
         reuse_delay_ns=220/call_frequency,compute_ns=512/call_frequency,
         commit_lead_ns=256/call_frequency,destination_service_ns=prices[2])
+    if 'compute_completion_lag_cycles' in profile:
+        lag = profile['compute_completion_lag_cycles']
+        parameters['completion_lag_ns'] = lag/call_frequency
+        for costs,f in zip(parameters['compute_phases_ns'],phases):
+            costs['completion_lag_ns'] = lag/f
+    if 'local_chain_transfer_cycles' in profile:
+        local = profile['local_chain_transfer_cycles']
+        parameters.update(compute_ns=local['compute_cycles']/call_frequency,
+            commit_lead_ns=local['commit_lead_cycles']/call_frequency,
+            completion_lag_ns=local['completion_lag_cycles']/call_frequency,
+            reuse_delay_ns=local['reuse_delay_cycles']/call_frequency,
+            input_release_delay_ns=local['release_visibility_cycles']/call_frequency,
+            loop_advance_ns=local['consumer_advance_cycles']/call_frequency)
+        for costs,f in zip(parameters['compute_phases_ns'],phases):
+            costs.update(compute_ns=local['compute_cycles']/f,
+                commit_lead_ns=local['commit_lead_cycles']/f,
+                completion_lag_ns=local['completion_lag_cycles']/f,
+                input_release_delay_ns=local['release_visibility_cycles']/f,
+                loop_advance_ns=local['consumer_advance_cycles']/f)
     clocks = dict(frequency_ghz=call_frequency,phase_frequency_ghz=phases,frequency_mode=mode)
     return program,source,parameters,clocks
 
@@ -92,29 +121,46 @@ def summarize_observations(report):
     return phases
 
 
-def predict(item, profile, protocol, *, detailed_ctas=(0,), report_demands=True):
+def predict(item, profile, protocol, *, detailed_ctas=(0,), report_demands=True, critical_path=False):
     program,source,parameters,clocks = prepare(item,profile)
     prefix = profile['producer_prefix_ns']
     counts = list(map(len,program['work']))
+    warm_program = program
+    if any(key in item['setup'] for key in ('fold_a_source', 'store_target_ctas', 'private_source')):
+        warm_setup = dict(item['setup'],
+            fold_a_source=item['setup'].get('warmup_fold_a_source', 0),
+            private_source=item['setup'].get('warmup_private_source', item['setup'].get('private_source', 0)),
+            store_target_ctas=item['setup'].get('warmup_store_ctas', len(counts)))
+        warm_program = cfg_b_program.build_program(item['case'], warm_setup)
     base,history = 100000.,[]
     for launch in range(protocol['calls']):
+        active_program = program if launch == protocol['calls']-1 else warm_program
+        if warm_program is not program:
+            source.use_program(active_program)
+        active_stages, execution_parameters = request.execution_inputs(active_program, parameters)
         source.begin(0,base)
+        callbacks = (source.callbacks() if 'input_network' in profile else
+                     dict(input_source_service=source.input, output_source_observer=source.output))
         if launch == protocol['calls']-1:
             report = request.simulate(program,parameters,producer_prefix_ns=prefix,
-                input_source_service=source.input,output_source_observer=source.output,
-                input_sync_service=ConditionSyncService(program['stages'],0.,0.),
+                **callbacks,
+                input_sync_service=ConditionSyncService(active_stages,0.,0.),
                 register_quota=report_demands,ordinary_lsu=report_demands,sm_activity=report_demands,
-                detailed_ctas=detailed_ctas)
+                detailed_ctas=detailed_ctas,critical_path=critical_path)
             internal_window = report['internal_window_ns']
         else:
-            result = supply.shared_stage_events(program['ktiles'],program['stages'],len(counts),
-                output_counts=counts,input_source_service=source.input,
-                output_source_observer=source.output,**parameters)
+            result = supply.shared_stage_events(active_program['ktiles'],active_stages,len(counts),
+                output_counts=counts,**callbacks,**execution_parameters)
             internal_window = result['makespan_ns']
         history.append(dict(launch=launch,entry_base_ns=base+launch*prefix,
             service_origin_ns=base+(launch+1)*prefix,internal_window_ns=internal_window,
             window_ns=internal_window+prefix,
             phases=summarize(result,program['ktiles']) if launch<protocol['calls']-1 else summarize_observations(report)))
+        if warm_program is not program:
+            history[-1]['output_tma_count'] = (report['accounting'].get('output_tma_count',
+                report['accounting']['request_count']-report['accounting']['input_source_count'])
+                if launch == protocol['calls']-1 else result['request_count']-result['input_source_count'])
+            history[-1]['output_bytes'] = source.output_bytes
         base += internal_window+protocol['inter_call_gap_ns']
     projection = aggregate.V09Observation(profile['calibration']).project(
         dict(window_us=report['consumer_span_ns']/1000))
@@ -129,6 +175,19 @@ def predict(item, profile, protocol, *, detailed_ctas=(0,), report_demands=True)
     report['modules'].update(frequency=dict(qualification='经验替代',**clocks),
         observation=dict(version=aggregate.V09Observation.version,qualification='经验替代'),
         zero_cost_sync='phase/计数检查；返回价格沿原零额外成本假设')
+    if 'input_network' in profile:
+        report['source_state']['request_reply_network'] = source.network_state()
+        report['modules']['input'] = ('假设：cache数据就绪→在途同址共享分区读取→GPC独立应答→逐CTA投递'
+            if profile['input_network'].get('routing') == 'address_banks_inflight_merge' else
+            '假设：cache数据就绪→地址分区读取→GPC共享PS2应答→逐CTA投递'
+            if profile['input_network'].get('routing') == 'address_banks' else
+            '假设：cache数据就绪→GPC共享PS2应答→逐CTA投递；两输入工作价格共同估计')
+        if profile['input_network'].get('routing') == 'address_banks_local_joint':
+            report['modules']['input'] = '假设：共享读取／应答后，目的投递与WGMMA操作数共同使用本地服务'
+        elif profile['input_network'].get('routing') == 'address_banks_port_lookup':
+            report['modules']['input'] = '假设：读取分区受理→cache查询／数据返回→GPC独立应答→逐CTA投递'
+        elif profile['input_network'].get('routing') == 'address_banks_formation_first':
+            report['modules']['input'] = '假设：每GPC共享请求形成→cache查询／数据返回→共享分区读取→逐CTA投递'
     return report
 
 
@@ -147,7 +206,7 @@ def main():
         if args.repo is None:
             parser.error('--case需要--repo')
         repo = args.repo.resolve()
-        plan = read(repo/'results/gh200_resource_campaign/access_rules/20261015-cfg-b-full-matrix-001/plan.json')
+        plan = read(repo/'results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-full-matrix-001/plan.json')
         item = next(row for row in plan['rows'] if row['case']['id']==args.case)
         inputs = {key:item[key] for key in ('case','setup','allocation_bytes','addresses','cta_groups','placement')}
         profile = load_profile(repo)

@@ -1,16 +1,16 @@
 # SMEM-01：完整需求与旧证据回放
 
-更新：2026-10-17。阶段6离线交付，未新增GPU采样或拟合。有限登记见[PLAN](../../../PLAN.md#stage-6-smem)，程序需求和写块假设见[SMEM服务](../../../model/mechanism/hardware_rules/SMEM-SERVICE.md)。
+更新：2026-10-17。阶段6离线交付，未新增GPU采样或拟合。有限登记见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，程序需求和写块假设见[SMEM服务](../../../model/mechanism/hardware_rules/SMEM-SERVICE.md)。
 
 ## 1. 固定证据与原结论
 
 | 证据族 | 固定读取范围 | 本轮复核与保留结果 |
 |---|---|---|
-| [m11 v1](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout/) | 60条件、180进程，50支持／10诊断 | 冻结需求、预测与支持标签逐float相等；原中位4.5524%、最大34.8208%，未通过 |
-| [m11 v2](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-holdout-v2/) | 66条件、198进程，47支持／19诊断 | 同样严格复现；原中位0.4400%、最大11.5972%，唯一超标仍为随机8 B／1 warp独立读 |
-| [lane对照](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/) | 48条件、144进程，14排列对、20桥接 | 全word集合、多重度和字节不变的排列反例保持，12/14对不相容；16 B主对照4194515／16777430 cycle，接近4倍 |
-| [R03](../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r03-formal-v1/) | 18条件、72记录（18 pilot、54正式） | 独立重算124800个uint32；原rules与CSV数值相等，普通LDS/STS和矩阵访存各自保留 |
-| [R12 v3](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/) | 24正式条件、18阶段／空控制，共174记录 | 独立检查14966784个值；42 kernel与六组阶段对照复现，保留TMA／WGMMA近重叠及与STS的条件干扰 |
+| [m11 v1](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout/) | 60条件、180进程，50支持／10诊断 | 冻结需求、预测与支持标签逐float相等；原中位4.5524%、最大34.8208%，未通过 |
+| [m11 v2](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-holdout-v2/) | 66条件、198进程，47支持／19诊断 | 同样严格复现；原中位0.4400%、最大11.5972%，唯一超标仍为随机8 B／1 warp独立读 |
+| [lane对照](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/) | 48条件、144进程，14排列对、20桥接 | 全word集合、多重度和字节不变的排列反例保持，12/14对不相容；16 B主对照4194515／16777430 cycle，接近4倍 |
+| [R03](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r03-formal-v1/) | 18条件、72记录（18 pilot、54正式） | 独立重算124800个uint32；原rules与CSV数值相等，普通LDS/STS和矩阵访存各自保留 |
+| [R12 v3](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3/) | 24正式条件、18阶段／空控制，共174记录 | 独立检查14966784个值；42 kernel与六组阶段对照复现，保留TMA／WGMMA近重叠及与STS的条件干扰 |
 
 合计768份旧进程／记录。留出评分按原支持标签和门槛重算，不执行旧评分脚本的写入主入口；已看过的留出保留为开发证据。两份留出的真实CUTLASS iterator实测条件数均为0，当前cfg_b地址核对另以静态证据登记。
 
@@ -26,7 +26,7 @@ CPU CuTe查询与SASS地址链逐项比较128线程×两个源槽×16个word，�
 
 ## 3. 复现与剩余观测
 
-[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-SMEM-01-replay-001/README.md)保存源码、CuTe查询与构建证据、完整地址、服务例子和旧证据回放。在仓库根目录执行，输出目录须尚不存在：
+[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/SMEM-01-replay/20261017-SMEM-01-replay-001/README.md)保存源码、CuTe查询与构建证据、完整地址、服务例子和旧证据回放。在仓库根目录执行，输出目录须尚不存在：
 
 ```bash
 python -B microbench/gh200_resource_campaign/access_rules/replay_smem_evidence.py \
@@ -38,3 +38,5 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
 ```
 
 剩余实机证据为该实际STS.64短块的条件周期、准备／写入／源读取端点，以及与计算和TMA共同执行的迁移。旧m11标量失败不恢复搜索；本轮未新增通用bank批次价格或独立C2/C3成绩。
+
+后续[真实输入／输出四组织](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261018-Q07-input-output-001/EXECUTION.md)已完成12进程／983424元素核对。并发比串行少918–955 cycle，比两条单独窗口的较大值多730–742 cycle。目标SASS显示fragment生成仍在起戳后，得到包含共有准备、两阶段join及实际Epilogue的开发联合窗口；机制信息不足，原输出价格保留，本轮收口。

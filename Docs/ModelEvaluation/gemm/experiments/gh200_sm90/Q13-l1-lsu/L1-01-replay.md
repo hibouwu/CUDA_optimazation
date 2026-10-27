@@ -1,6 +1,6 @@
 # L1-01：普通LSU证据与局部缓存探针
 
-更新：2026-10-17。阶段8；有限登记见[PLAN](../../../PLAN.md#stage-8-l1-lsu)，服务与接入见[L1／LSU服务](../../../model/mechanism/hardware_rules/L1-LSU-SERVICE.md)。旧回放及CPU准备轮GPU作业与拟合为0；原开发清单的目标实测及独立评分已完成，8留出未启。
+更新：2026-10-17。阶段8；有限登记见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，服务与接入见[L1／LSU服务](../../../model/mechanism/hardware_rules/L1-LSU-SERVICE.md)。旧回放及CPU准备轮GPU作业与拟合为0；原开发清单的目标实测及独立评分已完成，8留出未启。
 
 ## 1. 固定证据与程序
 
@@ -10,7 +10,7 @@
 | [EXP-13](../Q03-source-service/EXP-13-global-rw.md) read.ca／read.cg | small／large四条件／40进程 | 同体cache对照、工作量、原始记录及完整窗口；写路径沿用[HBM-01](../Q03-source-service/HBM-01-replay.md) |
 | [EXP-18](../Q08-register-residency/EXP-18-occupancy-aux.md) local／spill | 32／128 word四条件／40进程 | 实际LDL／STL及资源、原校验资格、完整cycle/loop窗口 |
 
-实际cfg_b的普通访存需求与条件见[程序图 §2](../../../model/mechanism/program/cutlass_program_graph.md#2-对象操作与依赖)，构建核对、旧记录回放及源码保存在[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L1-01-replay-001/README.md)。上述117份旧记录保持原条件与资格。
+实际cfg_b的普通访存需求与条件见[程序图 §2](../../../model/mechanism/program/cutlass_program_graph.md#2-对象操作与依赖)，构建核对、旧记录回放及源码保存在[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-L1-01-replay-001/README.md)。上述117份旧记录保持原条件与资格。
 
 回放后，R01逐值校核4640个输出；EXP-13读取对照各184条SASS，只有PC0x410的cache语义与一个编码位不同。local／spill主指标与伴随指标精确相等，两处暖机CV的1 ULP差异逐项匹配原C封存诊断，原阈值资格保持。正式local／spill raw未保存输出数组，当前承接原host检查资格。保存源码的30项CPU检查通过，六图启用需求报告后原完整结果保持。
 
@@ -30,9 +30,9 @@
 
 本地CUDA13.0静态编译采用GCC16兼容头，J1／J4分别为22／32 reg/thread，均512 B SMEM、无stack／spill。.ca／.cg指令体只差缓存修饰；J4正式循环四条16 B加载均先于第一次消费。编译收据、SASS、兼容头及可重建审查脚本保存在交付包；目标CUDA12.9已核对同一条件，四特化静态审查通过，资源同为J1／J4的22／32 reg/thread、512 B SMEM、无spill。
 
-[开发摘要](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L1-01-execution-001/dev/summary.json)的36进程全部合格，与A同GPU UUID；[回传验证](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L1-01-execution-001/transport-verified.json)核对228文件／1703550 B全SHA一致。[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L1-01-score-001/score.json)重算全部收据、目标静态审查及16项响应，与原摘要精确相同；逐节点与payload枚举27648个checksum，与每进程768个检查全部一致，未调用原闭式参考。
+[开发摘要](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-L1-01-execution-001/dev/summary.json)的36进程全部合格，与A同GPU UUID；[回传验证](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-L1-01-execution-001/transport-verified.json)核对228文件／1703550 B全SHA一致。[独立评分](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-L1-01-score-001/score.json)重算全部收据、目标静态审查及16项响应，与原摘要精确相同；逐节点与payload枚举27648个checksum，与每进程768个检查全部一致，未调用原闭式参考。
 
-下表为clock64内窗的三进程中位数及[min,max]，单位cycle；最后一列按`.ca/.cg−1`计算。跨工作集比较另按`cycle/(256W)`归一化，globaltimer与完整event保留在[原响应](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L1-01-execution-001/dev/response-screen.json)。
+下表为clock64内窗的三进程中位数及[min,max]，单位cycle；最后一列按`.ca/.cg−1`计算。跨工作集比较另按`cycle/(256W)`归一化，globaltimer与完整event保留在[原响应](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-L1-01-execution-001/dev/response-screen.json)。
 
 | W KiB | 请求carveout | J | .ca中位数[min,max] | .cg中位数[min,max] | .ca相对.cg |
 |---:|---:|---:|---:|---:|---:|
@@ -58,4 +58,16 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
   python -B -m unittest test_cfg_b_lsu_program test_l1_lsu_probe -v
 ```
 
-采样入口与本地静态编译证据见[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L1-01-replay-001/README.md)。本阶段不扩大到原子、地址翻译或多SM放置。
+采样入口与本地静态编译证据见[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-L1-01-replay-001/README.md)。本阶段不扩大到原子、地址翻译或多SM放置。
+
+原8留出的两种条件服务预测已[冻结](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-Q13-l1-minimal-001/README.md)，本轮按原条件验证；参数、资格与数值判据保存在该包，原开发筛查结论保持。
+
+## 4. 原8条件独立留出
+
+[冻结001](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-Q13-l1-minimal-001/README.md)以原12开发中位数确定共用固定项及快／慢group服务，预测128 KiB下两种复用响应。751892因旧binary未置可执行位在probe前停止；[002执行与判定](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-Q13-l1-minimal-002/EXECUTION.md)只恢复权限，冻结输入SHA保持，751897完成原8条件×3进程。
+
+24进程原资格全部通过。快复用候选的8个clock64时间绝对误差中位1.524266%、最大3.051481%，12个预列响应误差最大0.749949个百分点，均通过冻结的5%／5个百分点标准；慢服务候选在hint0的.ca两条件失败。结论为声明条件下快复用主张通过，实际分区容量未辨识。本方向收口，规则及适用域统一在[L1服务](../../../model/mechanism/hardware_rules/L1-LSU-SERVICE.md)维护。
+
+## a044 复测（2026-10-23～26）
+
+开发 36 次、留出 24 次调用全部通过原 checksum、计时与资源检查。冻结的 `reuse_at_128` 仍唯一通过，8/8 时间、12/12 响应，最大时间误差从旧卡 3.0515% 变为 1.9435%；`overflow_at_128` 只通过 6/8 和 7/12。见[内存服务阶段报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-storage-stage-report.md)。

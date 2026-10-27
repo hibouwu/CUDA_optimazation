@@ -6,6 +6,7 @@ import unittest
 import cfg_b_composition as aggregate
 import cfg_b_program
 import cfg_b_request_model as model
+from test_cfg_b_request_model import without_full_query_graph, without_full_query_report
 
 
 class RegisterProgramTests(unittest.TestCase):
@@ -38,7 +39,7 @@ class RegisterProgramTests(unittest.TestCase):
         self.assertTrue(set(registers)<=set(graph['nodes']['program_end']))
 
     def test_six_programs_preserve_prior_default_and_all_original_endpoints(self):
-        previous=aggregate.DEFAULT_ARCHIVE.parents[0]/'20261017-SMEM-01-replay-001/source'
+        previous=aggregate.DEFAULT_ARCHIVE.parents[2]/'Q07-smem/SMEM-01-replay/20261017-SMEM-01-replay-001/source'
         spec=importlib.util.spec_from_file_location('smem_stage_request_model',previous/'cfg_b_request_model.py')
         prior=importlib.util.module_from_spec(spec)
         spec.loader.exec_module(prior)
@@ -52,9 +53,11 @@ class RegisterProgramTests(unittest.TestCase):
             for stages in (4,6):
                 with self.subTest(ktiles=ktiles,stages=stages):
                     program=self.program(ktiles,stages)
-                    self.assertEqual(cfg_b_program.expand_cta(program,0),prior_program.expand_cta(program,0))
+                    self.assertEqual(without_full_query_graph(cfg_b_program.expand_cta(program,0)),
+                                     prior_program.expand_cta(program,0))
                     baseline=model.simulate(program,parameters,producer_prefix_ns=50.,detailed_ctas=range(4))
-                    self.assertEqual(baseline,prior.simulate(program,parameters,producer_prefix_ns=50.,detailed_ctas=range(4)))
+                    self.assertEqual(without_full_query_report(baseline), without_full_query_report(
+                        prior.simulate(program,parameters,producer_prefix_ns=50.,detailed_ctas=range(4))))
                     expanded=model.simulate(program,parameters,producer_prefix_ns=50.,
                                             detailed_ctas=range(4),register_quota=True)
                     for key in ('ctas','accounting','consumer_span_ns','program_end_ns','critical_candidates'):

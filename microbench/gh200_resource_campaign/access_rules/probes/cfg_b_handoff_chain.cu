@@ -11,6 +11,10 @@
 #include <sstream>
 #include <utility>
 
+#ifndef GH200_NORMAL_WAIT
+#define GH200_NORMAL_WAIT 1
+#endif
+
 namespace G = cute::SM90::GMMA;
 using U64 = uint64_t;
 using U32 = uint32_t;
@@ -20,6 +24,16 @@ constexpr int OperandElements = Slots * 128 * 64;
 constexpr int SmemBytes = 2 * OperandElements * sizeof(__half);
 constexpr int OutputElements = ConsumerThreads * 2 * FragmentRegisters;
 using Mma = G::MMA_64x128x16_F32F16F16_SS<G::Major::K, G::Major::MN>;
+
+struct RingIndex {
+  int slot, generation;
+  __host__ __device__ void advance(int stages) {
+    if (++slot == stages) {
+      slot = 0;
+      ++generation;
+    }
+  }
+};
 
 struct ClockPair { U64 cycle = 0, ns = 0; };
 struct ProducerTrace {
@@ -106,9 +120,13 @@ __device__ __forceinline__ void issue_tile(TensorA a, TensorB b, int slot, bool 
     }
   }
 }
-template <bool Trace>
+template <bool Trace, bool IncrementalIndex, bool ConsumerOnlyIndex>
 __global__ __launch_bounds__(Threads, 1) void handoff_chain(int ktiles, int stages,
-    U64 delay_cycles, U32 seed, Record* records, TileTrace* exported_trace, float* output) {
+    U64 delay_cycles, U32 seed,
+#ifdef GH200_CONSUMER_ENTRY_DELAY
+    U64 consumer_entry_delay_cycles,
+#endif
+    Record* records, TileTrace* exported_trace, float* output) {
   using namespace cute;
   auto la = tile_to_shape(G::Layout_K_SW128_Atom<__half>{},
       Shape<_128, _64, Int<Slots>>{}, Step<_1, _2, _3>{});
@@ -172,8 +190,11 @@ __global__ __launch_bounds__(Threads, 1) void handoff_chain(int ktiles, int stag
   }
   __syncthreads(); // only the start and final rendezvous involve the whole CTA
   if (threadIdx.x == ConsumerThreads) {
+    RingIndex index{0, 1};
     for (int tile = stages; tile < ktiles; ++tile) {
-      int slot = tile % stages, gen = tile / stages;
+      int slot, gen;
+      if constexpr (IncrementalIndex) { slot = index.slot; gen = index.generation; }
+      else { slot = tile % stages; gen = tile / stages; }
       ProducerTrace stamp;
       if constexpr (Trace) stamp.acquire_before = clocks();
       Barrier::wait(empty + slot, (gen + 1) & 1);
@@ -194,10 +215,24 @@ __global__ __launch_bounds__(Threads, 1) void handoff_chain(int ktiles, int stag
         stamp.full_after = clocks();
         trace[tile].producer = stamp;
       }
+      if constexpr (IncrementalIndex) index.advance(stages);
     }
   } else if (threadIdx.x < ConsumerThreads) {
+#ifdef GH200_CONSUMER_ENTRY_DELAY
+    if (consumer_entry_delay_cycles) {
+      U64 start = 0, now = 0;
+      asm volatile("mov.u64 %0, %%clock64;" : "=l"(start) :: "memory");
+      do {
+        asm volatile("mov.u64 %0, %%clock64;" : "=l"(now) :: "memory");
+      } while (now - start < consumer_entry_delay_cycles);
+    }
+#endif
+    RingIndex index{0, 0};
+    int previous_slot = 0;
     for (int tile = 0; tile < ktiles; ++tile) {
-      int slot = tile % stages, gen = tile / stages;
+      int slot, gen;
+      if constexpr (IncrementalIndex || ConsumerOnlyIndex) { slot = index.slot; gen = index.generation; }
+      else { slot = tile % stages; gen = tile / stages; }
       ConsumerTrace stamp;
       if constexpr (Trace) if (threadIdx.x == 0) stamp.wait_before = clocks();
       bool first_try_success = Barrier::try_wait(full + slot, gen & 1);
@@ -225,14 +260,15 @@ __global__ __launch_bounds__(Threads, 1) void handoff_chain(int ktiles, int stag
       asm volatile("wgmma.commit_group.sync.aligned;" ::: "memory");
       if constexpr (Trace) if (threadIdx.x == 0) stamp.commit_after = clocks();
       if (tile != 0) {
-        asm volatile("wgmma.wait_group.sync.aligned 1;" ::: "memory");
+        asm volatile("wgmma.wait_group.sync.aligned %0;" :: "n"(GH200_NORMAL_WAIT) : "memory");
         ReleaseInterval release;
         if constexpr (Trace) {
           if (threadIdx.x == 0) stamp.wait1_after = clocks();
           release.before = clocks();
         }
         // wait1 after committing tile proves the previous tile's operands consumed.
-        Barrier::arrive(empty + (tile - 1) % stages, 0, 1);
+        if constexpr (IncrementalIndex || ConsumerOnlyIndex) Barrier::arrive(empty + previous_slot, 0, 1);
+        else Barrier::arrive(empty + (tile - 1) % stages, 0, 1);
         if constexpr (Trace) {
           release.after = clocks();
           if (threadIdx.x == 0) {
@@ -256,6 +292,10 @@ __global__ __launch_bounds__(Threads, 1) void handoff_chain(int ktiles, int stag
         destination.release_after = stamp.release_after;
         destination.first_try_success = stamp.first_try_success;
       }
+      if constexpr (IncrementalIndex || ConsumerOnlyIndex) {
+        previous_slot = slot;
+        index.advance(stages);
+      }
     }
     asm volatile("wgmma.wait_group.sync.aligned 0;" ::: "memory");
     ReleaseInterval tail_release;
@@ -263,7 +303,9 @@ __global__ __launch_bounds__(Threads, 1) void handoff_chain(int ktiles, int stag
       if (threadIdx.x == 0) record.tail_wait0_after = clocks();
       tail_release.before = clocks();
     }
-    Barrier::arrive(empty + (ktiles - 1) % stages, 0, 1);
+    // consumer-only retains the original tail modulo to isolate loop control.
+    if constexpr (IncrementalIndex) Barrier::arrive(empty + previous_slot, 0, 1);
+    else Barrier::arrive(empty + (ktiles - 1) % stages, 0, 1);
     if constexpr (Trace) {
       tail_release.after = clocks();
       if (threadIdx.x == 0) {
@@ -351,17 +393,30 @@ U64 integer(const std::string& value, U64 maximum) {
 struct ChainOptions {
   int stages = 6, ktiles = 4, warmup_limit = 30;
   U64 delay_cycles = 0;
+#ifdef GH200_CONSUMER_ENTRY_DELAY
+  U64 consumer_entry_delay_cycles = 0;
+#endif
   U32 seed = 17;
-  bool trace = false;
+  bool trace = false, incremental_index = false, consumer_only_index = false;
   ChainOptions(int argc, char** argv) {
     for (int i = 1; i < argc; i += 2) {
       if (i + 1 == argc) throw std::runtime_error("missing option value");
       std::string key = argv[i], value = argv[i + 1];
       if (key == "--stages") stages = int(integer(value, 6));
       else if (key == "--delay-cycles") delay_cycles = integer(value, std::numeric_limits<U64>::max());
+#ifdef GH200_CONSUMER_ENTRY_DELAY
+      else if (key == "--consumer-entry-delay-cycles")
+        consumer_entry_delay_cycles = integer(value, std::numeric_limits<U64>::max());
+#endif
       else if (key == "--ktiles") ktiles = int(integer(value, 32));
       else if (key == "--seed") seed = U32(integer(value, std::numeric_limits<U32>::max()));
       else if (key == "--trace") trace = bool(integer(value, 1));
+      else if (key == "--index-mode") {
+        if (value != "runtime" && value != "incremental" && value != "consumer-only")
+          throw std::runtime_error("index-mode must be runtime, incremental, or consumer-only");
+        incremental_index = value == "incremental";
+        consumer_only_index = value == "consumer-only";
+      }
       else if (key == "--warmup-limit") warmup_limit = int(integer(value, 60));
       else throw std::runtime_error("unknown option: " + key);
     }
@@ -415,7 +470,7 @@ void print_correctness(const Trial& trial) {
       << ",\"generation_checked\":" << trial.trace.size() * ConsumerThreads
       << ",\"generation_errors\":" << trial.record.generation_errors << '}';
 }
-template <bool Trace>
+template <bool Trace, bool IncrementalIndex, bool ConsumerOnlyIndex>
 int run_chain(const ChainOptions& options) {
   const U32 endian_check = 1;
   if (*reinterpret_cast<const unsigned char*>(&endian_check) != 1)
@@ -427,7 +482,7 @@ int run_chain(const ChainOptions& options) {
   CUDA_CHECK(cudaGetDeviceProperties(&device, 0));
   if (device.major != 9 || device.minor != 0 || std::string(device.name).find("GH200") == std::string::npos)
     throw std::runtime_error("GH200 CC9.0 required");
-  auto kernel = handoff_chain<Trace>;
+  auto kernel = handoff_chain<Trace, IncrementalIndex, ConsumerOnlyIndex>;
   CUDA_CHECK(cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, SmemBytes));
   cudaFuncAttributes attributes{};
   CUDA_CHECK(cudaFuncGetAttributes(&attributes, kernel));
@@ -456,6 +511,9 @@ int run_chain(const ChainOptions& options) {
     CUDA_CHECK(cudaMemset(output.pointer, 0xff, OutputElements * sizeof(float)));
     CUDA_CHECK(cudaEventRecord(event_begin));
     kernel<<<1, Threads, SmemBytes>>>(ktiles, options.stages, options.delay_cycles, options.seed,
+#ifdef GH200_CONSUMER_ENTRY_DELAY
+        options.consumer_entry_delay_cycles,
+#endif
         records.pointer, trace_records.pointer, output.pointer);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaEventRecord(event_end));
@@ -542,6 +600,7 @@ int run_chain(const ChainOptions& options) {
       << ((trial.errors || trial.record.generation_errors) ? "correctness_error" : "measured") << "\",\"ktiles\":" << options.ktiles
       << ",\"stages\":" << options.stages << ",\"delay_cycles\":" << options.delay_cycles
       << ",\"seed\":" << options.seed << ",\"trace\":" << (Trace ? "true" : "false")
+      << ",\"index_mode\":\"" << (ConsumerOnlyIndex ? "consumer-only" : IncrementalIndex ? "incremental" : "runtime") << '"'
       << ",\"samples\":1,\"work_flop\":" << U64(2) * 128 * 128 * 64 * options.ktiles
       << ",\"wgmma_count\":" << 8 * options.ktiles
       << ",\"performance_eligible\":" << (converged && !trial.errors && !trial.record.generation_errors ? "true" : "false")
@@ -559,10 +618,14 @@ int run_chain(const ChainOptions& options) {
       << ",\"producer_threads\":128,\"consumer_threads\":128,\"full_arrivals\":1,\"empty_arrivals\":128,"
       << "\"initial_barrier_phase\":0,\"signal_kind\":\"normal_arrive\",\"transaction_bytes\":0,"
       << "\"prefilled_tiles\":" << std::min(options.stages, options.ktiles)
+#ifdef GH200_CONSUMER_ENTRY_DELAY
+      << ",\"consumer_entry_delay_cycles\":" << options.consumer_entry_delay_cycles
+      << ",\"consumer_entry_delay_boundary\":\"one clock64 spin after start rendezvous and before first consumer full wait\""
+#endif
       << ",\"delayed_tile\":" << (options.ktiles > options.stages ? std::to_string(options.stages) : "null")
       << ",\"software_tile\":[128,128,64],\"instruction_shape\":[64,128,16],"
       << "\"a_major\":\"K\",\"b_major\":\"MN\",\"smem_swizzle_bytes\":128,"
-      << "\"commit_per_ktile\":1,\"wait_groups\":1,\"tail_wait_groups\":0,"
+      << "\"commit_per_ktile\":1,\"wait_groups\":" << GH200_NORMAL_WAIT << ",\"tail_wait_groups\":0,"
       << "\"prologue_wait\":false,\"instruction_order\":\"q_then_m64\","
       << "\"input_profile\":\"slot_coordinate_dyadic\",\"mathematical_c0\":0,"
       << "\"ring_policy\":\"immutable slot=tile%stages; generation sideband only, no operand refill\","
@@ -645,7 +708,11 @@ int run_chain(const ChainOptions& options) {
 }
 int main(int argc, char** argv) try {
   ChainOptions options(argc, argv);
-  return options.trace ? run_chain<true>(options) : run_chain<false>(options);
+  if (options.consumer_only_index)
+    return options.trace ? run_chain<true, false, true>(options) : run_chain<false, false, true>(options);
+  if (options.incremental_index)
+    return options.trace ? run_chain<true, true, false>(options) : run_chain<false, true, false>(options);
+  return options.trace ? run_chain<true, false, false>(options) : run_chain<false, false, false>(options);
 } catch (const std::exception& error) {
   std::cout << "{\"schema\":\"gh200-cfg-b-handoff-chain/1\",\"status\":\"error\",\"error\":"
       << quote(error.what()) << "}\n";

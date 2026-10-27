@@ -30,6 +30,22 @@ def source_sharing_delta_cycles(a, b, active_ctas, extra128_times_B_peer, kt=1):
     return kt * (max(512, pitched) - max(512, aligned))
 
 
+def wgmma_compute_step(start, previous_service_end, previous_complete, *,
+                       compute_duration, commit_lead, completion_lag,
+                       issue_floor=0., wait_overhead=0., wait_retain=1):
+    """单组条件计算服务；时间单位由调用方统一，首次提交跳过正常等待。"""
+    service_end = max(start, previous_service_end) + compute_duration
+    commit = max(start + issue_floor, service_end - commit_lead)
+    complete = service_end + completion_lag
+    if previous_complete is None:
+        returned = commit
+    elif wait_retain == 0:
+        returned = max(commit, complete) + wait_overhead
+    else:
+        returned = max(commit, previous_complete) + wait_overhead
+    return service_end, commit, complete, returned
+
+
 def admission_stage_events(kt, stages, producer_interval, ready_latency,
                            commit_lead, completion_lag, *, service_cycles=512.,
                            issue_floor=0., wait_overhead=0., loop_advance=0.,
@@ -177,6 +193,45 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     return result
 
 
+def pingpong_output_state():
+    return dict(begin=None,end=None,scheduled=False,
+        prepare_begin=[None]*8,prepare_end=[None]*8,write_begin=[None]*8,write_end=[None]*8,
+        submitted=[None]*8,source_done=[None]*8)
+
+
+def pingpong_output_step(t, kind, index, outputs, *, prepare_ns, write_ns, control_ns,
+                         tail_ns, push, reserve, source_read):
+    """cfg_b八子块／双源槽的既有DelayTmaStore转换；源读取完成由调用方给出。"""
+    if kind=='epi_begin':
+        e=outputs[index];e['begin']=t;e['prepare_begin'][0]=t
+        reserve(t,prepare_ns,'prepare',index*8)
+        push(t+prepare_ns,'epi_prepared',index*8)
+    elif kind=='epi_prepared':
+        out,j=divmod(index,8);e=outputs[out];e['prepare_end'][j]=t
+        if j==0:
+            e['write_begin'][j]=t
+            reserve(t,write_ns,'write',index)
+            push(t+write_ns,'epi_written',index)
+        else:push(t+control_ns,'store',index-1)
+    elif kind=='epi_written':
+        out,j=divmod(index,8);e=outputs[out];e['write_end'][j]=t
+        if j==7:push(t+control_ns,'store',index)
+        else:
+            e['prepare_begin'][j+1]=t
+            reserve(t,prepare_ns,'prepare',index+1)
+            push(t+prepare_ns,'epi_prepared',index+1)
+    elif kind=='store':
+        out,j=divmod(index,8);e=outputs[out];e['submitted'][j]=t
+        done=source_read(t,index);e['source_done'][j]=done
+        if j==7:push(max(done,e['source_done'][j-1])+tail_ns,'epi_end',out)
+        else:
+            begin=max(t,e['source_done'][j-1]) if j else t
+            e['write_begin'][j+1]=begin
+            reserve(begin,write_ns,'write',index+1)
+            push(begin+write_ns,'epi_written',index+1)
+    elif kind=='epi_end':outputs[index]['end']=t
+
+
 def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         compute_ns, output_latency_ns=0., output_weight=1.,
                         producer_gap_ns=0., operand_gap_ns=0., reuse_delay_ns=0.,
@@ -194,7 +249,10 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         input_path_service_ns=0., input_source_service=None,
                         output_source_observer=None, compute_phases_ns=None,
                         input_source_async=None, input_destination_service=None,
-                        input_source_bind_events=None, input_sync_service=None):
+                        input_source_bind_events=None, input_sync_service=None,
+                        input_release_delay_ns=0., consumer_entry_delay_ns=0.,
+                        producer_control_ns=(0.,0.,0.), output_tma_enabled=None,
+                        compute_service=None):
     """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -262,10 +320,18 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     input_source_service replaces source admission/completion with a request
     callback. Destination FIFO and the software graph retain their own rules;
     the legacy shared server then serves only output requests.
+    Its optional issue_return_ns delays the next producer request or group,
+    independently of source_ready and destination completion.
+    producer_control_ns gives program work before A/B0/B1. A preparation starts
+    after empty acquisition; B preparation starts after the preceding request's
+    admission return. Source service receives the prepared request.
     input_source_async.issue(t,cta,index,atom,weight,demand_id,notify_ready)
     may queue a demand and later call notify_ready(demand_id,time,served), using
     the synchronous source metadata. destination_done(t,demand_id) runs at the
     actual destination completion, so the source can release its held credit.
+    An optional issue_with_admission(...,notify_ready,notify_admitted) replaces
+    issue and calls notify_admitted(demand_id,actual_start) when admitted.
+    The producer resumes from that return time; source readiness stays separate.
     input_source_bind_events receives schedule(time, callback); the event loop
     calls callback(time) at that time for source credit timers.
     input_destination_service(t,cta,index,atom,weight) optionally supplies
@@ -273,21 +339,36 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     the original per-CTA destination FIFO.
     output_source_observer receives (time, CTA, output-subtile index) when
     the modeled store source read completes, in event-time order.
+    output_tma_enabled optionally selects TMA copies per CTA. A disabled copy
+    completes at submission with no shared-server work or observer call;
+    preparation, SMEM writes, commit/acquire control and two-slot reuse remain.
     compute_phases_ns optionally supplies compute_ns and commit_lead_ns for
-    each output index. Other service/control costs keep their declared ns.
+    each output index. Optional completion_lag_ns overrides the scalar for that
+    output. Other service/control costs keep their declared ns.
+    compute_service optionally replaces wgmma_compute_step with a local joint
+    service. It returns service_end, commit, completion and wait-return times;
+    its extra duration is retained per group for weighted graph reconstruction.
     input_sync_service optionally supplies full_wait(enter_ns,ready_ns,cta,group)
     and release(time,cta,group). It prices only the full-wait return boundary;
     existing wait1/tail-wait0 events still own input-slot release. The service
     records persistent full/empty generation state without adding release cost.
     Only enabled calls add per-group full_wait_windows to each CTA actor.
+    input_release_delay_ns separates software empty emission from completion:
+    producer reuse and the sync state advance at the delayed completion event;
+    consumer continuation keeps its own wait-return and loop-advance boundary.
+    consumer_entry_delay_ns sets the first full-wait entry time; producer issue
+    and subsequent consumer wait/control dependencies keep their own timing.
     """
     import heapq
 
+    control_a,control_b0,control_b1=producer_control_ns
+    control_enabled=any(producer_control_ns)
     costs=(service_ns,read_latency_ns,output_latency_ns,output_weight,producer_gap_ns,
         operand_gap_ns,reuse_delay_ns,commit_lead_ns,completion_lag_ns,issue_floor_ns,
         wait_overhead_ns,loop_advance_ns,return_overhead_ns,handoff_delay_ns,
         epilogue_prepare_ns,epilogue_write_ns,epilogue_control_ns,epilogue_tail_ns,
-        destination_service_ns)
+        destination_service_ns,input_release_delay_ns,consumer_entry_delay_ns,
+        control_a,control_b0,control_b1)
     if min(kt,stages)<2 or cta_count<1 or compute_ns<=0 or min(costs)<0:
         raise ValueError('shared stage candidate requires positive geometry/compute and nonnegative costs')
     if issue_floor_ns>compute_ns or epilogue_defer not in (0,1,2):
@@ -310,6 +391,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     counts=[2]*cta_count if output_counts is None else list(output_counts)
     if len(counts)!=cta_count or any(type(n) is not int or n<1 for n in counts):
         raise ValueError('positive per-CTA output counts required')
+    output_enabled=[True]*cta_count if output_tma_enabled is None else list(output_tma_enabled)
+    if len(output_enabled)!=cta_count or any(type(value) is not bool for value in output_enabled):
+        raise ValueError('output TMA mask requires one boolean per CTA')
     if ((epilogue_defer==2 and min(counts)<2) or
             ((epilogue_defer==1 or second_prefill) and counts[0]<2)):
         raise ValueError('second-output treatment requires the affected outputs')
@@ -369,16 +453,24 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         heapq.heappush(events,(time,serial,kind,cta,index));serial+=1
     for cta in range(cta_count):
         total=counts[cta]*kt
-        actor={name:[None]*total for name in ('issued_a','issued_b0','issued_b1','issued_b','ready','starts',
+        actor={name:[None]*total for name in ('issued_a','issued_b0','issued_b1','issued_b','ready','consumer_query','starts',
             'service_frontier','commits','completed','wait1_return','released')}
         actor.update(ready_count=[0]*total,producer_index=0,producer_free=offsets[cta],producer_scheduled=False,
-            consumer_index=0,consumer_free=0.,consumer_scheduled=False,
+            consumer_index=0,consumer_free=consumer_entry_delay_ns,consumer_scheduled=False,
             mma_returns=[None]*counts[cta],main_ends=[None]*counts[cta],
-            outputs=[dict(begin=None,end=None,scheduled=False,
-                prepare_begin=[None]*8,prepare_end=[None]*8,write_begin=[None]*8,write_end=[None]*8,
-                submitted=[None]*8,source_done=[None]*8) for _ in range(counts[cta])])
+            outputs=[pingpong_output_state() for _ in range(counts[cta])])
         if input_sync_service is not None:actor['full_wait_windows']=[]
+        if input_release_delay_ns:actor['release_emitted']=[None]*total
+        if control_enabled:actor['producer_acquired']=[None]*total
         actors.append(actor)
+
+    control_windows=[]
+    def prepared_issue(t,cta,index,kind,cost):
+        if control_enabled:
+            control_windows.append(dict(cta=cta,index=index,
+                operand={'issue_a':'A','issue_b0':'B0','issue_b1':'B1'}[kind],
+                start_ns=t,end_ns=t+cost))
+        push(t+cost,kind,cta,index)
 
     def producer(cta):
         a=actors[cta];i=a['producer_index']
@@ -388,7 +480,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             release=a['released'][i-stages]
             if release is None:return
             t=max(t,release+reuse_delay_ns)
-        a['producer_scheduled']=True;push(t,'issue_a',cta,i)
+        if control_enabled:a['producer_acquired'][i]=t
+        a['producer_scheduled']=True;prepared_issue(t,cta,i,'issue_a',control_a)
 
     def consumer(cta):
         nonlocal prefill
@@ -404,6 +497,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             prefill=dict(begin_ns=begin,end_ns=end,waited_stages=stages)
             a['consumer_free']=end
         a['consumer_scheduled']=True
+        a['consumer_query'][i]=a['consumer_free']
         start=max(a['consumer_free'],a['ready'][i])
         if input_sync_service is not None:
             window=input_sync_service.full_wait(a['consumer_free'],a['ready'][i],cta,i)
@@ -464,7 +558,27 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                     arrival_ns=demand['arrival_ns'],work=weight,ready_ns=done,
                     source_id=served['source_id'],source_key=served['source_key'],
                     start_ns=served['service_start'],service_end_ns=served['service_end']))
-        push(destination_admission(demand,done),'deliver_input',demand['cta'],demand_id)
+        if not demand.get('awaiting_admission',False):
+            push(destination_admission(demand,done),'deliver_input',demand['cta'],demand_id)
+
+    deferred_admission=object()
+
+    def notify_admitted(demand_id,start):
+        demand=demands[demand_id]
+        demand.pop('awaiting_admission');demand['issue_return_ns']=start
+        push(start,'input_admitted',demand['cta'],demand_id)
+        if 'source_ready_ns' in demand:
+            push(destination_admission(demand,demand['source_ready_ns']),
+                'deliver_input',demand['cta'],demand_id)
+
+    def continue_input(cta,kind,index,issued,returned):
+        a=actors[cta]
+        if kind=='issue_a':prepared_issue(returned+operand_gap_ns,cta,index,'issue_b0',control_b0)
+        elif kind=='issue_b0':prepared_issue(returned+operand_gap_ns,cta,index,'issue_b1',control_b1)
+        else:
+            a['issued_b'][index]=issued
+            a['producer_index']=index+1;a['producer_free']=returned+producer_gap_ns
+            a['producer_scheduled']=False;producer(cta)
 
     def input_request(t,cta,kind,index,weight):
         nonlocal input_demand_count,input_source_count,input_merged_count,input_delivery_count
@@ -486,6 +600,11 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             input_demand_count+=1;input_demand_work+=weight
             demands.append(dict(demand_id=demand_id,cta=cta,kind=kind,index=index,
                 arrival_ns=t,work=weight,**path_fields))
+            admission_issue=getattr(input_source_async,'issue_with_admission',None)
+            if admission_issue is not None:
+                demands[demand_id]['awaiting_admission']=True
+                admission_issue(t,cta,index,atom,weight,demand_id,notify_ready,notify_admitted)
+                return deferred_admission
             input_source_async.issue(t,cta,index,atom,weight,demand_id,notify_ready)
             return
         if input_source_service is not None:
@@ -505,10 +624,12 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             demand = dict(demand_id=demand_id,source_id=source_id,source_key=served['source_key'],
                 merged=served['merged'],cta=cta,kind=kind,index=index,arrival_ns=t,
                 source_ready_ns=done,work=weight)
+            issue_return=served.get('issue_return_ns')
+            if issue_return is not None:demand['issue_return_ns']=issue_return
             demand.update(path_fields)
             demands.append(demand)
             push(destination_admission(demand,done),'deliver_input',cta,demand_id)
-            return
+            return issue_return
         key=source_keys[cta][index][atom] if share_inflight_sources else None
         existing=pending.get(key) if share_inflight_sources else None
         merged=existing is not None and t<existing[2]
@@ -579,16 +700,16 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 local_blocked[local_role]+=end-t;push(end,kind,cta,i);continue
         if kind=='source_event':
             i(t)
+        elif kind=='input_admitted':
+            demand=demands[i]
+            continue_input(cta,demand['kind'],demand['index'],demand['arrival_ns'],t)
         elif kind in ('issue_a','issue_b0','issue_b1'):
             field={'issue_a':'issued_a','issue_b0':'issued_b0','issue_b1':'issued_b1'}[kind]
             a[field][i]=t
-            input_request(t,cta,kind,i,1. if kind=='issue_a' else .5)
-            if kind=='issue_a':push(t+operand_gap_ns,'issue_b0',cta,i)
-            elif kind=='issue_b0':push(t+operand_gap_ns,'issue_b1',cta,i)
-            else:
-                a['issued_b'][i]=t
-                a['producer_index']=i+1;a['producer_free']=t+producer_gap_ns
-                a['producer_scheduled']=False;producer(cta)
+            issue_return=input_request(t,cta,kind,i,1. if kind=='issue_a' else .5)
+            if issue_return is deferred_admission:continue
+            returned=t if issue_return is None else max(t,issue_return)
+            continue_input(cta,kind,i,t,returned)
         elif kind=='source_done':
             key=source_generation_keys.pop(i)
             if pending.get(key,(None,None))[0]==i:del pending[key]
@@ -604,7 +725,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[demand['kind']]
                 delivered=input_destination_service(t,cta,demand['index'],atom,weight)
                 start,service_end,done=(delivered[k] for k in ('start_ns','service_end_ns','ready_ns'))
-                destination_busy[cta]+=service_end-start
+                destination_busy[cta]+=delivered.get('busy_ns',service_end-start)
             input_delivery_count+=1;input_delivery_work+=weight
             if trace_requests:deliveries.append(dict(demand,start_ns=start,service_end_ns=service_end,ready_ns=done))
             if input_source_async is not None:
@@ -626,17 +747,28 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             phase = compute_phases_ns[i//kt] if compute_phases_ns is not None else None
             duration = phase['compute_ns'] if phase is not None else compute_ns
             lead = phase['commit_lead_ns'] if phase is not None else commit_lead_ns
-            E=max(t,a['service_frontier'][i-1] if i else t)+duration
-            C=max(t+issue_floor_ns,E-lead);D=E+completion_lag_ns
-            W=C if i%kt==0 else max(C,a['completed'][i-1])+wait_overhead_ns
+            lag = phase.get('completion_lag_ns',completion_lag_ns) if phase is not None else completion_lag_ns
+            previous_service=a['service_frontier'][i-1] if i else t
+            previous_complete=None if i%kt==0 else a['completed'][i-1]
+            step_costs=dict(compute_duration=duration,
+                commit_lead=lead,completion_lag=lag,issue_floor=issue_floor_ns,
+                wait_overhead=wait_overhead_ns)
+            if compute_service is None:
+                E,C,D,W=wgmma_compute_step(t,previous_service,previous_complete,**step_costs)
+            else:
+                E,C,D,W=compute_service(t,cta,i,previous_service,previous_complete,**step_costs)
+            if compute_service is not None:
+                a.setdefault('compute_extra_ns',[0.]*(counts[cta]*kt))[i]=E-max(t,previous_service)-duration
             for name,value in [('service_frontier',E),('commits',C),('completed',D),('wait1_return',W)]:
                 a[name][i]=value
-            if i%kt:push(W,'release',cta,i-1)
+            if i%kt:
+                if input_release_delay_ns:a['release_emitted'][i-1]=W
+                push(W+(phase.get('input_release_delay_ns',input_release_delay_ns) if phase is not None else input_release_delay_ns),'release',cta,i-1)
             if i%kt==kt-1:
                 out=i//kt;M=W+return_overhead_ns
                 push(M,'mma_return',cta,out);push(max(M,D),'main_end',cta,out)
             else:
-                a['consumer_index']=i+1;a['consumer_free']=W+loop_advance_ns
+                a['consumer_index']=i+1;a['consumer_free']=W+(phase.get('loop_advance_ns',loop_advance_ns) if phase is not None else loop_advance_ns)
                 a['consumer_scheduled']=False;consumer(cta)
         elif kind=='release':
             if input_sync_service is not None:input_sync_service.release(t,cta,i)
@@ -647,46 +779,30 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             a['consumer_scheduled']=False;consumer(cta)
             epilogue(cta,0)
         elif kind=='main_end':
-            if input_sync_service is not None:input_sync_service.release(t,cta,(i+1)*kt-1)
-            a['main_ends'][i]=t;a['released'][(i+1)*kt-1]=t
+            a['main_ends'][i]=t
+            if input_release_delay_ns:
+                a['release_emitted'][(i+1)*kt-1]=t
+                phase = compute_phases_ns[i] if compute_phases_ns is not None else None
+                push(t+(phase.get('input_release_delay_ns',input_release_delay_ns) if phase is not None else input_release_delay_ns),'release',cta,(i+1)*kt-1)
+            else:
+                if input_sync_service is not None:input_sync_service.release(t,cta,(i+1)*kt-1)
+                a['released'][(i+1)*kt-1]=t
             producer(cta);epilogue(cta,i)
-        elif kind=='epi_begin':
-            e=a['outputs'][i];e['begin']=t;e['prepare_begin'][0]=t
-            reserve_epilogue(cta,t,epilogue_prepare_ns,'prepare',i*8)
-            push(t+epilogue_prepare_ns,'epi_prepared',cta,i*8)
-        elif kind=='epi_prepared':
-            out,j=divmod(i,8);e=a['outputs'][out];e['prepare_end'][j]=t
-            if j==0:
-                e['write_begin'][j]=t
-                reserve_epilogue(cta,t,epilogue_write_ns,'write',i)
-                push(t+epilogue_write_ns,'epi_written',cta,i)
-            else:push(t+epilogue_control_ns,'store',cta,i-1)
-        elif kind=='epi_written':
-            out,j=divmod(i,8);e=a['outputs'][out];e['write_end'][j]=t
-            if j==7:push(t+epilogue_control_ns,'store',cta,i)
-            else:
-                e['prepare_begin'][j+1]=t
-                reserve_epilogue(cta,t,epilogue_prepare_ns,'prepare',i+1)
-                push(t+epilogue_prepare_ns,'epi_prepared',cta,i+1)
-        elif kind=='store':
-            out,j=divmod(i,8);e=a['outputs'][out];e['submitted'][j]=t
-            done=request(t,cta,'store',i,output_weight/2,output_latency_ns);e['source_done'][j]=done
-            if output_source_observer is not None:
-                push(done,'output_source_read_done',cta,i)
-            if j==7:
-                push(max(done,e['source_done'][j-1])+epilogue_tail_ns,'epi_end',cta,out)
-            else:
-                # After committing j, wait until at most one source read remains.
-                # Then write j+1 into the buffer formerly used by j-1.
-                begin=max(t,e['source_done'][j-1]) if j else t
-                e['write_begin'][j+1]=begin
-                reserve_epilogue(cta,begin,epilogue_write_ns,'write',i+1)
-                push(begin+epilogue_write_ns,'epi_written',cta,i+1)
+        elif kind in ('epi_begin','epi_prepared','epi_written','store','epi_end'):
+            def source_read(time,index):
+                if not output_enabled[cta]:return time
+                done=request(time,cta,'store',index,output_weight/2,output_latency_ns)
+                if output_source_observer is not None:
+                    push(done,'output_source_read_done',cta,index)
+                return done
+            pingpong_output_step(t,kind,i,a['outputs'],prepare_ns=epilogue_prepare_ns,
+                write_ns=epilogue_write_ns,control_ns=epilogue_control_ns,tail_ns=epilogue_tail_ns,
+                push=lambda time,event,index:push(time,event,cta,index),
+                reserve=lambda time,duration,event,index:reserve_epilogue(cta,time,duration,event,index),
+                source_read=source_read)
+            if kind=='epi_end':epilogue(cta,i+1);consumer(cta)
         elif kind=='output_source_read_done':
             output_source_observer(t,cta,i)
-        elif kind=='epi_end':
-            a['outputs'][i]['end']=t
-            epilogue(cta,i+1);consumer(cta)
     if any(a['outputs'][-1]['end'] is None for a in actors):
         raise RuntimeError('shared stage graph did not complete')
     makespan=max(a['outputs'][-1]['end'] for a in actors)
@@ -704,6 +820,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         scope=('cfg_b two-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time'
             if all(n==2 for n in counts) else
             'cfg_b variable-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time'))
+    if not all(output_enabled):result['output_tma_enabled']=output_enabled
+    if control_enabled:result['producer_control_windows']=control_windows
+    if consumer_entry_delay_ns:result['consumer_entry_delay_ns']=consumer_entry_delay_ns
     if prefill is not None:result['second_prefill']=prefill
     if input_path_service_ns:result['input_path_service']=dict(demands=input_demand_count,
         work=input_demand_work,busy_ns=input_path_busy,last_service_end_ns=input_path_frontier,

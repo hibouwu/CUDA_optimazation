@@ -16,9 +16,9 @@ from analyze_r18 import replay
 from supply_model import cfg_a_atomic_source_graph, cfg_a_source_bindings
 
 
-RUNS = ('20261010-R18-cluster-fill-discrimination',
-    '20261009-R13-R15-R18-composition-job738496',
-    '20261009-R18-first-fill-job738707')
+RUNS = ('Q01-scheduling/R18-cluster-boundary/20261010-R18-cluster-fill-discrimination',
+    'Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496',
+    'Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738707')
 
 
 def read(path):

@@ -12,9 +12,9 @@ import sys
 
 
 BASE = Path("gh200_resource_campaign/access_rules")
-R02 = BASE / "20261008-R02-job736989-v8"
-FRAME = BASE / "20261008-R02-frame-job737122-v1"
-R01 = BASE / "20261006-r01r06-unrolled/r01"
+R02 = BASE / "Q08-register-residency/R02-register-service/20261008-R02-job736989-v8"
+FRAME = BASE / "Q08-register-residency/R02-register-service/20261008-R02-frame-job737122-v1"
+R01 = BASE / "Q08-register-residency/R01-R06-readiness/20261006-r01r06-unrolled/r01"
 SOURCE_MANIFESTS = {
     R02: "bd1a5b4435ed83df964e3aad10555a874e93224641e60a2da6140cbfa152ba47",
     FRAME: "956b945140f2471cc2e58eadcec4e95ae82eaa93a65eae0df536bdaaaf00f19c",

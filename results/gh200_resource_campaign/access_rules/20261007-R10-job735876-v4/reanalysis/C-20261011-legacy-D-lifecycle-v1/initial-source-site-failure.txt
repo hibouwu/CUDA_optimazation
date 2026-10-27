@@ -1,1 +1,0 @@
-Initial CPU analysis stopped before payload generation: exact text assertion omitted the cutlass::gemm:: namespace in the MainloopSchedule alias. Original source SHA passed. data-v1 contained no report or payload. The assertion was corrected to the archived qualified name; no source/data change.

@@ -11,7 +11,7 @@ import replay_sm_residency as replay
 class ResidencyScoreTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        results = aggregate.DEFAULT_ARCHIVE.parents[2]
+        results = aggregate.DEFAULT_ARCHIVE.parents[4]
         cls.original = json.loads((results / replay.R16 / 'analysis/rules.json').read_text())
 
     def with_known_differences(self):

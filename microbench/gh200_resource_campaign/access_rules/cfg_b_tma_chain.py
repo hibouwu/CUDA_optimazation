@@ -13,7 +13,8 @@ import numpy as np
 from cfg_b_compute_chain import output_coordinates, SEEDS
 from cfg_b_handoff_chain import reference as ring_reference
 from l2_saturation import command_record, digest, read_json, require, save_json
-from mbarrier_service import BarrierPhase
+from mbarrier_service import BarrierPhase, ConditionSyncService
+from supply_model import shared_stage_events
 
 HERE = Path(__file__).resolve().parent
 SCHEMA = 'gh200-cfg-b-tma-chain-plan/1'
@@ -42,30 +43,32 @@ def reference(ktiles, stages, seed, profile='ring'):
     return (total[rows,columns]/1024).astype(np.float32)
 
 
-def expected_descriptor(source_tiles):
+def expected_descriptor(source_tiles, source_batches=1):
     source_k = 64*source_tiles
     common = dict(rank=3, encoding_type='UINT16', numeric_type='FP16', swizzle_bytes=128,
         element_strides=[1,1,1], interleave='NONE', l2_promotion_bytes=128, oob_fill='NONE')
-    return dict(A=dict(**common, global_dim=[source_k,128,1],
+    return dict(A=dict(**common, global_dim=[source_k,128,source_batches],
                       byte_strides=[2*source_k,256*source_k], box=[64,128,1]),
-                B=dict(**common, global_dim=[128,source_k,1],
+                B=dict(**common, global_dim=[128,source_k,source_batches],
                       byte_strides=[256,256*source_k], box=[64,64,1]))
 
 
-def requests(tile, stages, source_tiles, profile='ring'):
+def requests(tile, stages, source_tiles, profile='ring', *, source_batch=0, source_batches=1):
     source = tile % stages if profile == 'ring' else tile
     require(profile in ('ring','generation') and 0 <= source < source_tiles, '源tile越界')
+    require(0 <= source_batch < source_batches, '源batch越界')
+    batch_offset = source_batch * 16384 * source_tiles
     slot = tile % stages
     common = dict(tile=tile, slot=slot, generation=tile//stages,
                   source_k_tile=source, transaction_group=tile)
-    return [dict(**common, operand='A', bytes=16384, source_coord=[64*source,0,0],
-        source_byte_offset=128*source, source_row_stride_bytes=128*source_tiles,
+    return [dict(**common, operand='A', bytes=16384, source_coord=[64*source,0,source_batch],
+        source_byte_offset=batch_offset+128*source, source_row_stride_bytes=128*source_tiles,
         destination_byte_offset=16384*slot),
-        dict(**common, operand='B0', bytes=8192, source_coord=[0,64*source,0],
-        source_byte_offset=16384*source, source_row_stride_bytes=256,
+        dict(**common, operand='B0', bytes=8192, source_coord=[0,64*source,source_batch],
+        source_byte_offset=batch_offset+16384*source, source_row_stride_bytes=256,
         destination_byte_offset=98304+16384*slot),
-        dict(**common, operand='B1', bytes=8192, source_coord=[64,64*source,0],
-        source_byte_offset=16384*source+128, source_row_stride_bytes=256,
+        dict(**common, operand='B1', bytes=8192, source_coord=[64,64*source,source_batch],
+        source_byte_offset=batch_offset+16384*source+128, source_row_stride_bytes=256,
         destination_byte_offset=98304+16384*slot+8192)]
 
 
@@ -130,6 +133,146 @@ def lifecycle(ktiles, stages):
     return dict(ktiles=ktiles, stages=stages, nodes=nodes,
         qualification='无硬件时间的程序／事务／槽代次见证',
         full=[item.snapshot() for item in full], empty=[item.snapshot() for item in empty])
+
+
+def _input_timeline(actor, stages, release_visibility_ns):
+    timeline = []
+    for tile, window in enumerate(actor['full_wait_windows']):
+        timeline.append(dict(tile=tile, slot=tile % stages, generation=tile//stages,
+            full_wait_phase=(tile//stages) % 2, empty_wait_phase=(tile//stages+1) % 2,
+            request_A_issue_ns=actor['issued_a'][tile], full_ready_ns=actor['ready'][tile],
+            full_enter_ns=window['enter_ns'], full_return_ns=window['wait_return_ns'],
+            compute_begin_ns=actor['starts'][tile], commit_ns=actor['commits'][tile],
+            compute_complete_ns=actor['completed'][tile],
+            wait1_return_ns=None if tile == 0 else actor['wait1_return'][tile],
+            release_ns=actor['released'][tile],
+            reuse_predecessor_ns=None if tile < stages else actor['released'][tile-stages]))
+        if release_visibility_ns:
+            timeline[-1].update(release_emit_ns=actor['release_emitted'][tile],
+                                empty_complete_ns=actor['released'][tile])
+        if 'producer_acquired' in actor:
+            timeline[-1]['producer_acquire_ns']=actor['producer_acquired'][tile]
+    return timeline
+
+
+def timed_lifecycle(ktiles, stages, *, request_service, compute_ns, commit_lead_ns,
+                    completion_lag_ns=0., producer_gap_ns=0., operand_gap_ns=0.,
+                    loop_advance_ns=0., fast_return_ns=0., blocked_return_ns=0.,
+                    source_tiles=None, source_profile='ring', release_visibility_ns=0.,
+                    consumer_entry_delay_ns=0., input_destination_service=None,
+                    input_source_async=None, input_source_bind_events=None,
+                    source_batch=0, source_batches=1, producer_control_ns=(0.,0.,0.)):
+    """D的计时内三请求接到既有引擎；所有服务时间由调用方显式提供。"""
+    observed_requests = []
+    source_tiles = stages if source_tiles is None else source_tiles
+
+    def source(t, cta, index, atom, weight):
+        request = requests(index, stages, source_tiles, source_profile,
+                           source_batch=source_batch, source_batches=source_batches)[atom]
+        served = request_service(t, request)
+        observed_requests.append(dict(request, arrival_ns=t,
+            source_ready_ns=served['source_ready'], issue_return_ns=served.get('issue_return_ns')))
+        return served
+
+    sync = ConditionSyncService(stages, fast_return_ns, blocked_return_ns)
+    result = shared_stage_events(ktiles, stages, 1, service_ns=0., read_latency_ns=0.,
+        compute_ns=compute_ns, commit_lead_ns=commit_lead_ns,
+        completion_lag_ns=completion_lag_ns, producer_gap_ns=producer_gap_ns,
+        operand_gap_ns=operand_gap_ns, loop_advance_ns=loop_advance_ns,
+        producer_control_ns=producer_control_ns,
+        input_source_service=source if input_source_async is None else None,
+        input_source_async=input_source_async, input_source_bind_events=input_source_bind_events,
+        input_sync_service=sync, output_counts=[1],
+        output_weight=0., trace_requests=True,input_release_delay_ns=release_visibility_ns,
+        consumer_entry_delay_ns=consumer_entry_delay_ns,
+        input_destination_service=input_destination_service)
+    if input_source_async is not None:
+        observed_requests = [dict(requests(demand['index'], stages, source_tiles, source_profile,
+            source_batch=source_batch, source_batches=source_batches)[
+            {'issue_a':0, 'issue_b0':1, 'issue_b1':2}[demand['kind']]],
+            arrival_ns=demand['arrival_ns'], source_ready_ns=demand['source_ready_ns'],
+            issue_return_ns=demand.get('issue_return_ns')) for demand in result['input_demands']]
+    actor = result['ctas'][0]
+    timeline = _input_timeline(actor, stages, release_visibility_ns)
+    value = dict(unit='ns', qualification='显式给价的D局部连接；硬件服务未校准',
+        ktiles=ktiles, stages=stages, prefilled_tiles=0, physical_slots=6,
+        source_tiles=source_tiles, descriptors=expected_descriptor(source_tiles, source_batches),
+        transaction_bytes=32768, full_arrivals=1, empty_arrivals=128,
+        requests=observed_requests, timeline=timeline,
+        tail_wait0_and_release_ns=actor['main_ends'][0],
+        slots=[sync.slot_snapshot(0, slot) for slot in range(stages)])
+    if any(producer_control_ns):value['producer_control_windows']=result['producer_control_windows']
+    if release_visibility_ns:
+        value.update(tail_wait0_return_ns=actor['main_ends'][0],
+                     tail_wait0_and_release_ns=actor['released'][-1])
+    if consumer_entry_delay_ns:value['consumer_entry_delay_ns']=consumer_entry_delay_ns
+    if source_batches != 1:
+        value.update(source_batch=source_batch, source_batches=source_batches)
+    if input_destination_service is not None or input_source_async is not None:
+        value['deliveries']=result['deliveries']
+    if input_source_async is not None:
+        value.update(input_demands=result['input_demands'], sources=result['sources'])
+    return value
+
+
+def timed_cta_group(ktiles, stages, source_batches_by_cta, *, source_batches,
+                    request_service, compute_ns, commit_lead_ns, source_tiles=None,
+                    source_profile='ring', completion_lag_ns=0., loop_advance_ns=0.,
+                    producer_gap_ns=0., operand_gap_ns=0.,
+                    release_visibility_ns=0., fast_return_ns=0., blocked_return_ns=0.,
+                    input_source_async=None, input_source_bind_events=None,
+                    input_destination_service=None, producer_control_ns=(0.,0.,0.)):
+    """D的多个CTA在同一次引擎中推进；源callback接收(t, cta, request)。"""
+    batches = list(source_batches_by_cta)
+    source_tiles = stages if source_tiles is None else source_tiles
+    observed = []
+
+    def request(cta, tile, atom):
+        return requests(tile, stages, source_tiles, source_profile,
+            source_batch=batches[cta], source_batches=source_batches)[atom]
+
+    def source(t, cta, tile, atom, weight):
+        q = request(cta, tile, atom)
+        served = request_service(t, cta, q)
+        observed.append(dict(q, cta=cta, arrival_ns=t, source_ready_ns=served['source_ready'],
+                             issue_return_ns=served.get('issue_return_ns')))
+        return served
+
+    sync = ConditionSyncService(stages, fast_return_ns, blocked_return_ns)
+    result = shared_stage_events(ktiles, stages, len(batches), service_ns=0., read_latency_ns=0.,
+        compute_ns=compute_ns, commit_lead_ns=commit_lead_ns, completion_lag_ns=completion_lag_ns,
+        producer_gap_ns=producer_gap_ns, operand_gap_ns=operand_gap_ns,
+        producer_control_ns=producer_control_ns,
+        loop_advance_ns=loop_advance_ns, input_release_delay_ns=release_visibility_ns,
+        input_source_service=source if input_source_async is None else None,
+        input_source_async=input_source_async, input_source_bind_events=input_source_bind_events,
+        input_destination_service=input_destination_service, input_sync_service=sync,
+        output_counts=[1]*len(batches), output_weight=0., trace_requests=True)
+    if input_source_async is not None:
+        observed = [dict(request(q['cta'],q['index'],{'issue_a':0,'issue_b0':1,'issue_b1':2}[q['kind']]),
+            cta=q['cta'],arrival_ns=q['arrival_ns'],source_ready_ns=q['source_ready_ns'],
+            issue_return_ns=q.get('issue_return_ns')) for q in result['input_demands']]
+    actors = []
+    for cta,actor in enumerate(result['ctas']):
+        actors.append(dict(cta=cta,source_batch=batches[cta],
+            timeline=_input_timeline(actor,stages,release_visibility_ns),
+            tail_wait0_return_ns=actor['main_ends'][0],
+            tail_wait0_and_release_ns=actor['released'][-1] if release_visibility_ns else actor['main_ends'][0],
+            slots=[sync.slot_snapshot(cta,slot) for slot in range(stages)]))
+    value = dict(schema='gh200-d-cta-group/1',unit='ns',
+        qualification='显式给价的D多CTA局部连接；硬件服务未校准',
+        entry_rule='所有CTA从0开始，相同时刻沿既有引擎顺序',
+        ktiles=ktiles,stages=stages,physical_slots=6,cta_count=len(batches),
+        source_tiles=source_tiles,source_batches=source_batches,
+        descriptors=expected_descriptor(source_tiles,source_batches),
+        transaction_bytes=32768,full_arrivals=1,empty_arrivals=128,
+        requests=observed,ctas=actors,deliveries=result['deliveries'],
+        input_demands=result['input_demands'],sources=result['sources'],
+        accounting={key:result[key] for key in ('input_demand_count','input_source_count',
+            'input_merged_count','input_delivery_count','source_busy_ns','destination_busy_ns')},
+        tail_wait0_and_release_ns=max(a['tail_wait0_and_release_ns'] for a in actors))
+    if any(producer_control_ns):value['producer_control_windows']=result['producer_control_windows']
+    return value
 
 
 def verify_output(path, ktiles, stages, seed):

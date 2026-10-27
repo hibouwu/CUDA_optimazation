@@ -11,7 +11,7 @@ from v06_run import sha
 
 
 def verify(base, clock_path, comparison_path, plan_path, output):
-    freeze = base/'20261009-V09-freeze-job738972-r2'
+    freeze = base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
     paths = [freeze/'cases.json', freeze/'static_setup.json',
              freeze/'frozen/calibration.json', clock_path, comparison_path, plan_path]
     rows = json.loads(paths[0].read_text())

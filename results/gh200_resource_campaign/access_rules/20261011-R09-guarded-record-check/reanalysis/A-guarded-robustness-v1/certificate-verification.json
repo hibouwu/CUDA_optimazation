@@ -1,7 +1,0 @@
-{
-  "solver_called": false,
-  "exact_boundary_cases": 20,
-  "certificates_verified": 46,
-  "original_bracket_inversions_verified": 10560,
-  "contained_pairs_verified": 6
-}

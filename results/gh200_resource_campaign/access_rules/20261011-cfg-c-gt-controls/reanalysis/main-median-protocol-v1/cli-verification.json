@@ -1,7 +1,0 @@
-{
-  "correct_identity_evaluated": true,
-  "wrong_identity_rejected": true,
-  "existing_output_preserved": true,
-  "synthetic_only": true,
-  "evaluator_sha256": "704006c1e14d98ffed0c15c5e5e7863b5998c5845981ce2cc4f87e7637ca6b43"
-}

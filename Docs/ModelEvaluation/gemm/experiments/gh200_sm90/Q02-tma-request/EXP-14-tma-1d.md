@@ -31,3 +31,7 @@
 ## 数据
 
 [cases.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/tma_cluster/analysis/s14-formal-733392-qualified/cases.csv)、[参数](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/tma_cluster/analysis/s14-formal-733392-qualified/parameter-candidates.json)、[复现说明](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/tma_cluster/analysis/s14-formal-733392-qualified/REPRODUCE.md)。
+
+## a044 复测（2026-10-23～26）
+
+240 次调用全部通过原审计，24 个条件稳定。单 CTA B/cycle 变化 −0.4132%～+0.1382%，整卡 GB/s 变化 −0.0658%～+1.8830%。见[TMA bulk 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-tma-bulk-report.md)。

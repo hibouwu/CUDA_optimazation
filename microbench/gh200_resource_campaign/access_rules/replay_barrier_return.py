@@ -17,11 +17,11 @@ REPO = HERE.parents[2]
 RESULTS = REPO / "results/gh200_resource_campaign/access_rules"
 GPU_UUID = "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
 GROUPS = (
-    ("20261015-barrier-return-development-001", 18,
+    ("Q04-sync-slot/barrier-return/20261015-barrier-return-development-001", 18,
      "c36ad4b218101f254af32b49c32c8ac4b8ddb4011083ddc6fcaeadbf527066ce"),
-    ("20261015-barrier-return-development-002", 16,
+    ("Q04-sync-slot/barrier-return/20261015-barrier-return-development-002", 16,
      "95249a2ba55369475b7a3516f0394d17905e713a3a78f691db4437b2ce3286f0"),
-    ("20261015-barrier-return-development-003", 12,
+    ("Q04-sync-slot/barrier-return/20261015-barrier-return-development-003", 12,
      "223679877ba8ebcfc61d7e61147c059eef4a38b1edb9e5afc90f38db1289853a"),
 )
 

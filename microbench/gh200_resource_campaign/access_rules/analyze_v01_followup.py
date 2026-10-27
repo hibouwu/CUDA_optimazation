@@ -87,7 +87,7 @@ def main(root):
               "受控单CTA Ktile=31：工作量=2×128×256×64×31=130023424 FLOP。中位完成窗口39628 cycle，对应约3281.100 FLOP/cycle；窗口包含预填与完整输出，不能与孤立计算速率4095 FLOP/cycle直接等同。",
               "", "```bash",
               "python3 microbench/gh200_resource_campaign/access_rules/analyze_v01_followup.py \\",
-              "  --input results/gh200_resource_campaign/access_rules/20261006-v01-followup",
+              "  --input results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261006-v01-followup",
               "```", "",
               "原始记录：`layout-samples/`、`fresh-lengths/samples/`；预测：`fresh-lengths/predictions.json`；完整SASS与编译日志：`build/`及`fresh-lengths/build/`；条件参数：`conditional_parameters.json`。",
               "对应独立增量审查为`independent-review-B.md`；审查结论与测量结果分别保留。", "",

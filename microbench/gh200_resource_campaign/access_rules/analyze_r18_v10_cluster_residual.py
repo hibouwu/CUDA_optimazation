@@ -44,8 +44,8 @@ def replay(base, bundle, output):
         input_hashes[str(path)] = digest(path)
         return json.loads(path.read_text())
 
-    frozen = base / "20261009-V09-freeze-job738972-r2"
-    heldout = base / "20261009-V09-heldout-job739011"
+    frozen = base / "Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2"
+    heldout = base / "Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011"
     contract = load(bundle / "interface-contract.json")
     rows = [row for row in load(frozen / "cases.json") if row["set"] == "heldout"]
     setups = {item["case"]: item["setup"] for item in load(frozen / "static_setup.json")}
@@ -147,7 +147,7 @@ def replay(base, bundle, output):
             no_frozen_candidate=True, GPU_jobs=0))
 
     folds = []
-    for run in ("20261009-R18-first-fill-job738707", "20261009-R18-first-fill-job738865"):
+    for run in ("Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738707", "Q02-tma-request/R18-first-fill/20261009-R18-first-fill-job738865"):
         root = base / run
         reference = load(root / "cases.json")
         reference_setup = load(root / "static_setup.json")

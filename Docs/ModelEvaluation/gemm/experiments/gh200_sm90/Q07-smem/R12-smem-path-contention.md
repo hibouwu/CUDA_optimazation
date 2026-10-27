@@ -58,7 +58,7 @@ v3用不同阶段初值保留两条归约链。第一阶段B-only控制与并发
 
 两布局均预留155648 B动态SMEM，384线程，实际上限1 CTA/SM。寄存器随组织为约80–90/thread，全部无spill；单CTA实验不受不同驻留波次影响，但仍不能忽略寄存器编号和编译排程差异。每个TC服务体静态8个HGMMA、批量部分等待与最终完整等待，动态8批×8条=64条/单元。
 
-![多路径完整服务](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/analysis/plots/r12-paths.png)
+![多路径完整服务](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3/analysis/plots/r12-paths.png)
 
 图为独立进程中位数，不绘误差条；CV和全部样本在归档。并发没有接触另一路的数据，所以约10%的TC+STS额外窗口属于共享服务或执行组织的条件影响，尚不能唯一归因于某个SMEM写端口。
 
@@ -68,7 +68,7 @@ v3用不同阶段初值保留两条归约链。第一阶段B-only控制与并发
 
 ## 数据
 
-[正式归档v3](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/)保存冻结源码、完整CUTLASS依赖、SASS/二进制及所有物理数据；[结构化条件规则](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/analysis/rules.json)、[阶段控制](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/analysis/phase-controls.json)、[独立全值重算](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/analysis/checks.json)。离线换目录重算使用`analyze_r12.py --input <归档> --output <新分析目录>`。
+[正式归档v3](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3/)保存冻结源码、完整CUTLASS依赖、SASS/二进制及所有物理数据；[结构化条件规则](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3/analysis/rules.json)、[阶段控制](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3/analysis/phase-controls.json)、[独立全值重算](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R12-smem-path-contention/20261008-R12-job736989-v3/analysis/checks.json)。离线换目录重算使用`analyze_r12.py --input <归档> --output <新分析目录>`。
 
 ## 脚本
 

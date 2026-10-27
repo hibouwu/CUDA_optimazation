@@ -8,8 +8,8 @@
 
 | 对象 | 工作树与分支 | 新结果根 | 预算 |
 |---|---|---|---|
-| 主线 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation`；`codex/gh200-long-k-event-20261011` | `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded` | 最多八小时，GPU 0 |
-| SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation`；`codex/gh200-smem-lds-sts-20261011` | `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded` | 最多八小时，GPU 作业 2 |
+| 主线 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation`；`codex/gh200-long-k-event-20261011` | `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q15-full-time/long-k-mainline/20261011-long-k-event-bounded` | 最多八小时，GPU 0 |
+| SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation`；`codex/gh200-smem-lds-sts-20261011` | `/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-m11-lds-sts-bounded` | 最多八小时，GPU 作业 2 |
 
 两工作树的代码和 PLAN 与共同基点相同。公共执行状态以主 checkout 的[EXECUTION](../../gh200_sm90/access_rules/EXECUTION.md#status)为准；新工作树内旧 EXECUTION 只反映基点历史，不能把其中旧“未提交/未准备”描述当实时状态。未移动现有对话的默认 cwd，执行者每次 shell 调用须显式使用上表工作树。
 
@@ -19,7 +19,7 @@
 
 主线负责组合分析、`v09_model`、需要修正的服务/事件组件及 R09/R13/R18/R19 证据扩展。主集成串行维护公共 PLAN/RULES/EXECUTION、共享 runner、最终冻结/评分。SMEM 只改专属模型/probe、R03 runner 的新增模式和 R03/EXP-09 扩展，不改公共预测或共享计时头；需要公共接口时先在交付中说明。时间与供给对话保持暂停。双方不覆盖旧原始、冻结、失败或准备记录。
 
-SMEM 旧对照已绑定 R03 job735059 的源码/环境/协议与 EXP-09 的原共享内存 probe、合同及报告。CUTLASS 子模块未初始化；静态序列核对使用已有冻结运行中的 3.9.2 快照：`/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/source/cutlass`。它是只读源，不是新的编译/运行资格，也不以根仓库 HEAD 冒充 CUTLASS 提交。
+SMEM 旧对照已绑定 R03 job735059 的源码/环境/协议与 EXP-09 的原共享内存 probe、合同及报告。CUTLASS 子模块未初始化；静态序列核对使用已有冻结运行中的 3.9.2 快照：`/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/source/cutlass`。它是只读源，不是新的编译/运行资格，也不以根仓库 HEAD 冒充 CUTLASS 提交。
 
 ## 主线启动消息
 

@@ -13,6 +13,7 @@ import numpy as np
 from cfg_b_compute_chain import output_coordinates, SEEDS
 from l2_saturation import command_record, digest, read_json, require, save_json
 from mbarrier_service import BarrierPhase
+from supply_model import wgmma_compute_step
 
 HERE = Path(__file__).resolve().parent
 SCHEMA = "gh200-cfg-b-handoff-chain-plan/1"
@@ -45,8 +46,9 @@ def reference(ktiles, stages, seed):
     return (total[row, column]/1024).astype(np.float32)
 
 
-def lifecycle(ktiles, stages, delay_cycles):
+def lifecycle(ktiles, stages, delay_cycles, *, wait_retain=1):
     """无时间价格的有序见证；empty由128次独立arrival推进。"""
+    require(wait_retain in (0, 1), '正常计算等待保留组数须为0或1')
     full = [BarrierPhase(1) for _ in range(stages)]
     empty = [BarrierPhase(128) for _ in range(stages)]
     published = [-1]*stages
@@ -93,7 +95,8 @@ def lifecycle(ktiles, stages, delay_cycles):
         complete[tile] = node('group_complete', tile, [commits[tile]])
         control = commits[tile]
         if tile:
-            wait1 = node('wait1', tile, [commits[tile], complete[tile-1]])
+            wait1 = node(f'wait{wait_retain}', tile,
+                         [commits[tile], complete[tile-wait_retain]])
             released = tile-1
             for _ in range(128):
                 empty[released % stages].arrive()
@@ -117,6 +120,79 @@ def classify_wait(producer, consumer, prefilled):
     pending = all(consumer['wait_before'][unit] < producer['full_before'][unit]
                   for unit in ('cycle', 'ns'))
     return 'ready_before_enter' if ready else 'entered_before_signal' if pending else 'overlap'
+
+
+def timed_lifecycle(ktiles, stages, delay_cycles, *, compute_cycles=512.,
+                    commit_lead_cycles=256., completion_lag_cycles=0.,
+                    consumer_advance_cycles=0., producer_advance_cycles=0.,
+                    release_visibility_cycles=0., full_ready_return_cycles=0.,
+                    full_blocked_return_cycles=0., wait_retain=1):
+    """递增回绕B/C的局部cycle假设；普通arrival、计时前预填、末尾wait0。
+
+    计算服务进度与完成分开；正常等待返回发布前组empty，最后一组由tail释放。
+    release_visibility是发布到最后必要arrival的显式假设，消费者本地推进独立。
+    前缀、结果消费及最终CTA会合未定价，返回端点为局部链结束。
+    """
+    program = lifecycle(ktiles, stages, delay_cycles, wait_retain=wait_retain)
+    values = (compute_cycles, commit_lead_cycles, completion_lag_cycles,
+              consumer_advance_cycles, producer_advance_cycles, release_visibility_cycles,
+              full_ready_return_cycles, full_blocked_return_cycles)
+    require(all(isinstance(value, (int, float)) and math.isfinite(value) and value >= 0
+                for value in values) and compute_cycles > 0, '局部服务须为非负有限cycle')
+    rows = []
+    consumer_free = producer_free = service_frontier = 0.
+    for tile in range(ktiles):
+        state = dict(tile=tile, slot=tile % stages, generation=tile//stages,
+                     full_wait_phase=(tile//stages) % 2,
+                     empty_wait_phase=(tile//stages+1) % 2,
+                     prefilled=tile < stages)
+        if tile < stages:
+            state.update(acquire_enter_cycle=None, empty_ready_cycle=None,
+                         acquire_return_cycle=None, full_publish_cycle=0.)
+        else:
+            enter = producer_free + producer_advance_cycles
+            empty_ready = rows[tile-stages]['empty_complete_cycle']
+            acquired = max(enter, empty_ready)
+            published = acquired + (delay_cycles if tile == stages else 0.)
+            state.update(acquire_enter_cycle=enter, empty_ready_cycle=empty_ready,
+                         acquire_return_cycle=acquired, full_publish_cycle=published)
+            producer_free = published
+        full_eligibility = max(consumer_free, state['full_publish_cycle'])
+        full_path = 'ready' if consumer_free >= state['full_publish_cycle'] else 'blocked'
+        full_cost = full_ready_return_cycles if full_path == 'ready' else full_blocked_return_cycles
+        full_return = full_eligibility + full_cost
+        if full_ready_return_cycles or full_blocked_return_cycles:
+            state.update(full_eligibility_cycle=full_eligibility, full_wait_path=full_path,
+                         full_return_cost_cycle=full_cost)
+        service_frontier, commit, complete, returned = wgmma_compute_step(
+            full_return, service_frontier,
+            None if tile == 0 else rows[-1]['compute_complete_cycle'],
+            compute_duration=compute_cycles, commit_lead=commit_lead_cycles,
+            completion_lag=completion_lag_cycles, wait_retain=wait_retain)
+        state.update(full_enter_cycle=consumer_free, full_return_cycle=full_return,
+                     compute_begin_cycle=full_return, service_end_cycle=service_frontier,
+                     commit_cycle=commit, compute_complete_cycle=complete,
+                     wait1_return_cycle=None if tile == 0 else returned,
+                     consumer_continue_cycle=returned + consumer_advance_cycles)
+        if wait_retain == 0:
+            state['wait0_return_cycle'] = state.pop('wait1_return_cycle')
+        if tile:
+            rows[-1].update(release_emit_cycle=returned,
+                            empty_complete_cycle=returned + release_visibility_cycles)
+        rows.append(state)
+        consumer_free = state['consumer_continue_cycle']
+    tail = max(returned, complete)
+    rows[-1].update(release_emit_cycle=tail,
+                    empty_complete_cycle=tail + release_visibility_cycles)
+    return dict(unit='SM clock64 cycle', qualification='工作假设：普通arrival局部时间连接',
+                ktiles=ktiles, stages=stages, delay_cycles=delay_cycles,
+                physical_slots=6, full_arrivals=1, full_transaction_bytes=0,
+                empty_arrivals=128, timeline=rows, tail_wait0_return_cycle=tail,
+                local_end_cycle=max(tail, rows[-1]['empty_complete_cycle']),
+                control_and_return_costs=('显式给定推进／可见性及条件full返回；empty返回额外成本为0'
+                    if full_ready_return_cycles or full_blocked_return_cycles else
+                    '显式给定推进／可见性；full及empty返回额外成本为0'),
+                barrier_final_state=dict(full=program['full'], empty=program['empty']))
 
 
 def verify_output(path, ktiles, stages, seed):

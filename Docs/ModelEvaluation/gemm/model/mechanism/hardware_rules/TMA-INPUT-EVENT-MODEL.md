@@ -79,7 +79,7 @@ S16 的512组近似与原始长度之间，所有候选/条件最大差异为0.2
 - [模拟器](../../../../../../microbench/gh200_resource_campaign/access_rules/tma_input_events.py)：不读取实测时间，只接受程序组织和候选参数。
 - [历史适配与离线比较](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_tma_input_events.py)：读取历史证据、分别拟合、完整长度复算。
 - [测试](../../../../../../microbench/gh200_resource_campaign/access_rules/test_tma_input_events.py)。
-- [条件、身份与参数](../../../../../../results/gh200_resource_campaign/access_rules/20261013-tma-input-events-v2/analysis.json)、[逐条件比较](../../../../../../results/gh200_resource_campaign/access_rules/20261013-tma-input-events-v2/comparison.csv)、[候选事件轨迹](../../../../../../results/gh200_resource_campaign/access_rules/20261013-tma-input-events-v2/traces.json)。结果目录受现有 Git 忽略规则管理，本机可复现；v1 初次输出保留，v2增加了完整重复循环检查和S14等价示例。
+- [条件、身份与参数](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-input-events-v2/analysis.json)、[逐条件比较](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-input-events-v2/comparison.csv)、[候选事件轨迹](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-input-events-v2/traces.json)。结果目录受现有 Git 忽略规则管理，本机可复现；v1 初次输出保留，v2增加了完整重复循环检查和S14等价示例。
 
 在仓库根目录运行，需要 Python、NumPy、SciPy：
 

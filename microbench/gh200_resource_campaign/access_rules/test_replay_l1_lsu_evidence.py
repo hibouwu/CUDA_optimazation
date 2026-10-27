@@ -9,7 +9,7 @@ import replay_l1_lsu_evidence as replay
 class CacheSassMatchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        path = aggregate.DEFAULT_ARCHIVE.parents[1] / (
+        path = aggregate.DEFAULT_ARCHIVE.parents[3] / (
             '20261001-resource-suite-v2/global_duplex/formal-b3-v1/build/sass.txt')
         cls.text = path.read_text()
         cls.parts = cls.text.split('Function : ')

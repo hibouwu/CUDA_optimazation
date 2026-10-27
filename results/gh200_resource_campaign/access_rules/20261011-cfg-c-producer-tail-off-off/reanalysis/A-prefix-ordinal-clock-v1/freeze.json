@@ -1,9 +1,0 @@
-{
-  "files": {
-    "contract.json": "323fffd18075b1298d4051778e9cc823a82ba70fddd203b39277929e37549c19",
-    "calibration.json": "b2bae8dd94e7d24e1196cf8d29d1d5eed1150a8b03b46467acc185e4c8d61822",
-    "r09_prefix_ordinal_clock.py": "42735ffb5c8124d006995bebe1ee18b8c502b35cc917571bcddb9d74d813400c",
-    "analyze.py": "9afca60cfd5c8bee39385374db126dbe008a1c58687486e9e1da36172b9451a8"
-  },
-  "status": "development scoring freeze only; not a new independently acquired holdout"
-}

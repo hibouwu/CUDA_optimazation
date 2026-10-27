@@ -1,6 +1,6 @@
 # REG-01：寄存器条件证据与启动配额
 
-更新：2026-10-17。阶段7离线交付，未新增GPU采样或拟合。有限登记见[PLAN](../../../PLAN.md#stage-7-register)，需求与配额规则见[寄存器服务](../../../model/mechanism/hardware_rules/register_service.md)。
+更新：2026-10-17。阶段7离线交付，未新增GPU采样或拟合。有限登记见[PLAN](../../../model/mechanism/hardware_rules/MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，需求与配额规则见[寄存器服务](../../../model/mechanism/hardware_rules/register_service.md)。
 
 ## 1. 固定证据
 
@@ -11,7 +11,7 @@
 | [R02固定帧](R02-register-service.md#固定帧诊断差异缩小但没有消失) | 82记录 | 514304个uint64见证字重算；rules和修正SASS分析与`local-independent`逐字节相同 |
 | [R01正式FFMA链](R01-readiness.md) | 128／512／2048步各3进程，共9记录 | 288个输出重算，64步展开、HFMA2.MMA准备与原窗口核对；固定关系`T=265+4.265625N`及零残差精确复现 |
 
-合计539份旧记录。R02原380记录报告保留，后来两条u64进位控制增加了12544个见证字，32个服务条件与价格保持。固定帧plain的两代码位置均为复用9880、轮换10400 cycle；position1／trace轮换为10399。旧22%与固定帧5.26%来自不同GPU。上述来源与逐记录身份保存在[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-REG-01-replay-001/README.md)，沿用原评分和资格。
+合计539份旧记录。R02原380记录报告保留，后来两条u64进位控制增加了12544个见证字，32个服务条件与价格保持。固定帧plain的两代码位置均为复用9880、轮换10400 cycle；position1／trace轮换为10399。旧22%与固定帧5.26%来自不同GPU。上述来源与逐记录身份保存在[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/REG-01-SM-01-replay/20261017-REG-01-replay-001/README.md)，沿用原评分和资格。
 
 ## 2. 实际程序与配额
 
@@ -29,10 +29,10 @@ FIRST_WORK来自thread0，前缀只确认覆盖producer warp0释放；其余prod
 python -B microbench/gh200_resource_campaign/access_rules/replay_register_evidence.py \
   --results-root results --output /tmp/reg01-source-consumer
 python -B microbench/gh200_resource_campaign/access_rules/analyze_r16_quota.py \
-  --input results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2 \
+  --input results/gh200_resource_campaign/access_rules/Q08-register-residency/R16-residency-quota/20261008-R16-quota-job737122-v2 \
   --output /tmp/reg01-quota
 PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
   python -B -m unittest test_register_quota test_cfg_b_register_program test_cfg_b_request_model -v
 ```
 
-[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-REG-01-replay-001/README.md)另存源码、SHA、实际资源核对、逐warp生命周期和六图接线例子。配额和程序需求已核对，源／消费窗口保持原条件服务，完整cfg_b独立C2/C3仍待验收。
+[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q08-register-residency/REG-01-SM-01-replay/20261017-REG-01-replay-001/README.md)另存源码、SHA、实际资源核对、逐warp生命周期和六图接线例子。配额和程序需求已核对，源／消费窗口保持原条件服务，完整cfg_b独立C2/C3仍待验收。

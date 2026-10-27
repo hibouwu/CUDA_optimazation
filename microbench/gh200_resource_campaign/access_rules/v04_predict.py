@@ -42,7 +42,7 @@ import statistics
 
 REPO = Path(__file__).resolve().parents[3]
 V02_PREDICTIONS = Path(__file__).resolve().parent / "configs/v02-predictions.json"
-R09 = REPO / "results/gh200_resource_campaign/access_rules/20261007-r09-clock-stages"
+R09 = REPO / "results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261007-r09-clock-stages"
 R05_SUPPLY = 55.45  # B/cycle/SM, R05-D shared small source, stage 2/4: 55.45/55.48 (R05 doc)
 R01_WGMMA_SLOPE = 0.62  # cycle per N of WGMMA+wait0 dependent time, R01 (~36+0.62N)
 SMS = 132

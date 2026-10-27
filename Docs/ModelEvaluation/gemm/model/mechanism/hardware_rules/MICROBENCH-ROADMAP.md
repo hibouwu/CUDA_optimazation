@@ -1,12 +1,12 @@
 # GH200 模块级微基准与模型接入
 
-更新：2026-10-17。范围为单 GH200 GPU、本地 HBM 分配及 SM90a 计算路径，首先服务 cfg_b S6/S4。本文维护研究方向、已有证据、待辨识关系、实验设计和模块接入；当前硬件假设与成绩仍在各路径页和实验记录维护。目标模式已启动九个模块阶段及最终组合，免费ROMEO上的已登记GPU测量已获许可；阶段1 L2开发完成，六形式按单调反例收口，留出未采；阶段2驻留A开发及留出完成，有限长度外推通过，两解释仍重合；B/C零额外控制具体形式停止，D/E完成开发数值与路径观测，尚无新可迁移价格。L1原开发清单实测与独立评分也已完成，本轮首版有限交付已齐；原完整模型失败保持。执行范围见 [GOALS §5.4](../../../GOALS.md#current-scope)，当前登记见 [PLAN](../../../PLAN.md)。
+更新：2026-10-18。范围为单 GH200 GPU、本地 HBM 分配及 SM90a 计算路径，首先服务 cfg_b S6/S4。本文维护研究方向、已有证据、待辨识关系、实验设计和模块接入；当前硬件假设与成绩仍在各路径页和实验记录维护。首版九阶段及组合已交付；九方向保留为本轮覆盖与分工，当前推进顺序见[PLAN §1](../../../PLAN.md#1-近期顺序)。免费ROMEO上的已登记GPU测量已获许可；阶段1 L2开发完成，六形式按单调反例收口，留出未采；阶段2驻留A开发及留出完成，有限长度外推通过，两解释仍重合；后续Q05每组完成滞后形式通过两wait冻结长度验证，固定截距形式未通过；B/C零额外控制具体形式停止，D/E完成开发数值与路径观测，尚无新可迁移价格。L1原开发及8留出完成，快复用限定规则通过；Q02行距与CPU源定位、Q07四组织开发窗口已完成，见§6。本轮首版有限交付已齐；原完整模型失败保持。执行范围见 [GOALS §5.4](../../../GOALS.md#current-scope)，当前登记见 [PLAN](../../../PLAN.md)。
 
 ## 1. 九个方向与一个组合层
 
 以下九个方向与组合层是 2026-10-17 这一轮的实验分工：按可独立控制的服务路径分工，再用组合层检验它们共同执行的结果。研究导航统一按[16 个研究问题](../../../experiments/gh200_sm90/README.md#research-questions)组织。方向不对应九个物理硬件块。GPU L1 cache 与 SMEM 分别研究；HBM 是存储资源，global 是地址空间；本文的 cache 名称与[模型 L0–L4](../../README.md)分层分别使用。
 
-| 方向 | 对象与核心问题 | 已有入口 | 执行阶段 |
+| 方向 | 对象与核心问题 | 已有入口 | 首版执行阶段 |
 |---|---|---|---|
 | 1. HBM 外存服务 | 大工作集读、写及混合请求的整卡联合能力 | [EXP-13](../../../experiments/gh200_sm90/Q03-source-service/EXP-13-global-rw.md)、[HBM服务](HBM-SERVICE.md) | 阶段5；复用已有外存对照 |
 | 2. L2 cache 与共享源服务 | 热数据吞吐、地址状态、共享／独立源、跨 SM 竞争 | [L2服务](L2-SERVICE.md)、[R10](../../../experiments/gh200_sm90/Q03-source-service/R10-layout-cache.md)、[B01](../../../experiments/gh200_sm90/Q03-source-service/B01-bandwidth-cache.md)、[TMA 共享服务](TMA-SHARED-SERVICE.md) | 阶段1；开发完成，六形式停止、留出未采 |
@@ -88,7 +88,7 @@
 
 ### 3.3 L1 cache 与 LSU：普通指令的请求和返回
 
-**已有证据：** [EXP-13](../../../experiments/gh200_sm90/Q03-source-service/EXP-13-global-rw.md)的小工作集 `.ca/.cg` 差异、[EXP-18](../../../experiments/gh200_sm90/Q08-register-residency/EXP-18-occupancy-aux.md)的 local／spill 窗口；尚无独立 L1 cache 服务曲线。
+**已有证据：** [EXP-13](../../../experiments/gh200_sm90/Q03-source-service/EXP-13-global-rw.md)的小工作集 `.ca/.cg` 差异、[EXP-18](../../../experiments/gh200_sm90/Q08-register-residency/EXP-18-occupancy-aux.md)的 local／spill 窗口；[原8留出](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-Q13-l1-minimal-002/EXECUTION.md)的快复用条件规则通过，实际物理cache容量未知。
 
 **要辨识：** 单 SM 复访容量、独立加载数、warp 数、访问宽度／lane mask 怎样影响接收、返回和消费者就绪；carveout 改变缓存与驻留后的联合响应。
 
@@ -134,11 +134,11 @@
 
 **最小补测：** 首轮直接用 cfg_b 的 A16 KiB＋B0/B1各8 KiB、128B SMEM swizzle 和已查询的实际描述符。固定物理缓冲分配，分步改变活动槽数、请求并发和消费者释放延迟，再从单 CTA 扩到多 CTA；多 CTA 共享范围实验可独立于单 CTA 内部拆分推进。cp.async 只在实际方案使用时补匹配工作集与组控制，独立维护参数。
 
-**交付与接入：** tensor 请求形成、源与目的服务、就绪／释放事件和共享规则。输出路径分别给出源读取完成与目的写完成；输入槽复用由最后消费者释放推进。具体完成与等待观测设计引用[TMA 路径页](TMA-SHARED-SERVICE.md)和[窗口最小证据缺口](../../../../../../results/gh200_resource_campaign/access_rules/20261016-cfg-b-window-001/STATUS.md)。
+**交付与接入：** tensor 请求形成、源与目的服务、就绪／释放事件和共享规则。输出路径分别给出源读取完成与目的写完成；输入槽复用由最后消费者释放推进。具体完成与等待观测设计引用[TMA 路径页](TMA-SHARED-SERVICE.md)和[窗口最小证据缺口](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/STATUS.md)。
 
 ### 3.8 同步：条件满足与线程返回
 
-**已有证据：** [EXP-11](../../../experiments/gh200_sm90/Q04-sync-slot/EXP-11-sync.md)的齐步／偏斜与 fence 窗口；[R13](../../../experiments/gh200_sm90/Q02-tma-request/R13-async-retirement.md)、[R14](../../../experiments/gh200_sm90/Q06-handoff-output/R14-stage-handoff.md)的释放／交接；[计算量干预](../../../../../../results/gh200_resource_campaign/access_rules/20261015-g3-compute-credit-discrimination-003/RESULTS.md)支持有限槽复用的作用。
+**已有证据：** [EXP-11](../../../experiments/gh200_sm90/Q04-sync-slot/EXP-11-sync.md)的齐步／偏斜与 fence 窗口；[R13](../../../experiments/gh200_sm90/Q02-tma-request/R13-async-retirement.md)、[R14](../../../experiments/gh200_sm90/Q06-handoff-output/R14-stage-handoff.md)的释放／交接；[计算量干预](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/RESULTS.md)支持有限槽复用的作用。
 
 **要辨识：** full 条件满足、wait 返回、计算完成和 empty／release 的间隔；快速已满足路径与实际等待恢复路径的差异；有在途操作时 fence 的覆盖范围。
 
@@ -162,7 +162,7 @@
 
 cfg_b 软件 tile 为128×128×64，FP16输入／FP32累加。构建使用 `MMA_64x128x16_F32F16F16_SS<Major::K,Major::MN>`，A/B 均为128B SMEM swizzle；每 Ktile 的两个 M64片段各执行四个 K16操作，共8条 WGMMA。4 Ktile共32条、8,388,608 FLOP；以4096 FLOP/SM cycle作名义持续服务参照，计算工作量为2048 cycle。
 
-来源：[冻结构建日志](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_b_plain.log)、[SASS](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_b_plain.sass)及[程序图](../program/cutlass_program_graph.md)。SASS 的 PC15c0–1780含8条 `HGMMA.64x128x16.F32`，均带 `.tnspB`。普通循环采用 `K_PIPE_MMAS=1`，commit后wait1再释放较早槽，末尾wait0释放最后槽。旧 R00 的 N256 K/MN 对照复用为布局依据，真实短链的有限实测与资格见[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md)。
+来源：[冻结构建日志](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/build/cfg_b_plain.log)、[SASS](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/build/cfg_b_plain.sass)及[程序图](../program/cutlass_program_graph.md)。SASS 的 PC15c0–1780含8条 `HGMMA.64x128x16.F32`，均带 `.tnspB`。普通循环采用 `K_PIPE_MMAS=1`，commit后wait1再释放较早槽，末尾wait0释放最后槽。旧 R00 的 N256 K/MN 对照复用为布局依据，真实短链的有限实测与资格见[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md)。
 
 ### 逐层实验
 
@@ -210,24 +210,38 @@ S4第一次复用在第5 Ktile，S6在第7 Ktile；4项短链不能单独决定�
 
 ## 6. 推进次序与本轮交付
 
-九方向文档盘点已完成，按下表逐阶段推进。免费ROMEO上的已登记GPU测量已获许可；阶段1 L2开发完成，六形式按预置单调反例停止、未采留出；阶段2驻留A长度留出通过，两解释未区分；B/C开发合格但冻结零额外控制具体形式停止，未采留出。阶段3旧证据回放与条件接口已完成，实际短链独立返回价格未辨识。阶段4源／目的接口与旧证据回放已完成，D原生TMA开发数值／路径通过，D/E均无正式时间预测或留出；阶段5已完成HBM旧18条件回放与显式共享外存后端，真实写回与TMA迁移待测；阶段6已接入完整SMEM需求与输出写块工作假设，匹配时间仍待测；阶段7已接入实际寄存器需求与逐warp配额，条件窗口已回放，申请时长待测；阶段8已核对实际普通LSU需求及117份旧记录，局部缓存探针和静态构建已准备；原开发实测及独立评分完成，条件响应已记录，实际分区容量未知，8留出未启。阶段9已核对cfg_b容量、267份旧记录与R12快照，完整合同及模型活动报告已接通；E真实三输出端点已观测，尚无可迁移相位价格。阶段10已交付同版离线组合、三条件精确回归和原12评分，真实短链迁移与独立C2/C3未完成。
+下表保留2026-10-17这一轮九方向最小验证的分工与证据入口；当前按[PLAN §1](../../../PLAN.md#1-近期顺序)的模块、局部连接、共享与竞争、完整验收依赖推进。单轮许可与上限只在[GOALS §5.4–5.6](../../../GOALS.md#current-scope)维护。
 
-| 执行阶段 | 对应方向 | 本阶段有限交付 | 接入或转段依据 |
+| 原顺序 | 方向 | 本轮核心判断与最小干预 | 当前入口 |
+|---|---|---|---|
+| 1 | 同步与释放 | 原索引／递增回绕×首次复用D0／4096，先plain响应 | [同步服务](SYNC-SERVICE.md)、[当前轮次](../../../experiments/gh200_sm90/README.md#research-questions) |
+| 2 | 计算 | 驻留长度约束及wait0／wait1条件对照，检验提交与完成 | [计算服务](COMPUTE-SERVICE.md)；[Q05冻结长度验证](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q05-compute-wait-002/EXECUTION.md)两wait通过原5%标准，固定截距形式wait0失败；已有Q04迁移响应仍未通过 |
+| 3 | 异步搬运 | 固定G5分配的四种B行距，Q1／Q4端点配对 | [TMA共享服务](TMA-SHARED-SERVICE.md)；[行距开发结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261017-Q02-tma-stride-002/EXECUTION.md)已完成，Q4的B32近零、B80/B112约增加4.3%–5.4%；[CPU源定位](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261018-Q02-source-isolation-001/score.json)确认现有源就绪及最终响应均为0 |
+| 4 | L2共享源 | 复用源重排及两域反例；共享／独立源与次序最小配对 | [L2服务](L2-SERVICE.md) |
+| 5 | HBM | 固定工作集／活动规模的相同比例串行与交错读写 | [HBM服务](HBM-SERVICE.md) |
+| 6 | SMEM与输出 | 实际STS.64输出链与TMA输入的独立／串行／并发四组织 | [SMEM服务](SMEM-SERVICE.md)；[Q07开发结果](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261018-Q07-input-output-001/EXECUTION.md)12进程合格，并发比串行少918–955 cycle、比单独窗口max多730–742 cycle；含计时内fragment准备及两阶段join，机制信息不足 |
+| 7 | 寄存器源 | 固定编译帧、依赖和消费者的源复用／轮换 | [寄存器服务](register_service.md) |
+| 8 | L1／LSU | 原12开发条件冻结规则，原8个留出已检验 | [L1服务](L1-LSU-SERVICE.md)；[24进程留出结果](../../../../../../results/gh200_resource_campaign/access_rules/Q13-l1-lsu/L1-01-minimal/20261017-Q13-l1-minimal-002/EXECUTION.md)支持声明普通LSU条件内的快复用规则 |
+| 9 | SM发射／驻留 | 匹配cfg_b配额，改变释放前后工作放置，检验消费者推进 | [驻留服务](residency.md) |
+
+以下为首版交付及其未解决项。免费ROMEO上的已登记GPU测量已获许可；阶段1 L2开发完成，六形式按预置单调反例停止、未采留出；阶段2驻留A长度留出通过，两解释未区分；Q05两wait的每组完成滞后形式通过冻结长度验证、固定截距形式未通过，Q04迁移响应仍未通过；B/C开发合格但冻结零额外控制具体形式停止，未采留出。阶段3旧证据回放与条件接口已完成，实际短链独立返回价格未辨识。阶段4源／目的接口与旧证据回放已完成，D原生TMA开发数值／路径通过，D/E均无正式时间预测或留出；阶段5已完成HBM旧18条件回放与显式共享外存后端，真实写回与TMA迁移待测；阶段6已接入完整SMEM需求与输出写块工作假设，真实四组织开发窗口已测，含计时内fragment准备；准备完成后的联合响应及GEMM迁移仍缺；阶段7已接入实际寄存器需求与逐warp配额，条件窗口已回放，申请时长待测；阶段8已核对实际普通LSU需求及117份旧记录，局部缓存探针和静态构建已准备；原开发实测及独立评分完成，条件响应已记录；原8留出24进程的快复用规则通过，实际分区容量未知。阶段9已核对cfg_b容量、267份旧记录与R12快照，完整合同及模型活动报告已接通；E真实三输出端点已观测，尚无可迁移相位价格。阶段10已交付同版离线组合、三条件精确回归和原12评分，真实短链迁移与独立C2/C3未完成。
+
+| 首版阶段 | 对应方向 | 本阶段有限交付 | 接入或转段依据 |
 |---|---|---|---|
 | 1 L2 | 方向2 | 固定工作集的读并发曲线、写／1:1选点、局部供给与共享服务候选 | [L2服务](L2-SERVICE.md)、[L2-01](../../../experiments/gh200_sm90/Q03-source-service/L2-01-saturation.md)；开发及构建核对完成，六形式停止，无冻结、留出未采 |
-| 2 计算 | 方向6 | cfg_b实际形状／布局的4／13／32 Ktile服务，复用mma.sync证据 | [计算服务](COMPUTE-SERVICE.md)、[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md)；驻留A长度留出通过、两解释未区分；B/C具体形式停止，D/E开发诊断完成；未分离部分保留复合计算节点 |
+| 2 计算 | 方向6 | cfg_b实际形状／布局的4／13／32 Ktile服务，复用mma.sync证据 | [计算服务](COMPUTE-SERVICE.md)、[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md)；驻留A长度留出通过、两解释未区分；Q05两wait每组完成滞后形式通过冻结长度验证，固定截距形式未通过，固定项未迁移；B/C具体形式停止，D/E开发诊断完成；未分离部分保留复合计算节点 |
 | 3 同步与释放 | 方向8 | 已就绪／受控迟到交接，full、wait返回、empty与再取得槽 | [同步服务](SYNC-SERVICE.md)、[SYNC-01](../../../experiments/gh200_sm90/Q04-sync-slot/SYNC-01-replay.md)；phase／计数及条件返回已接通，旧46条件重算一致；B/C具体零控制形式已停止，独立返回价格未辨识 |
 | 4 异步搬运 | 方向7 | A16KiB、B0/B1各8KiB原生TMA服务，复用cp.async；源与目的分别推进 | [服务接口](TMA-SHARED-SERVICE.md#stage-4-service)、[TRANSFER-01](../../../experiments/gh200_sm90/Q02-tma-request/TRANSFER-01-replay.md)；源／目的与条件等待已接通，旧资格保留；D开发路径完成，无正式预测／留出，供给价格未辨识 |
 | 5 HBM | 方向1 | 大工作集读／写／混合参照与共享外存接口 | [HBM服务](HBM-SERVICE.md)、[HBM-01](../../../experiments/gh200_sm90/Q03-source-service/HBM-01-replay.md)；旧窗口外推反例、显式方向服务率和真实写回缺口 |
-| 6 SMEM | 方向4 | 完整lane／word需求、实际STS.64输出块及旧联合窗口 | [SMEM服务](SMEM-SERVICE.md)、[SMEM-01](../../../experiments/gh200_sm90/Q07-smem/SMEM-01-replay.md)；地址与接口已核对，保留m11反例，真实价格与联合迁移待测 |
+| 6 SMEM | 方向4 | 完整lane／word需求、实际STS.64输出块及旧联合窗口 | [SMEM服务](SMEM-SERVICE.md)、[SMEM-01](../../../experiments/gh200_sm90/Q07-smem/SMEM-01-replay.md)；地址与接口已核对，保留m11反例；Q07四组织开发已测（含fragment准备），准备完成后的联合响应、真实写块价格与GEMM迁移待测 |
 | 7 寄存器 | 方向5 | 固定资源和生成代码的源复用／依赖／消费窗口、实际启动配额 | [寄存器服务](register_service.md)、[REG-01](../../../experiments/gh200_sm90/Q08-register-residency/REG-01-replay.md)；条件窗口与需求已核对，逐warp CTA池可执行，实际申请时长待测 |
-| 8 L1／LSU | 方向3 | `.ca/.cg`、工作集及独立加载的普通访存服务 | [L1／LSU服务](L1-LSU-SERVICE.md)、[L1-01](../../../experiments/gh200_sm90/Q13-l1-lsu/L1-01-replay.md)；实际零普通global／local需求与旧窗口核对；原开发实测及独立评分完成，保留条件响应与未知实际分区；8留出未启，无新价格或独立验收 |
+| 8 L1／LSU | 方向3 | `.ca/.cg`、工作集及独立加载的普通访存服务 | [L1／LSU服务](L1-LSU-SERVICE.md)、[L1-01](../../../experiments/gh200_sm90/Q13-l1-lsu/L1-01-replay.md)；实际零普通global／local需求与旧窗口核对；原开发实测及独立评分完成；原8留出的快复用规则通过5%时间／5个百分点响应标准，限于原普通LSU条件，实际物理分区未知 |
 | 9 发射／驻留 | 方向9 | cfg_b相关混合流、资源配额与活动推进规则 | [联合服务](joint_service.md)、[驻留服务](residency.md)、[SM-01](../../../experiments/gh200_sm90/Q08-register-residency/SM-01-replay.md)；容量与活动报告已接通，E已取得三输出软件端点；可迁移联合价格及启动分布仍待证据 |
 | 10 组合验证 | 组合层 | 同一cfg_b程序图、模块版本、短链及原12条件的时间线、端点和plain时间 | [COMPOSITION-01](../../../experiments/gh200_sm90/Q14-composition/COMPOSITION-01-replay.md)；三条件与原价格精确回归、原12评分复用，真实迁移与独立C2/C3待证据 |
 
 每阶段按 [GOALS §5.6](../../../GOALS.md#56-一轮研究)先登记有限条件、重复、候选及成本，再执行。转段交付包含已完成证据、可执行规则或明确工作假设及接口、有限结论和剩余观测；规则被反证或信息不足也须保存结果后收口。准备完成、实测完成与独立验收分别记录；等待GPU只阻塞依赖该观测的部分，后续独立离线准备可以继续。
 
-每阶段先复用已有结果，按顺序选择最小对照，不展开全参数组合。原C1/C2/C3标准、旧阈值和失败记录保留；频率／暖机、C1续跑、其他配置、前端和设备保持原暂停范围。本轮九阶段首版有限交付及当前状态统一见[交付包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-module-campaign-001/README.md)。
+每阶段先复用已有结果，按PLAN依赖选择最小对照，不展开全参数组合。原C1/C2/C3标准、旧阈值和失败记录保留；频率／暖机、C1续跑、其他配置、前端和设备保持原暂停范围。本轮九阶段首版有限交付及当前状态统一见[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261017-module-campaign-001/README.md)。
 
 ## 7. 资料与使用位置
 

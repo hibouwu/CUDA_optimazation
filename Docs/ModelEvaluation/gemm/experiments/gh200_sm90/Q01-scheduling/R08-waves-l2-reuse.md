@@ -66,7 +66,7 @@
 | graph | 分数 | a=23.66，t=45.83 | 13.23 | 25.01 |
 | graph | 离散 + 分数 | a=−0.36，t=36.66，分数项 14.33 | 2.73 | 7.69 |
 
-![波次](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r08-waves-l2/waves.png)
+![波次](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2/waves.png)
 
 **每 CTA 时间戳**（3 进程 × 3 次启动的中位数；忙碌 = 出口 − 入口）
 
@@ -134,7 +134,7 @@
 
 ## 数据
 
-[结果目录](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r08-waves-l2/)：`samples.jsonl`（每进程一行）、`samples/<case>/trial-*/stdout.txt`（原始事件与每 CTA 时间戳）、[cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r08-waves-l2/cases.csv)、[summary.json](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r08-waves-l2/summary.json)、[waves.png](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r08-waves-l2/waves.png)、[l2_traversal.png](../../../../../../results/gh200_resource_campaign/access_rules/20261007-r08-waves-l2/l2_traversal.png)、`build/`（编译命令、SASS、`sass_check.json`）、`environment.json`、`nvidia-smi-power.txt`。代码：[r08_run.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r08_run.py)、[r08_analyze.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r08_analyze.py)、[probes/r08_probe.cu](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/r08_probe.cu)。
+[结果目录](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2/)：`samples.jsonl`（每进程一行）、`samples/<case>/trial-*/stdout.txt`（原始事件与每 CTA 时间戳）、[cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2/cases.csv)、[summary.json](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2/summary.json)、[waves.png](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2/waves.png)、[l2_traversal.png](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/R08-waves-l2-reuse/20261007-r08-waves-l2/l2_traversal.png)、`build/`（编译命令、SASS、`sass_check.json`）、`environment.json`、`nvidia-smi-power.txt`。代码：[r08_run.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r08_run.py)、[r08_analyze.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r08_analyze.py)、[probes/r08_probe.cu](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/r08_probe.cu)。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/r08_run.py build --cutlass-root <cutlass> --output RUN

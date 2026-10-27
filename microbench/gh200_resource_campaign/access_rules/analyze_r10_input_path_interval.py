@@ -85,13 +85,13 @@ def analyze(root,output):
         digest=hashlib.sha256(path.read_bytes()).hexdigest();inputs[str(path.resolve())]=digest
         return digest
     def read(path):sha(path);return json.loads(path.read_text())
-    previous=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json')
-    prefix=read(root/'20261010-R10-producer-delay/reanalysis/B-20261011-shared-path-prefix-v1/B-shared-path-prefix.json')
-    original=read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
-    endpoints=read(root/'20261010-R10-raster-pitch/reanalysis/main-input-path-endpoints-v1/report.json')
+    previous=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-v1/B-input-path.json')
+    prefix=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-producer-delay/reanalysis/B-20261011-shared-path-prefix-v1/B-shared-path-prefix.json')
+    original=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
+    endpoints=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/main-input-path-endpoints-v1/report.json')
     trace_attempts=[]
     for version in (2,3):
-        directory=root/f'20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-interval-v{version}'
+        directory=root/f'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-input-path-interval-v{version}'
         trace=read(directory/'B-input-path-interval.json');archived_source=directory/'branch-cell-source.py'
         expected=next(v for n,v in trace['input_sha256'].items() if n.endswith('analyze_r10_input_path_interval.py'))
         if sha(archived_source)!=expected:raise ValueError('historical trace source snapshot changed')

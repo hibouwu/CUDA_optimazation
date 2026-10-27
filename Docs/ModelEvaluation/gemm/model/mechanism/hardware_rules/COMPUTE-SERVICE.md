@@ -1,6 +1,6 @@
 # cfg_b 有限计算链服务
 
-更新：2026-10-17。阶段2驻留计算版本A的开发与留出18进程已完成并合格，4／13→32 Ktile窗口长度外推通过；两个解释重合，尚不能区分机制。实验条件、数值见证和操作入口见[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md)，B–E的设计与依赖见[模块地图 §4](MICROBENCH-ROADMAP.md#4-首个组合切片cfg_b-真实短计算链)。
+更新：2026-10-20。阶段2驻留计算版本A的开发与留出18进程已完成并合格，4／13→32 Ktile窗口长度外推通过；首轮两个解释重合。Q05的wait0／wait1单因素对照及冻结长度验证支持匹配驻留窗口的每组完成滞后形式，固定截距形式未通过。实验条件、数值见证和操作入口见[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md)，B–E的设计与依赖见[模块地图 §4](MICROBENCH-ROADMAP.md#4-首个组合切片cfg_b-真实短计算链)。
 
 ## 1. 当前证据与工作假设
 
@@ -9,7 +9,7 @@
 | [EXP-07](../../../experiments/gh200_sm90/Q05-wgmma/EXP-07-wgmma.md) | N64指定长循环的4095.942 FLOP/cycle参照、完整排空与数值检查 | 实际cfg_b N128短链；`555+105n`的条件窗口未获独立留出，也未导出参数 |
 | [R00-B](../../../experiments/gh200_sm90/Q05-wgmma/R00-anchor-target.md#r00-b目标-wgmma-形状15-点) | N128 K/K、1/2WG长循环分别4095.111/4095.548 FLOP/cycle；128个累加寄存器/线程 | 实际K/MN、两个不同M64子块、四个K16偏移及每组8条指令；旧每组32条 |
 | 同页K/MN配对 | N256、2WG、1024轮的布局对照 | N128有限长度、末尾等待和两个输出WG的pingpong |
-| [计算量干预](../../../../../../results/gh200_resource_campaign/access_rules/20261015-g3-compute-credit-discrimination-003/RESULTS.md) | 增加两遍计算的增量接近名义工作量 | 原程序首段、提交提前量及完成后的返回价格仍未分离 |
+| [计算量干预](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/RESULTS.md) | 增加两遍计算的增量接近名义工作量 | 原程序首段、提交提前量及完成后的返回价格仍未分离 |
 
 当前请求级组合的计算递推在[supply_model](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)维护，`cfg_b_request_model.predict()`按阶段频率换算512 cycle/Ktile与256 cycle提交提前量。历史不带该预测器的`simulate()`则读取原候选288 ns与144 ns；两者分别保留来源。
 
@@ -34,11 +34,19 @@ E为内部累计服务进度，C为提交，D为模型完成，W为软件等待�
 | 13 | 6400 cycle | 6656 cycle | 工作假设 |
 | 32 | 16128 cycle | 16384 cycle | 工作假设 |
 
-离线入口[cfg_b_compute_chain.py](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_compute_chain.py)的`resident_hypothesis()`直接调用现有引擎，以1 GHz数值坐标换成cycle保存上述事件。外部服务成本设0，探针的起步会合、打点和结果消费另有实际窗口，因此这些值作为服务假设保存。
+离线入口[cfg_b_compute_chain.py](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_compute_chain.py)的`resident_hypothesis()`以零外部等待调用独立计算服务，按SM cycle保存上述事件。外部服务成本设0，探针的起步会合、打点和结果消费另有实际窗口，因此这些值作为服务假设保存。
+
+`compute_timeline`由同步模块或调用方提供逐组外部前驱满足后的许可时刻，使用共同单组转换独立输出开始、提交、完成、正常wait0/1返回及末尾排空；`resident_hypothesis()`提供全部驻留就绪的特例，保留原字段与数值。跨输出调用通过`initial_service_end_cycles`传入同一服务的上一进度，缺省0；正常wait历史在本输出首组重新开始。输入／槽代次和释放由调用方连接，计算参数仍按本页证据选择。[独立模块交付](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q05-local-compute-service-001/EXECUTION.md)核对了完整引擎与局部链逐位回归、两wait公式和异目录复现。[跨输出接口交付](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261019-Q14-compute-handoff-contract-001/EXECUTION.md)修复独立调用重置计算进度的反例，四组织762端点与既有完整引擎一致，默认报告保持。
+
+[跨WG容量必要界](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261019-Q05-compute-capacity-bound-001/README.md)按[硬件稠密计算容量](../../../hardware/gh200_sm90/L0.md#官方单-gpu-计算规格)核累计完成工作量，排除每WG各持一份q512满速服务、其他价格不变的具体形式；S6、S4及K2提前交接均有161cycle缺口，输入延后时相容。当前同SM共享计算进度保留为工作规则，内部仲裁仍未辨识。
+
+[提交提前量的局部辨识](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261019-Q05-commit-lead-001/README.md)核实：零额外等待、q512／d95且lead在0–417cycle内时，旧两wait完整窗口公式均不含lead，六窗口回放无法选择256或381cycle。在同活动调用足迹假设下，首次计算前／首次commit后的同剂量延迟给出两种不同预测；755945的15进程零桥接及数值通过，原始响应差267cycle，但实际剂量差29cycle超冻结12.8门槛，结论信息不足；原2048未采，两形式均未选择，价格保持。匹配与后续辨识结果见第3节。
 
 ## 2. 两个有限解释与观测对应
 
-首轮固定两个完整窗口解释：`T(Kt)=a+512·Kt`，以及`T(Kt)=a+q·Kt`。a与q非负，后者是包含发出、commit／wait及操作数访问的条件循环服务。仅用4／13 Ktile的plain开发窗口确定参数和32 Ktile预测，冻结后采32；trace配对检查打点对窗口的影响以及末段的提交和等待。两段长度增量不相容时保存有限链反例，按[本轮登记](../../../PLAN.md#stage-2-compute-a)收口。
+首轮固定两个完整窗口解释：`T(Kt)=a+512·Kt`，以及`T(Kt)=a+q·Kt`。a与q非负，后者是包含发出、commit／wait及操作数访问的条件循环服务。仅用4／13 Ktile的plain开发窗口确定参数和32 Ktile预测，冻结后采32；trace配对检查打点对窗口的影响以及末段的提交和等待。两段长度增量不相容时保存有限链反例，按[本轮登记](MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)收口。
+
+Q05保留首组无wait、末尾wait0，只改变中间各组的wait立即数，全部使用plain。预列两种形式：分别加固定截距的`T1=a1+512·Kt、T0=a0+512·Kt`；每组完成滞后的`T1=a+512·Kt+d、T0=a+512·Kt+(Kt−1)·d`。后者预测两臂差为`(Kt−2)·d`；4→13的每组长度增量分别为512和512+d。
 
 | 探针观测 | 组合接口 | 约束范围 |
 |---|---|---|
@@ -52,12 +60,14 @@ E为内部累计服务进度，C为提交，D为模型完成，W为软件等待�
 
 ## 3. 接入与当前结论
 
-[准备包](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-preparation-001/README.md)的9项CPU检查与本地静态审查保留；[开发实测](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-execution-002/dev/summary.json)及[留出](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-execution-002/heldout/summary.json)已完成同卡数值、资源与窗口核对。[开发冻结](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-fit-001/dev-freeze.json)的名义与条件解释均得到`a=769、q=512 cycle`，两者预测完全重合；[独立长度评分](../../../../../../results/gh200_resource_campaign/access_rules/20261017-COMPUTE-01-heldout-001/score.json)通过本轮原5%标准，但不能排除竞争解释。
+- **条件循环量**：512 cycle/Ktile 有匹配六槽驻留计算体的证据（[COMPUTE-01](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md) A：a=769、q=512，长度留出通过）。769 cycle 是 A 完整窗口的复合固定项，不加到 GEMM 前缀或每 Ktile 服务。
+- **完成滞后 d95**：wait1/wait0 的长度增量为 512/607 cycle/Ktile，32 Ktile 冻结验证误差约 0.02%；固定截距形式被反证。d 保留为匹配驻留计算组织的完成连接量。
+- **软件端点**：驻留 plain 窗口 769+512·K 与软件返回 448+28·[K>1] 通过 K2 冻结验证。
+- **提交提前量不可辨识**：完整窗口不含 lead；提交提前量与调用控制之间可以在 256／381 cycle 间等价变换，原假设 256 cycle 保持。
+- **复合连接**：计算完成与控制的复合连接（消费者继续推进 133.4 cycle/组、empty 反馈 275 cycle）由[同步服务](SYNC-SERVICE.md)维护。
+- **接入 GEMM**：可选 d95 默认不启用；启用后 stage 响应 3.899%（实测 10.467%），普通 wait1 由当前 commit 主导。
+- **真实 GEMM wait0 干预（752070）**：不完整样本中 S6 +21.6%、S4 +15.5%，与 d0 的预测（S6 不变）明显不符，按资格门记为信息不足。
+- **其他**：B/C 的零额外控制形式被反证；D/E 只有开发数值与路径核对。
+- **未辨识**：等待返回与物理完成的关系、独立控制价格、完整供给／输出的价格迁移。
 
-512 cycle/Ktile现在有匹配六槽驻留计算体的条件循环量证据，覆盖该程序的发出、描述符／fence、提交／等待与操作数访问。769 cycle是A完整窗口的复合固定项，包含会合、消费等未分离过程，不加到GEMM前缀或每Ktile服务；256 cycle提交提前量仍为原工作假设。末段观测只保存软件发出／提交／等待返回边界，不将其差值命名为物理指令延迟。当前cfg_b计算服务及其他价格保持原版。
-
-[B/C实测](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md#bc-measured)的开发进程全部合格，但q512／lead256与零额外控制价格的具体形式被冻结plain响应反证，按原规则停止，未采留出；trace扰动超限，端点不迁移到plain。该失败没有单独辨识barrier或返回价格。
-
-[D原生TMA](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md#d-measured)与[E真实pingpong输出](../../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md#e-measured)已完成有限开发数值／路径核对，没有正式时间预测或留出验收。E的trace实际区分了mma返回与MAIN_END；D/E观察扰动均不满足向plain迁移端点的条件。
-
-当前限定结论是A驻留复合窗口的有限长度外推相容，B/C具体时间连接已停止，D/E提供匹配程序的数值与软件路径证据。等待返回与物理完成、独立控制价格及完整供给／输出的价格迁移仍未辨识；当前组合没有新增参数或全GEMM独立C2/C3通过资格。
+各轮记录见[计算完成与提交](../../../experiments/gh200_sm90/Q05-wgmma/local-compute-chain.md)、[局部同步链](../../../experiments/gh200_sm90/Q04-sync-slot/local-sync-chain.md)与[局部规则接回 GEMM](../../../experiments/gh200_sm90/Q14-composition/gemm-connection.md)。

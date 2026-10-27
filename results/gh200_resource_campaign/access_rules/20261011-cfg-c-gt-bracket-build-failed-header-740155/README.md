@@ -1,1 +1,0 @@
-740155 CPU-only 构建失败，未运行 GPU。准备脚本误改 source/probes/r18_trace.hpp 副本；实际 overlay/v06_trace.hpp 引用 source/probes/v06_trace.hpp，导致 host 看不到三个新标识。保留 input/output tar、冻结身份、命令和完整错误输出。修正实际 include 绑定后的成功构建为相邻 20261011-cfg-c-gt-bracket-build（740156）。本目录没有可用二进制或观测结果。

@@ -133,6 +133,10 @@ class StatefulTensorSource:
                 lines = [(self.addresses['B']+(k*64+row)*3072+n*256+(128 if atom == 'B1' else 0))//128
                          for row in range(64)]
             self.line_sets[identity] = lines
+        return self.submit_identity(t, cta, identity, weight)
+
+    def submit_identity(self, t, cta, identity, weight):
+        """源身份由调用方的实际请求给出；工作坐标不参与服务合并。"""
         t += self.base
         core_key = (self.cta_groups[cta], identity)
         previous = self.core_pending.get(core_key)
@@ -144,6 +148,8 @@ class StatefulTensorSource:
         ready = max(core['source_ready'], data_ready+self.frontend_ns)
         self.count, self.work, self.busy = self.core.count, self.core.work, self.core.busy
         if self.record_diagnostics:
+            k = identity[2]
+            atom = 'A' if identity[0] == 'A' else 'B1' if identity[1] % 2 else 'B0'
             self.diagnostics.append(dict(cta=cta,k=k,atom=atom,issue_ns=t-self.base,
                 ready_ns=ready-self.base,new_hbm_lines=self.hbm_lines-before))
         return dict(source_id=core['source_id'],merged=merged,source_key=identity,
@@ -187,8 +193,14 @@ class ProgramGemmSource(StatefulTensorSource):
 
     def __init__(self, program, cta_groups, prices, *, output_base, **parameters):
         super().__init__(program['work'], cta_groups, prices, **parameters)
-        self.ktiles = program['ktiles']
         self.output_base = output_base
+        self.use_program(program)
+        self.output_bytes = 0
+
+    def use_program(self, program):
+        """切换同一分配/描述符的程序分支，保留跨调用的源状态。"""
+        self.coordinates = program['work']
+        self.ktiles = program['ktiles']
         self.output_stride = program['case']['ldd']*4
         self.atom_templates = []
         for outputs in program['outputs']:
@@ -197,7 +209,6 @@ class ProgramGemmSource(StatefulTensorSource):
                 ids = output['operands']['A']['source_atoms'] + output['operands']['B']['source_atoms']
                 templates.append([program['source_atoms'][i] for i in ids])
             self.atom_templates.append(templates)
-        self.output_bytes = 0
 
     def begin(self, work_index, base, groups=64):
         super().begin(work_index, base, groups, probe_metadata=False)
@@ -205,11 +216,11 @@ class ProgramGemmSource(StatefulTensorSource):
 
     def input(self, t, cta, group, atom, weight):
         self.work_index, k = divmod(group, self.ktiles)
-        operand = ('A', 'B0', 'B1')[atom]
-        m, n = self.coordinates[cta][self.work_index]
-        identity = ('A', m, k) if atom == 0 else ('B', n*2+(atom == 2), k)
+        source = self.atom_templates[cta][self.work_index][atom]
+        identity = (source['operand'], source['origin'][0]//(128 if atom == 0 else 64), k)
+        if source['base_offset_bytes']:
+            identity += (source['base_offset_bytes'],)
         if identity not in self.line_sets:
-            source = self.atom_templates[cta][self.work_index][atom]
             origin = [source['origin'][0], source['origin'][1]+64*k]
             strides, shape = source['stride_bytes'], source['shape']
             row_axis = 0 if atom == 0 else 1
@@ -221,7 +232,7 @@ class ProgramGemmSource(StatefulTensorSource):
                 lines.extend(range(start//128,(start+row_bytes-1)//128+1))
             self.line_sets[identity] = lines
         busy = self.busy
-        result = self.submit(t,cta,(cta,k,operand),weight)
+        result = self.submit_identity(t,cta,identity,weight)
         result['source_busy_ns'] = self.busy-busy
         return result
 

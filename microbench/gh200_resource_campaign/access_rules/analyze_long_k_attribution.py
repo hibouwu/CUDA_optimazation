@@ -181,8 +181,8 @@ def analyze_run(run, rows, calibration, source_label, provenance):
 
 
 def run(base, output):
-    freeze=base/'20261009-V09-freeze-job738972-r2'
-    observed=base/'20261009-V09-heldout-job739011'
+    freeze=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
+    observed=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     calibration=read(freeze/'frozen/calibration.json')
     provenance={str(freeze/'frozen/calibration.json'):v06_run.sha(freeze/'frozen/calibration.json')}
     references=[r for r in read(freeze/'cases.json') if r['set']=='calib']

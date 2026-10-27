@@ -119,10 +119,10 @@ def analyze(base, public_code, output):
         inputs[str(path)] = sha(path)
         return read(path)
 
-    roots = dict(ends21=base/'20261009-R09-input-clock-calibration-job738376',
-                 ends9=base/'20261009-R09-equal-work-job738459',
-                 dual30=base/'20261009-V09-heldout-job739011',
-                 frozen=base/'20261009-V09-freeze-job738972-r2')
+    roots = dict(ends21=base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376',
+                 ends9=base/'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-equal-work-job738459',
+                 dual30=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011',
+                 frozen=base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2')
     original = bound(roots['ends21']/'reanalysis/C-20261009-source-clock-dev-v2/source-clock.json')
     for root in roots.values():
         env = bound(root/'environment.json')

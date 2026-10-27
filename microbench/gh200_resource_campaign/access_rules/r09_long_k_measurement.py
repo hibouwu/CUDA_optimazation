@@ -21,9 +21,9 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 GPU = 'GPU-43269fbc-449d-3e0f-908a-9c81229546d3'
-FROZEN = '20261009-V09-freeze-job738972-r2'
-ENDS = '20261009-R09-input-clock-calibration-job738376'
-MEASUREMENT = '20261011-long-k-event-bounded/measurement-v2'
+FROZEN = 'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
+ENDS = 'Q09-frequency/R07-R09-inkernel-clock/20261009-R09-input-clock-calibration-job738376'
+MEASUREMENT = 'Q15-full-time/long-k-mainline/20261011-long-k-event-bounded/measurement-v2'
 
 
 def read(p):

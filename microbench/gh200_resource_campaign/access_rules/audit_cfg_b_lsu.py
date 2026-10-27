@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 
-FROZEN = Path('results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011')
+FROZEN = Path('results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011')
 MANIFEST_SHA = '09da85d124eb697a95c4695bd05281b07c37877890d0eca18afbdd2cf213f2ab'
 LOG_SHA = {
     'cfg_b_plain': 'cb7d5bca3d5e98814f141149deb93a13da83596ae1e90701cc7545118eb0b1fe',

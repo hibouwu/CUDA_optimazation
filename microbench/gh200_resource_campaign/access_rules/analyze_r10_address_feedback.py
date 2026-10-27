@@ -18,7 +18,7 @@ def analyze(root,output):
         digest=hashlib.sha256(path.read_bytes()).hexdigest()
         inputs[str(path.resolve())]=digest
         return digest
-    old_path=root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json'
+    old_path=root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json'
     sha(old_path)
     old=json.loads(old_path.read_text())
     # Reuse the already-replayed observations, rechecking their data identities.

@@ -1,4 +1,0 @@
-Filesystem          1024-blocks    Used Available Capacity Mounted on
-/dev/mapper/live-rw    16766976 7094540   9672436      43% /
-JOB=740259 NODE=romeo-a058 RUN_TMP=/tmp/gh200-r13-early-wait-sum-correctness-6Xgwkg5v
-srun: error: romeo-a058: task 0: Exited with exit code 1

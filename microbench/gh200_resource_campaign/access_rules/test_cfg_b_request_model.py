@@ -1,5 +1,6 @@
 """请求服务与共同程序的绑定、跨 CTA 共享和旧候选反例的 CPU 回归。"""
 import copy
+from graphlib import TopologicalSorter
 import importlib.util
 import unittest
 from unittest.mock import patch
@@ -9,6 +10,29 @@ import cfg_b_program
 import cfg_b_request_model as request_model
 import supply_model as supply
 import tma_tensor_multicta as tensor
+
+
+def without_full_query_graph(graph):
+    graph = copy.deepcopy(graph)
+    nodes = graph['nodes']
+    queries = {name: nodes.pop(name) for name in list(nodes) if name.endswith('.full_query')}
+    for name, predecessors in nodes.items():
+        nodes[name] = [prior for p in predecessors for prior in queries.get(p, [p])]
+    graph['topological_order'] = list(TopologicalSorter(nodes).static_order())
+    return graph
+
+
+def without_full_query_report(report):
+    report = copy.deepcopy(report)
+    for detail in report['details']:
+        times = detail['node_times_ns']
+        queries = [name for name in times if name.endswith('.full_query')]
+        for name in queries:
+            del times[name]
+        detail['dependency_edges_checked'] -= len(queries)
+        report['dependency_edges_checked'] -= len(queries)
+        detail['control_nodes_at_predecessor_max'].sort()
+    return report
 
 
 class RequestCompositionTests(unittest.TestCase):
@@ -24,6 +48,177 @@ class RequestCompositionTests(unittest.TestCase):
             handoff_delay_ns=2., output_latency_ns=31., output_weight=3.,
             epilogue_prepare_ns=7., epilogue_write_ns=5., epilogue_control_ns=2.,
             epilogue_tail_ns=3., destination_service_ns=3.)
+
+    def test_source_fold_changes_only_actual_a_requests(self):
+        row = dict(config='cfg_b', m=2816, n=1536, k=4096, stages=6,
+                   lda=4104, alloc_lda=4104, seed=29)
+        setup = dict(grid=[1, 132, 1], stages=6)
+        original = cfg_b_program.build_program(row, setup)
+        folded = cfg_b_program.build_program(row, dict(setup, fold_a_source=1))
+        self.assertEqual(folded['work'], original['work'])
+        self.assertEqual(folded['outputs'], original['outputs'])
+        changed = []
+        for old, new in zip(original['source_atoms'], folded['source_atoms']):
+            if old == new:
+                continue
+            changed.append(new)
+            self.assertEqual(old['operand'], 'A')
+            self.assertEqual(new, dict(old, origin=[old['origin'][0]-2176, old['origin'][1]]))
+            self.assertGreaterEqual(old['origin'][0], 2176)
+        self.assertEqual(len(changed), 60)
+        self.assertEqual({a['origin'][0] for a in changed}, {128*m for m in range(5)})
+        for name, value in original['totals'].items():
+            if name == 'distinct_source_boxes':
+                self.assertEqual(folded['totals'][name], value - 5*64)
+            elif name == 'distinct_valid_source_KiB':
+                self.assertEqual(folded['totals'][name], value - 5*64*16)
+            else:
+                self.assertEqual(folded['totals'][name], value)
+        before = cfg_b_program.expand_cta(original, 72)
+        after = cfg_b_program.expand_cta(folded, 72)
+        self.assertEqual(before['nodes'], after['nodes'])
+        for old, new in zip(before['requests'], after['requests']):
+            if old['output'] == 1 and old['atom'] == 'A':
+                self.assertEqual(new['source']['origin'], [0, 64*new['k']])
+                self.assertEqual(new['source']['shape'], [128, 64])
+            else:
+                self.assertEqual(new, old)
+        self.assertEqual(cfg_b_program.expand_cta(original, 0), cfg_b_program.expand_cta(folded, 0))
+        self.assertEqual(original, cfg_b_program.build_program(row, setup))
+        self.assertEqual(folded['runtime_intervention']['fold_a_source'], 1)
+        for changed_row, changed_setup in (
+                (dict(row, input_mode='random'), setup), (dict(row, zero_m=2176), setup),
+                (dict(row, m=2944), setup), (dict(row, swizzle=8), setup),
+                (dict(row, stages=4), dict(setup, stages=4)),
+                (row, dict(setup, active_stages=4)), (row, dict(setup, wgmma_repeats=3))):
+            with self.assertRaisesRegex(ValueError, 'fold_a_source requires'):
+                cfg_b_program.build_program(changed_row, dict(changed_setup, fold_a_source=1))
+
+    def test_output_copy_gate_preserves_local_work_and_control(self):
+        row = dict(config='cfg_b', m=768, n=256, k=320, stages=4)
+        setup = dict(grid=[4, 1, 1], stages=4)
+        original = cfg_b_program.build_program(row, setup)
+        self.assertNotIn('runtime_intervention', original)
+        self.assertNotIn('output_tma_enabled', original)
+        explicit = cfg_b_program.build_program(row, dict(setup, fold_a_source=0, store_target_ctas=4))
+        explicit['setup'] = dict(setup)
+        self.assertEqual(explicit, original)
+        for limit in (0, 1, 3):
+            gated = cfg_b_program.build_program(row, dict(setup, store_target_ctas=limit))
+            self.assertEqual(gated['output_tma_enabled'], [cta < limit for cta in range(4)])
+            self.assertEqual(gated['runtime_intervention']['store_target_ctas'], limit)
+            self.assertEqual(gated['work'], original['work'])
+            self.assertEqual(gated['source_atoms'], original['source_atoms'])
+            for cta in range(4):
+                graph = cfg_b_program.expand_cta(gated, cta)
+                self.assertEqual(graph.pop('output_tma_enabled'), cta < limit)
+                self.assertEqual(graph, cfg_b_program.expand_cta(original, cta))
+            demand = cfg_b_program.smem_demands(gated)
+            old_demand = cfg_b_program.smem_demands(original)
+            self.assertEqual(demand['paths'][:3], old_demand['paths'][:3])
+            self.assertEqual(demand['paths'][3]['total_bytes'], limit*3*65536)
+        for bad in (-1, 5, 1.5):
+            with self.assertRaisesRegex(ValueError, 'store_target_ctas'):
+                cfg_b_program.build_program(row, dict(setup, store_target_ctas=bad))
+        with self.assertRaisesRegex(ValueError, 'fold_a_source must'):
+            cfg_b_program.build_program(row, dict(setup, fold_a_source=2))
+
+    def test_private_sources_keep_program_and_use_allocation_stride(self):
+        row = dict(config='cfg_b', m=2816, n=1536, k=4096, lda=4104, alloc_lda=4104, storage_m=2944)
+        setup = dict(grid=[1, 132, 1], stages=6)
+        original = cfg_b_program.build_program(row, setup)
+        private = cfg_b_program.build_program(row, dict(setup, private_source=1))
+        explicit = cfg_b_program.build_program(row, dict(setup, private_source=0))
+        explicit['setup'] = setup
+        self.assertEqual(explicit, original)
+        self.assertEqual(private['outputs'], original['outputs'])
+        self.assertEqual(private['work'], original['work'])
+        for cta in (0, 1, 131):
+            old, new = (cfg_b_program.expand_cta(p, cta) for p in (original, private))
+            self.assertEqual(old['nodes'], new['nodes'])
+            for a, b in zip(old['requests'], new['requests']):
+                stride = 2944*4104*2 if a['atom'] == 'A' else 4096*1536*2
+                self.assertEqual(b, dict(a, source=dict(a['source'],
+                    base_offset_bytes=a['source']['base_offset_bytes']+cta*stride)))
+        for key in original['totals']:
+            if not key.startswith('distinct_'):
+                self.assertEqual(private['totals'][key], original['totals'][key])
+        self.assertGreater(private['totals']['distinct_source_boxes'], original['totals']['distinct_source_boxes'])
+
+    def test_same_s6_runtime_slots_and_repeated_compute(self):
+        for ktiles, outputs, expected in ((4, 1, 192), (13, 1, 624), (4, 2, 480)):
+            program = cfg_b_program.build_program(
+                dict(config='cfg_b', m=128*outputs, n=128, k=64*ktiles),
+                dict(grid=[1, 1, 1], stages=6, smem=215040,
+                     active_stages=4, wgmma_repeats=3, epilogue_alpha=0.3333333433))
+            costs = dict(service_ns=0., read_latency_ns=0., compute_ns=16., commit_lead_ns=8.)
+            if outputs == 2:
+                costs['compute_phases_ns'] = [dict(compute_ns=16., commit_lead_ns=8.),
+                                              dict(compute_ns=24., commit_lead_ns=12.)]
+            original = copy.deepcopy(costs)
+            report = request_model.simulate(program, costs, detailed_ctas=(0,))
+            self.assertEqual(costs, original)
+            self.assertEqual(program['stages'], 6)
+            self.assertEqual(program['setup']['smem'], 215040)
+            detail = report['details'][0]
+            times = detail['node_times_ns']
+            self.assertEqual(times[f'j{outputs-1}.main_end'], expected)
+            for group in detail['groups']:
+                self.assertEqual(group['slot'], group['group'] % 4)
+                self.assertEqual(group['wgmma_count'], 24)
+                self.assertGreaterEqual(times[group['release']], times[group['compute_completion']])
+                if group['previous_group'] is not None:
+                    self.assertGreaterEqual(times[f'g{group["group"]}.acquire'],
+                                            times[f'g{group["previous_group"]}.release'])
+            self.assertEqual(report['accounting']['input_delivery_count'], 3*ktiles*outputs)
+        historical = cfg_b_program.build_program(
+            dict(config='cfg_b', m=128, n=128, k=256),
+            dict(grid=[1, 1, 1], stages=6, active_stages=4))
+        self.assertEqual(historical['runtime_intervention']['epilogue_alpha'], 1.)
+        self.assertEqual(historical['runtime_intervention']['wgmma_repeats'], 1)
+
+    def test_preparation_acquire_requests_and_critical_path_share_coordinates(self):
+        import cfg_b_tma_chain as transfer
+        from mbarrier_service import ConditionSyncService
+        program=cfg_b_program.build_program(dict(config='cfg_b',m=128,n=128,k=832,stages=4),
+            dict(grid=[1,1,1],stages=4))
+        def hardware(t,q):
+            atom=('A','B0','B1').index(q['operand'])
+            returned=t+(10. if q['tile']==atom==0 else 0.)
+            return dict(source_id=3*q['tile']+atom,source_key=(q['tile'],atom),merged=False,
+                source_ready=returned+100.,source_busy_ns=0.,service_start=returned,
+                service_end=returned,issue_return_ns=returned)
+        costs=dict(service_ns=0.,read_latency_ns=0.,compute_ns=512.,commit_lead_ns=256.,
+            completion_lag_ns=95.,loop_advance_ns=133.,input_release_delay_ns=275.,
+            producer_gap_ns=3.,operand_gap_ns=1.,producer_control_ns=(7.,5.,3.))
+        local=transfer.timed_lifecycle(13,4,request_service=hardware,compute_ns=512.,
+            commit_lead_ns=256.,completion_lag_ns=95.,loop_advance_ns=133.,release_visibility_ns=275.,
+            producer_gap_ns=3.,operand_gap_ns=1.,producer_control_ns=(7.,5.,3.))
+        report=request_model.simulate(program,costs,detailed_ctas=(0,),producer_prefix_ns=13.,
+            input_source_service=lambda t,cta,i,atom,weight:hardware(t,dict(tile=i,operand=('A','B0','B1')[atom])),
+            input_sync_service=ConditionSyncService(4,0.,0.),critical_path=True)
+        self.assertEqual(report['producer_control_windows'],
+            [dict(w,start_ns=w['start_ns']+13.,end_ns=w['end_ns']+13.) for w in local['producer_control_windows']])
+        detail=report['details'][0]
+        self.assertEqual([q['service']['arrival_ns'] for q in detail['requests']],
+                         [q['arrival_ns']+13. for q in local['requests']])
+        self.assertEqual([q['service']['arrival_ns'] for q in detail['requests'][:4]],[20.,36.,40.,50.])
+        for row in local['timeline']:
+            self.assertEqual(detail['node_times_ns'][f'g{row["tile"]}.acquire'],row['producer_acquire_ns']+13.)
+        cp=report['critical_path']
+        self.assertAlmostEqual(cp['target_ns'],report['consumer_span_ns'])
+        self.assertAlmostEqual(sum(cp['breakdown_ns'].values()),cp['target_ns'])
+        self.assertEqual(cp['breakdown_ns'].get('epilogue_exclusion',0.),0.)
+        for stages in (4,6):
+            costs=dict(self.parameters(),producer_control_ns=(7.,5.,3.),input_release_delay_ns=11.)
+            complete=request_model.simulate(self.program(stages),costs,detailed_ctas=range(4),critical_path=True)
+            for cta in complete['details']:
+                self.assertAlmostEqual(cta['critical_path']['target_ns'],cta['consumer_exit_ns'])
+                for group in cta['groups']:
+                    g=group['group'];times=cta['node_times_ns']
+                    self.assertEqual(times[f'g{g}.A.issue']-times[f'g{g}.acquire'],7.)
+                    if group['previous_group'] is not None:
+                        self.assertGreaterEqual(times[f'g{g}.acquire'],times[f'g{group["previous_group"]}.release'])
 
     def test_common_work_sources_and_every_dependency(self):
         for stages in (4, 6):
@@ -61,6 +256,40 @@ class RequestCompositionTests(unittest.TestCase):
                             self.assertGreaterEqual(times[f'g{g["group"]}.A.issue'],
                                                     times[f'g{g["previous_group"]}.release'])
                         self.assertGreaterEqual(times[g['release']], times[g['compute_completion']])
+
+    def test_deferred_first_output_matches_engine_and_future_math_dependency(self):
+        program = self.program()
+        keys, counts = request_model.request_inputs(program)
+        for flag in (1, 2):
+            parameters = dict(self.parameters(), epilogue_defer=flag)
+            report = request_model.simulate(program, parameters, register_quota=True,
+                                            detailed_ctas=range(4))
+            legacy = supply.shared_stage_events(program['ktiles'], program['stages'], 4,
+                output_counts=counts, source_keys=keys, trace_requests=True, **parameters)
+            for detail, actor in zip(report['details'], legacy['ctas']):
+                cta = detail['cta']
+                graph = cfg_b_program.expand_cta(program, cta, register_quota=True,
+                                                 epilogue_defer=flag)
+                selected = flag == 2 or cta == 0
+                self.assertEqual('j1.math_handoff' in graph['nodes']['j0.epilogue_permit'], selected)
+                times = detail['node_times_ns']
+                if selected:
+                    self.assertGreaterEqual(times['j0.epilogue_permit'], times['j1.math_handoff'])
+                self.assertEqual(detail['output_service'], actor['outputs'])
+                for group in detail['groups']:
+                    g = group['group']
+                    self.assertEqual(times[f'g{g}.commit'], actor['commits'][g])
+                    self.assertEqual(times[f'g{g}.release'], actor['released'][g])
+                for node, predecessors in graph['nodes'].items():
+                    self.assertTrue(all(times[node] >= times[p] for p in predecessors))
+
+    def test_explicit_zero_defer_preserves_default_report(self):
+        program = self.program()
+        baseline = request_model.simulate(program, self.parameters(), detailed_ctas=range(4))
+        explicit = request_model.simulate(program, dict(self.parameters(), epilogue_defer=0),
+                                         detailed_ctas=range(4))
+        explicit['parameters'].pop('epilogue_defer')
+        self.assertEqual(explicit, baseline)
 
     def test_services_change_events_without_changing_program(self):
         program = self.program()
@@ -214,10 +443,81 @@ class RequestCompositionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'service violates g0.A.complete'):
             request_model.bind_cta(cfg_b_program.expand_cta(program, 0), result['ctas'][0], deliveries)
 
+    def test_critical_path_and_slack_match_bound_timeline(self):
+        for stages in (4, 6):
+            program = self.program(stages)
+            baseline = request_model.simulate(program, self.parameters(), producer_prefix_ns=120.,
+                                              detailed_ctas=range(4))
+            reported = request_model.simulate(program, self.parameters(), producer_prefix_ns=120.,
+                                              detailed_ctas=range(4), critical_path=True)
+            top_cp = reported.pop('critical_path')
+            self.assertEqual(top_cp['cta'], reported['critical_candidates'][0])
+            self.assertAlmostEqual(top_cp['target_ns'], reported['consumer_span_ns'], places=6)
+            self.assertAlmostEqual(sum(top_cp['breakdown_ns'].values()), top_cp['target_ns'], places=6)
+            for cta_detail in reported['details']:
+                cp = cta_detail.pop('critical_path')
+                self.assertAlmostEqual(cp['target_ns'], cta_detail['consumer_exit_ns'], places=6)
+                self.assertAlmostEqual(sum(cp['breakdown_ns'].values()), cp['target_ns'], places=6)
+                self.assertEqual(cp['path'][0]['from_node'], 'entry')
+                self.assertEqual(cp['path'][-1]['to_node'], 'consumer_exit')
+                for step in cp['path']:
+                    self.assertAlmostEqual(cp['slack_ns'][step['from_node']], 0., places=6)
+                    self.assertAlmostEqual(cp['slack_ns'][step['to_node']], 0., places=6)
+            self.assertEqual(reported, baseline)
+
+    def test_full_query_uses_consumer_control_before_readiness(self):
+        from mbarrier_service import ConditionSyncService
+        for stages in (4, 6):
+            program = self.program(stages)
+            for entry in (0., 37.):
+                costs = dict(self.parameters(), consumer_entry_delay_ns=entry,
+                             input_release_delay_ns=11.)
+                for sync in (False, True):
+                    report = request_model.simulate(program, costs, producer_prefix_ns=120.,
+                        detailed_ctas=range(4), critical_path=True,
+                        input_sync_service=ConditionSyncService(stages,0.,0.) if sync else None)
+                    for cta in report['details']:
+                        times = cta['node_times_ns']
+                        for group in cta['groups']:
+                            g, j, k = group['group'], group['output'], group['k']
+                            if g == 0:
+                                expected = 0. if entry == 0. else entry + 120.
+                            elif k == 0:
+                                expected = times[f'j{j-1}.math_handoff'] + costs['handoff_delay_ns']
+                                if j >= 2:
+                                    expected = max(expected,times[f'j{j-2}.epilogue_handoff'])
+                            else:
+                                previous = f'g{g-1}.commit' if k == 1 else f'g{g-1}.wait1'
+                                expected = times[previous] + costs['loop_advance_ns']
+                            self.assertAlmostEqual(times[f'g{g}.full_query'], expected)
+                            self.assertEqual(times[f'g{g}.consumer_wait'],
+                                max(times[f'g{g}.full_query'],times[f'g{g}.full_ready']))
+                            if sync:
+                                self.assertEqual(times[f'g{g}.full_query'],
+                                    cta['full_wait_windows'][g]['enter_ns'])
+                        if entry == 0.:
+                            self.assertLess(times['g0.full_query'],times['g0.full_ready'])
+                        self.assertAlmostEqual(cta['critical_path']['target_ns'],cta['consumer_exit_ns'])
+
+    def test_consumer_slack_excludes_later_producer_tail(self):
+        program = cfg_b_program.build_program(dict(config='cfg_b', m=128, n=128, k=256, stages=4),
+                                             dict(grid=[1, 1, 1], stages=4))
+        costs = dict(service_ns=0., read_latency_ns=10., compute_ns=64.,
+                     commit_lead_ns=32., input_release_delay_ns=1000.)
+        report = request_model.simulate(program, costs, detailed_ctas=(0,), critical_path=True)
+        detail = report['details'][0]
+        self.assertEqual(report['consumer_span_ns'], 266.)
+        self.assertEqual(report['program_end_ns'], 1266.)
+        slack = report['critical_path']['slack_ns']
+        self.assertEqual(slack['consumer_exit'], 0.)
+        self.assertEqual(detail['node_times_ns']['g3.release'], 1266.)
+        for node in ('g3.release', 'producer_tail', 'program_end'):
+            self.assertNotIn(node, slack)
+
 
 class HistoricalCandidateTests(unittest.TestCase):
     def test_phase_frequency_inference_preserves_development_snapshot(self):
-        root = aggregate.DEFAULT_ARCHIVE.parent/'20261015-phase-frequency-development-001'
+        root = aggregate.DEFAULT_ARCHIVE.parents[2]/'Q09-frequency/frequency-mechanism/20261015-phase-frequency-development-001'
         model = aggregate.load_json(root/'fit-001/model.json')
         rows = aggregate.load_json(root/'rows.json')['rows']
         audit = aggregate.load_json(root/'audit.json')['cases']
@@ -243,7 +543,7 @@ class HistoricalCandidateTests(unittest.TestCase):
         measured = aggregate.load_json(replay_path)['processes']
         rows = aggregate.load_json(root/'cases.json')
         setups = {r['case']: r['setup'] for r in aggregate.load_json(root/'static_setup.json')}
-        # 复用历史受干预引擎做旧反例回归；共同程序接线只接未干预分支。
+        # 复用历史 second_prefill 引擎分支做旧反例回归；共同程序尚未展开该分支。
         for stages, case in [(4, 'v09d_cfg_b_G3_stage4'), (6, 'v09d_cfg_b_G3_base')]:
             row = next(r for r in rows if r['id'] == case)
             program = cfg_b_program.build_program(row, setups[case])

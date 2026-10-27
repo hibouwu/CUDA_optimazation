@@ -31,3 +31,7 @@
 ## 数据
 
 [cases.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/async-copy-formal-b3-v2/cases.csv)、[trials.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/async-copy-formal-b3-v2/trials.csv)、[stage 比较](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/async-copy-formal-b3-v2/comparisons.csv)、[手算](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/async-copy-formal-b3-v2/manual-examples.md)。原始 run：`async_copy/formal-b3-v2`。
+
+## a044 复测（2026-10-23～26）
+
+240 次调用全部通过原审计，24 个条件稳定。单 CTA 每周期载荷变化 −0.0112%～+0.0135%，全 GPU 载荷吞吐变化 −0.0042%～+0.6382%，stage1→2→4 的响应重现。见[cp.async 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-async-copy-report.md)。

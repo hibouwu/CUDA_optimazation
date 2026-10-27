@@ -85,6 +85,6 @@ stamped 每 CTA 记录：入口、producer 首次工作、每 tile 每消费组�
 
 ## 数据与复现
 
-结果目录：[20261008-V06-job736868](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V06-job736868/)：`cases.csv`、`summary.json`、`calibration.json`、`v06-predictions.json`、[图](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V06-job736868/plots/v06_heldout.png)、`samples/`、`build/`、`source/`（编译时源码）、`dev/`（开发作业校准记录）。SASS：HGMMA 为 8/16/16，plain 与 stamped 相同，无 C7510、无 spill，168 寄存器。代码：`microbench/gh200_resource_campaign/access_rules/v06_{run,model,fit,analyze}.py`、`probes/v06.cu`、`probes/v06_trace.hpp`。
+结果目录：[20261008-V06-job736868](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V06-job736868/)：`cases.csv`、`summary.json`、`calibration.json`、`v06-predictions.json`、[图](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261008-V06-job736868/plots/v06_heldout.png)、`samples/`、`build/`、`source/`（编译时源码）、`dev/`（开发作业校准记录）。SASS：HGMMA 为 8/16/16，plain 与 stamped 相同，无 C7510、无 spill，168 寄存器。代码：`microbench/gh200_resource_campaign/access_rules/v06_{run,model,fit,analyze}.py`、`probes/v06.cu`、`probes/v06_trace.hpp`。
 
 流程：`v06_run.py prepare`（含新尺寸核对）→ build/setup/`sample --set calib` → `v06_fit.py --freeze` → `sample --set heldout` → `v06_analyze.py`。

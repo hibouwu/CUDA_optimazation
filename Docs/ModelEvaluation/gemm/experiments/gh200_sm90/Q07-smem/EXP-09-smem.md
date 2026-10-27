@@ -16,7 +16,7 @@
 
 新lane排列作业741153完成48条件/144进程，20/20旧窗口桥接中位周期完全一致；最大CV 1.37729%。完整warp地址集合、多重度和字节量均不变时，16 B主对照周期为4194515与16777430，接近4倍；8 B密集对照的原子组需求也相同，周期仍差47.38%。14对中12对不满足原联合容差，两对4 B负对照相容。旧8 B、1 warp依赖读缺口仍在；没有新合格候选，不冻结或提交条件留出。最终SASS没有显式WARPSYNC，原控制只能覆盖循环、消费与CTA会合的组合开销。
 
-[各轮当前结论](R03-access-demand.md#m11-current)、[新排列对照完整交付](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)、[第一轮完整交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、[两形式反证](../../../../../../results/gh200_resource_campaign/access_rules/20261012-m11-demand-offline-v1/README.md)。
+[各轮当前结论](R03-access-demand.md#m11-current)、[新排列对照完整交付](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-lane-contrast/run-20261012T110219Z/README.md)、[第一轮完整交付](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/README.md)、[两形式反证](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261012-m11-demand-offline-v1/README.md)。
 
 后续零GPU推导用子组bank向量构造最忙bank标量，区分了密集排列，却仍将宽广播与密集交错合成相同输入，已由原容差反证。密集连续与全广播、密集交错与stride1的窗口周期相同，为下一种广播描述提供约束；[公式与反例](R03-access-demand.md#m11-bank-vector)只维护在R03，未拟合或修改预测器。
 
@@ -78,4 +78,8 @@ stride=1 读在约 95 与 127 B/cycle 两档之间跳动，三批后仍不稳定
 | 4 B 连续写 | 127.9466 | 3 |
 | 4 B 同址广播 | 88.78126 | 10 |
 
-预写的九个兼容门槛全部通过。旧广播范围 88.5–110.7 和 CV 4.8% 保留为历史观测，不由本轮十个进程替换。新 probe 的同步/消费组织另列，其候选需求模型被向量广播反例否定；本页兼容复测不授予新模型留出资格。见 [m11 开发反证](R03-access-demand.md#开发反证2026-10-12)及[本轮完整数据](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/development-analysis/old-compatibility.json)。
+预写的九个兼容门槛全部通过。旧广播范围 88.5–110.7 和 CV 4.8% 保留为历史观测，不由本轮十个进程替换。新 probe 的同步/消费组织另列，其候选需求模型被向量广播反例否定；本页兼容复测不授予新模型留出资格。见 [m11 开发反证](R03-access-demand.md#开发反证2026-10-12)及[本轮完整数据](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/m11-lds-sts/20261011-m11-lds-sts-bounded/run-20261011T210745Z/continuation-20261012/development-analysis/old-compatibility.json)。
+
+## a044 复测（2026-10-23～26）
+
+170 次调用全部通过原审计，15 个条件稳定，B/cycle 变化 −0.005459%～+0.536854%；stride 2/4/8/16/32 的约 64/32/16/8/4 B/cycle 响应保留。bank 冲突仍没有计数器验证。见[SMEM 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/resource-shared-memory-report.md)。

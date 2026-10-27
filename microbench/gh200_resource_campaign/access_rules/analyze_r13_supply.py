@@ -612,9 +612,9 @@ def coverage_suite(run, output):
     base=run.parent
     cohort_paths={
         '43269fbc_B_dual':(run,'coverage'),
-        'ef8692f3_SM_stamped':(base/'20261009-R13-sm-job738101','sm'),
-        '099dda56_joint_dual':(base/'20261009-R10-joint-pitch-job738169','joint'),
-        '099dda56_V08F_stamped':(base/'20261008-V08F-job737322-v1','v08')}
+        'ef8692f3_SM_stamped':(base/'Q02-tma-request/R13-async-retirement/20261009-R13-sm-job738101','sm'),
+        '099dda56_joint_dual':(base/'Q03-source-service/R10-layout-cache/20261009-R10-joint-pitch-job738169','joint'),
+        '099dda56_V08F_stamped':(base/'Q15-full-time/V01-V08-validation/20261008-V08F-job737322-v1','v08')}
     result={}; hashes={}; residuals=[]
     for label,(folder,kind) in cohort_paths.items():
         rows,paths,cases,setups=coverage_rows(folder,kind)
@@ -879,7 +879,7 @@ def fill_geometry(row, setup):
 
 def fill_observations(run):
     base=run.parent; rows=[]; inputs=[]; reports=[]; gpu=None
-    for folder in (base/'20261009-R18-input-map-job738296',base/'20261009-R18-input-map-n-job738307'):
+    for folder in (base/'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-job738296',base/'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-n-job738307'):
         path=folder/'reanalysis/input-map-pairs-v1/input-map-pairs.json'; data=read_json(path); reports.append(data)
         current=data['environment']['gpu']; gpu=current if gpu is None else gpu
         if current!=gpu: raise ValueError('fill fits must remain on one card')
@@ -1014,7 +1014,7 @@ def compose_fill(run, report_path, output, assumed_ghz):
     import v06_fit
     import v08_model
     source=read_json(report_path); base=run.parent
-    folders=[run,base/'20261009-R18-input-map-job738296',base/'20261009-R18-input-map-n-job738307']
+    folders=[run,base/'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-job738296',base/'Q01-scheduling/R18-cluster-boundary/20261009-R18-input-map-n-job738307']
     processes=[];paths=[report_path]; raw_intervals=defaultdict(list); case_rows={}; setup_by_case={}
     for folder in folders:
         env=read_json(folder/'environment.json')
@@ -1297,7 +1297,7 @@ def failure_diagnostics(base, output, calls_factory):
     import re
 
     base, output = Path(base), Path(output)
-    root = base/'20261009-V09-heldout-job739011'
+    root = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     new = defaultdict(list)
     needed = {f'v09d_cfg_{c}_G3_{v}' for c in 'abc' for v in ('base', 'A16')}
     needed |= {f'v09d_cfg_b_G5_{v}' for v in ('base', 'B32', 'B80', 'B112')}
@@ -1309,7 +1309,7 @@ def failure_diagnostics(base, output, calls_factory):
     pairs += [('V09', new['v09d_cfg_b_G5_base'], new[f'v09d_cfg_b_G5_{v}']) for v in ('B32','B80','B112')]
     pairs += [('V09', new['v09d_cfg_b_G3_base'], new['v09d_cfg_b_G3_stage4'])]
     hashes, old = {}, {}
-    for name in ('20261009-R10-b-coverage-job738203', '20261009-R13-R15-R18-composition-job738496'):
+    for name in ('Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203', 'Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496'):
         run = base/name
         setups = {r['case']:r['setup'] for r in read_json(run/'static_setup.json')}
         for filename in ('cases.json', 'static_setup.json', 'environment.json'):
@@ -1638,8 +1638,8 @@ def _fit_stage_candidate(rows, kind):
 def finite_stage_diagnostics(base, output):
     """Test finite slots against old demand discount, without changing prediction code."""
     base,output = Path(base),Path(output)
-    run = base/'20261010-R09-R13-R18-failure-controls'
-    source = base/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json'
+    run = base/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
+    source = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json'
     controls = read_json(source)
     targets = []
     for pair in controls['comparisons']:
@@ -1830,7 +1830,7 @@ def stage_event_diagnostics(root, output):
         a,b=timing[1][protocol+'_trials'],timing[0][protocol+'_trials']
         whole_time[protocol] = dict(stage4_minus_stage6_us=span([b[t]-a[t] for t in sorted(a)]),
             stage4_relative_change=span([b[t]/a[t]-1 for t in sorted(a)]))
-    old = root.parent/'20261010-R09-R13-R18-failure-controls'
+    old = root.parents[2]/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
     old_rows = {r['id']:r for r in read_json(old/'cases.json')}
     old_setups = {r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
     cohort_comparison = []
@@ -2128,7 +2128,7 @@ def stage_progress_diagnostics(root, output):
             stage4_relative_change=span([b[t]/a[t]-1 for t in sorted(a)]))
 
     # Compare observer programs as separate jobs, never concatenate their clocks.
-    old_root=root.parent/'20261010-R13-stage-events'
+    old_root=root.parents[2]/'Q02-tma-request/R13-async-retirement/20261010-R13-stage-events'
     old_rows={r['id']:r for r in read_json(old_root/'cases.json')}
     old_setups={r['case']:r['setup'] for r in read_json(old_root/'static_setup.json')}
     old_cohort=[]
@@ -2517,7 +2517,7 @@ def first_supply_diagnostics(root, output):
                 timing[case]=dict(dual_us=span(r['elapsed_us'] for r in targets[case].values()),
                     events0_plain_us=span(plain[base].values()),
                     dual_relative_to_events0_plain=span(targets[case][t]['elapsed_us']/plain[base][t]-1 for t in range(10)))
-    previous=root.parent/'20261010-R10-producer-delay';reference_comparison={}
+    previous=root.parents[2]/'Q03-source-service/R10-layout-cache/20261010-R10-producer-delay';reference_comparison={}
     if read_json(previous/'environment.json')['gpu']!=read_json(root/'environment.json')['gpu']:
         raise ValueError('first-supply reference comparison changed card')
     for row in rows.values():
@@ -2642,7 +2642,7 @@ def ready_observer_diagnostics(root, output):
     artifact='R13-ready-release' if release_bound else 'R13-ready-observer'
     boundary='release_pre_c' if release_bound else 'FIRST_c'
     late_status='after_release' if release_bound else 'after_first'
-    previous_name='20261010-R13-ready-observer' if release_bound else '20261010-R13-first-supply'
+    previous_name='Q04-sync-slot/R13-release-feedback/20261010-R13-ready-observer' if release_bound else 'Q02-tma-request/R13-async-retirement/20261010-R13-first-supply'
     previous_job='739645' if release_bound else '739629'
     def span(values):
         values=list(values)
@@ -2811,7 +2811,7 @@ def ready_observer_diagnostics(root, output):
     if release_bound:
         observer_positions.update(release_pre_minus_FIRST_cycles=span(r['observer_position']['release_pre_minus_FIRST_cycles'] for r in enabled),
             exit_minus_release_pre_cycles=span(r['observer_position']['exit_minus_release_pre_cycles'] for r in enabled))
-    previous=root.parent/previous_name;references={}
+    previous=root.parents[2]/previous_name;references={}
     if read_json(previous/'environment.json')['gpu']!=read_json(root/'environment.json')['gpu']:
         raise ValueError('ready reference comparison changed card')
     for row in rows.values():
@@ -3056,7 +3056,7 @@ def stage_handoff_sample_diagnostics(root, output):
         if variant!='plain':summary['delta_cycles']={k:span(p['delta_cycles'][k] for p in paired)
             for k in paired[0]['delta_cycles']}
         stage_pairs.append(summary)
-    references=[];old=root.parent/'20261010-R13-stage-progress'
+    references=[];old=root.parents[2]/'Q02-tma-request/R13-async-retirement/20261010-R13-stage-progress'
     old_rows={r['id']:r for r in read_json(old/'cases.json')}
     old_setups={r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
     for row in rows.values():
@@ -3264,7 +3264,7 @@ def epilogue_order_diagnostics(root, output):
                 for k in pairs[0]['delta_cycles']}
             treatment.append(summary)
 
-    old=root.parent/'20261010-R13-stage-handoff';common.verify(old)
+    old=root.parents[2]/'Q06-handoff-output/R15-output-service/20261010-R13-stage-handoff';common.verify(old)
     old_rows={r['id']:r for r in read_json(old/'cases.json')}
     old_setups={r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
     reference_results=[]
@@ -3427,7 +3427,7 @@ def stage_boundary_diagnostics(base, output):
     wide_limits=dict(scope='Necessary bounds for a deterministic central target, not statistical parameter confidence.',
         g_upper=(652-h)/2,q_lower=2*c-652,w_upper=43.,w_plus_r_upper=53.,
         lambda_plus_g_plus_w_upper=23587/23-h)
-    root=base/'20261010-R13-stage-events';common.verify(root)
+    root=base/'Q02-tma-request/R13-async-retirement/20261010-R13-stage-events';common.verify(root)
     rows=read_json(root/'cases.json');refill=[];hashes={str(source):common.sha(source)}
     for row in rows:
         if row.get('set')=='reference':continue
@@ -3645,7 +3645,7 @@ def stage_output_context_diagnostics(base, output):
     from math import gcd
     import v06_run as common
 
-    root=Path(base)/'20261010-R09-R13-R18-failure-controls';output=Path(output)
+    root=Path(base)/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls';output=Path(output)
     common.verify(root)
     rows={r['id']:r for r in read_json(root/'cases.json')}
     setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
@@ -3953,7 +3953,7 @@ def stage_output_background_diagnostics(base, output):
             if check.get('comparison_flag')!=row['epilogue_defer'] or check['elements']!=4325376 or check['different'] or check['nonfinite']:
                 raise ValueError('background full-output comparison failed or used a different flag')
             correctness.append(dict(case=row['id'],variant=variant,source=str(path),**check));hashes[str(path)]=common.sha(path)
-    old=root.parent/'20261010-R13-epilogue-order';common.verify(old)
+    old=root.parents[2]/'Q06-handoff-output/R15-output-service/20261010-R13-epilogue-order';common.verify(old)
     old_rows={r['id']:r for r in read_json(old/'cases.json')}
     old_setups={r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
     reference_results=[]
@@ -5385,7 +5385,7 @@ def stage_request_formation_diagnostics(base, output):
     from analyze_r13_sm import select_attempts
     from supply_model import static_tma_requests
     import v06_run as common
-    root=Path(base)/'20261010-R09-R13-R18-failure-controls';output=Path(output)
+    root=Path(base)/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls';output=Path(output)
     common.verify(root)
     rows={r['id']:r for r in read_json(root/'cases.json')}
     setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
@@ -5440,7 +5440,7 @@ def stage_request_formation_diagnostics(base, output):
         summaries.append(dict(stage=stage,second_MAIN_span_ns=span(p['second_MAIN_span_ns'] for p in group),
             phases={k:{field:span(p['phase_stats'][k][field] for p in group)
                 for field in ('spatial_span_ns','span_with_phase_flattened_ns')} for k in phases}))
-    atom_root=Path(base)/'20261010-R13-output-background';common.verify(atom_root)
+    atom_root=Path(base)/'Q06-handoff-output/R15-output-service/20261010-R13-output-background';common.verify(atom_root)
     sass=[]
     import re
     for binary in ('cfg_b_plain','cfg_b_progress','cfg_b_s4_plain','cfg_b_s4_progress'):
@@ -5634,7 +5634,7 @@ def shared_stage_service_diagnostics(output):
                     for scale in (1e-6,1.)]))
     # Reuse the existing raw parser and selection rule for same-producer bounds.
     from analyze_r13_sm import select_attempts
-    issue_root=Path(data['root']).parent/'20261010-R13-stage-events';common.verify(issue_root)
+    issue_root=Path(data['root']).parents[2]/'Q02-tma-request/R13-async-retirement/20261010-R13-stage-events';common.verify(issue_root)
     issue_windows=[];issue_hashes={}
     for row in read_json(issue_root/'cases.json'):
         if row.get('set')=='reference':continue
@@ -5715,7 +5715,7 @@ def shared_stage_service_diagnostics(output):
                 post_overlap_ctas_median=statistics.median(p['other_E0_post_early']['overlapping_ctas'] for p in g),
                 earlier_M_ctas_median=statistics.median(sum(z['mma_return_ns']<p['direct_ns_background'][0]['mma_return_ns'] for z in p['direct_ns_background']) for p in g)))
     from analyze_r13_sm import select_attempts
-    entry_root=Path(data['root']).parent/'20261010-R09-R13-R18-failure-controls'
+    entry_root=Path(data['root']).parents[2]/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
     common.verify(entry_root);entry_rows={r['id']:r for r in read_json(entry_root/'cases.json')}
     entry_evidence=[];entry_hashes={}
     for stage in (4,6):
@@ -6137,7 +6137,7 @@ def stage_handoff_diagnostics(base,output):
     from analyze_r13_sm import select_attempts
     from supply_model import admission_stage_events
     import v06_run as common
-    output=Path(output);root=Path(base)/'20261010-R09-R13-R18-failure-controls'
+    output=Path(output);root=Path(base)/'Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls'
     rows={r['id']:r for r in read_json(root/'cases.json')}
     progress=read_json(output/'B-stage-progress.json')
     cal=next(r['intervals'] for r in progress['timing'] if r['stages']==6)
@@ -6182,7 +6182,7 @@ def stage_handoff_diagnostics(base,output):
         examples.append(dict(ready_latency=latency,handoff_delay=handoff,comparisons=comparisons))
     for path in (output/'B-stage-progress.json',output/'B-stage-events.json',root/'cases.json',
             Path(__file__),Path(__file__).with_name('supply_model.py')):hashes[str(path)]=common.sha(path)
-    source_root=Path(base)/'20261010-R13-stage-progress'
+    source_root=Path(base)/'Q02-tma-request/R13-async-retirement/20261010-R13-stage-progress'
     for relative in ('source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp',
             'source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp','build/cfg_b_stamped.sass'):
         path=source_root/relative;hashes[str(path)]=common.sha(path)

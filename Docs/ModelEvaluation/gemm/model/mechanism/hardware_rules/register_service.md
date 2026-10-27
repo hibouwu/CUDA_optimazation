@@ -1,6 +1,6 @@
 # 寄存器源供给与结果消费
 
-状态：阶段7离线接入。有限范围见[PLAN](../../../PLAN.md#stage-7-register)，旧证据回放与剩余观测见[REG-01](../../../experiments/gh200_sm90/Q08-register-residency/REG-01-replay.md)；实测入口保留[R02](../../../experiments/gh200_sm90/Q08-register-residency/R02-register-service.md)。
+状态：阶段7离线接入。有限范围见[PLAN](MICROBENCH-ROADMAP.md#6-推进次序与本轮交付)，旧证据回放与剩余观测见[REG-01](../../../experiments/gh200_sm90/Q08-register-residency/REG-01-replay.md)；实测入口保留[R02](../../../experiments/gh200_sm90/Q08-register-residency/R02-register-service.md)。
 
 ## 1. 现象
 

@@ -119,11 +119,11 @@ def analyze(root, output):
     def read(path):
         inputs[str(path.resolve())] = hashlib.sha256(path.read_bytes()).hexdigest()
         return json.loads(path.read_text())
-    price_report = read(root/'20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
+    price_report = read(root/'Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v3/B-r10-event-transfer.json')
     parameters = price_report['parameters']
     price = price_report['coverage_price_ns_per_KiB']
     cases = []
-    runs = ('20261010-R10-raster-pitch','20261010-R10-source-pressure','20261009-V09-heldout-job739011')
+    runs = ('Q03-source-service/R10-layout-cache/20261010-R10-raster-pitch','Q03-source-service/R10-layout-cache/20261010-R10-source-pressure','Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011')
     for run_name in runs:
         run = root/run_name
         rows = read(run/'cases.json')

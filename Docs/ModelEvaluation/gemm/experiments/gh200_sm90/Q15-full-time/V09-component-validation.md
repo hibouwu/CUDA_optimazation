@@ -17,9 +17,9 @@
 - 修订冻结时间：2026-10-09T19:55:09+02:00（Europe/Paris）。CPU修订源码提交：`929cb63c7a30c0b408f6aa35a2bf167321e3121c`。
 - 预测SHA256：`f4df39e00cf1d2ab61947c911e699bd5bea4e533609d93f726de43077515d81e`。
 - 清单SHA256：`09da85d124eb697a95c4695bd05281b07c37877890d0eca18afbdd2cf213f2ab`。
-- [预测文件](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/frozen/predictions.json)、[冻结清单](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/frozen/manifest.json)、[模型参数](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/frozen/calibration.json)、[完整条件与容量设置](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/cases.json)。三份冻结文件均为只读，SHA已从回传字节复核。
+- [预测文件](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/predictions.json)、[冻结清单](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/manifest.json)、[模型参数](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/frozen/calibration.json)、[完整条件与容量设置](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/cases.json)。三份冻结文件均为只读，SHA已从回传字节复核。
 
-原作业自动完成了校准、拟合与冻结。回传后发现，ARM上的等价供给参数解使局部Jacobian判定错误地接受了cfg_c G2；训练证据没有增强。r2只改支持判定：用已有条件线性规划检查等价参数能给出的供给范围，拒绝非唯一窗口。原冻结包保留，未获准采样；r2逐字节复用原ARM参数、GPU二进制、SASS和六参照数据，没有重新测GPU、改训练点或拟合参数。[修订来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/freeze-revision.json)记录原SHA、测量源码与本地CPU冻结环境。
+原作业自动完成了校准、拟合与冻结。回传后发现，ARM上的等价供给参数解使局部Jacobian判定错误地接受了cfg_c G2；训练证据没有增强。r2只改支持判定：用已有条件线性规划检查等价参数能给出的供给范围，拒绝非唯一窗口。原冻结包保留，未获准采样；r2逐字节复用原ARM参数、GPU二进制、SASS和六参照数据，没有重新测GPU、改训练点或拟合参数。[修订来源](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/freeze-revision.json)记录原SHA、测量源码与本地CPU冻结环境。
 
 ## 完整留出表
 
@@ -58,25 +58,25 @@
 | cfg_a_P1_partial_first_and_later | a | 960×2816 | 4096 | 部分边界 | 47.5454 | 52.4640 | -9.38% |
 | cfg_c_P2_partial_later_sw8 | c | 4096×2240 | 4096 | sw8；部分边界 | 188.0030 | 199.4720 | -5.75% |
 
-共8个不同M×N，其中6个基础形状各覆盖三配置；cfg_a/b/c分别9/12/9条件。与97份含实际样本的历史条件文件核对，8个M×N均未出现，[扫描依据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/inputs/novelty.json)。
+共8个不同M×N，其中6个基础形状各覆盖三配置；cfg_a/b/c分别9/12/9条件。与97份含实际样本的历史条件文件核对，8个M×N均未出现，[扫描依据](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/inputs/novelty.json)。
 
 ## 模型与限制
 
 供给使用R13 first/later同形式的条件max规则，事件递推沿用V06/V08；输出使用R15的single/multi与有效/越界分类；频率使用R09的计算/源请求活动候选。plain时间映射只由实测dual包络与plain event重新定值，不用组件误差作拟合目标。原校准行及来源均绑定进清单。
 
-拒绝项的两个CTA（62/63）在预测频率约1.86 GHz下可能转入供给受限，现有数据没有唯一确定对应价格。r2的固定预测频率下，等价拟合参数给出首轮L约9.066–9.409 µs，超过既有1e-7相对辨识容差；[测后离线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/support-check/report.json)保存参数SHA、频率与条件区间。这只是固定频率、固定已拟合分支的范围，不是置信区间，也未重新联立时钟，因而没有用范围中点冒充受支持的冻结预测。详见[R13首轮补测](../Q02-tma-request/R13-async-retirement.md)与[支持定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json)。
+拒绝项的两个CTA（62/63）在预测频率约1.86 GHz下可能转入供给受限，现有数据没有唯一确定对应价格。r2的固定预测频率下，等价拟合参数给出首轮L约9.066–9.409 µs，超过既有1e-7相对辨识容差；[测后离线复核](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/reanalysis/support-check/report.json)保存参数SHA、频率与条件区间。这只是固定频率、固定已拟合分支的范围，不是置信区间，也未重新联立时钟，因而没有用范围中点冒充受支持的冻结预测。详见[R13首轮补测](../Q02-tma-request/R13-async-retirement.md)与[支持定位](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json)。
 
 短/长K、小grid、stage4、partial与新random seed是本轮检验的迁移；代数支持不等于测量通过。部分输出插值、cfg_c普通多轮middle代理与零工作比例时钟混合仍是候选。局部慢窗口、首段供给和关键CTA定位的误差分别报告，不被总时间成绩覆盖。尚未覆盖跨卡、A+32/64/96B、基址偏移、rotation、K尾部、cfg_b partial以及A16+B非零组合。
 
 ## 采样与核对
 
-用户明确确认本页30条件及两个SHA后，提交了作业739011。该作业重新取得同一参考卡，核验源码/二进制/清单身份并复测预列六参照；plain时间和dual包络允许±5%，有效频率±3%，同调用event与包络差允许±0.5 µs。超限停止，不现场调参。738972相对旧参照的最大变化分别为0.605%、0.487%、0.649%，绝对差检查也通过，见[参照检查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reference-check.json)。
+用户明确确认本页30条件及两个SHA后，提交了作业739011。该作业重新取得同一参考卡，核验源码/二进制/清单身份并复测预列六参照；plain时间和dual包络允许±5%，有效频率±3%，同调用event与包络差允许±0.5 µs。超限停止，不现场调参。738972相对旧参照的最大变化分别为0.605%、0.487%、0.649%，绝对差检查也通过，见[参照检查](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2/reference-check.json)。
 
 作业二使用不含既有samples的执行副本，保留frozen文件的只读属性；两项期望SHA由用户确认版本传入heldout.sh。通过参照后执行了30条件的原容差数值检查与计时。失败条件和拒绝项均保留，分项报告首段、预填、first/later主循环、末次输出、尾段及关键CTA并列情况。本版本由用户在本对话明确确认，实际传入heldout.sh的两份SHA与本页一致。
 
 作业739011以COMPLETED 0结束，耗时18分07秒，GPU分配已释放。六参照相对冻结时的plain、包络和有效频率最大变化分别为1.792%、1.486%、1.357%，绝对时间差检查也通过。成功进程共1440个：参照240、留出1200（各条件四变体×10）。另有27次预热未收敛尝试，按原脚本最多两次重试的规则恢复；失败原件保留，没有测后放宽2%预热CV阈值，也没有未解决的数值失败。
 
-[原始归档](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/)、[原评分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/score.json)、[独立复核及复现脚本](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/)、[逐例CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv)可复核所有条件。归档SHA256为`7a1d30c6b625dd00930f40185122788d35b546793c48ae186adac551d29eef88`；全部raw哈希、数值回放与源码/二进制/SASS身份已核对，frozen文件保持0444。最早留出进程为2026-10-09T21:20:41+02:00，晚于获批预测绑定；没有重拟合或更改两份获批SHA。plain进程间CV中位约1.01%、最大4.71%（短K cfg_a G1），这些条件全部保留。
+[原始归档](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/)、[原评分](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/score.json)、[独立复核及复现脚本](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/)、[逐例CSV](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv)可复核所有条件。归档SHA256为`7a1d30c6b625dd00930f40185122788d35b546793c48ae186adac551d29eef88`；全部raw哈希、数值回放与源码/二进制/SASS身份已核对，frozen文件保持0444。最早留出进程为2026-10-09T21:20:41+02:00，晚于获批预测绑定；没有重拟合或更改两份获批SHA。plain进程间CV中位约1.01%、最大4.71%（短K cfg_a G1），这些条件全部保留。
 
 ## 失败定位与下一步
 
@@ -103,7 +103,7 @@ $$
 1+e_{C^*}=\frac{\widehat T-F}{T-F}\frac{\widehat f}{f}.
 $$
 
-C*是换算量，不是直接测得的CTA周期；T来自plain、f来自dual，不能用它替代同CTA、同调用的cycle/ns分析。使用[逐例诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/summary.json)与[冻结F参数](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/frozen/calibration.json)可重算下表。相关系数与同号计数排除cfg_b G6，其他中位数使用全部29个可评分条件。
+C*是换算量，不是直接测得的CTA周期；T来自plain、f来自dual，不能用它替代同CTA、同调用的cycle/ns分析。使用[逐例诊断](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/summary.json)与[冻结F参数](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/frozen/calibration.json)可重算下表。相关系数与同号计数排除cfg_b G6，其他中位数使用全部29个可评分条件。
 
 | 换算口径 | 等效周期绝对误差中位数 | 频率绝对误差中位数 | 周期/频率误差相关系数 | 同号条件 |
 |---|---:|---:|---:|---:|
@@ -123,3 +123,15 @@ V09的A+16B、B+80B、B+112B行距均为32 B倍数余16；B+32B的4640 B行距�
 冻结前拒绝的cfg_c G2实测17.8720 µs；原r1给出17.0991 µs，测后差为−4.325%，只作诊断，不增加V09可评分数。一次接近实测不能追认参数唯一；它提示后续可以保留有条件的预测区间。须先把参数不确定性传播到频率联立与完整时间，再判断范围是否有用，不能直接用固定f局部区间的中点替代受支持点值。
 
 后续先离线复用本批记录：R09负责长K有效频率与首段，R13/R10负责行距和stage响应，R19负责关键CTA。只在现有记录不能区分候选原因时补对应原实验；本轮不追加GPU任务、不改冻结成绩。任何新规则须重新冻结并用V10的新留出验证。
+
+## 相关轮次
+
+以下各轮原登记在访问规则索引，按日期排列；全部结果目录见[Q15-full-time/V09-component-validation](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/README.md)。
+
+| 研究轮次与检验主张 | 固定与改变的条件 | 改变的判定 | 证据与相关产物 |
+|---|---|---|---|
+| V09两卡共同参照回顾：四个普通参照的完整时间接近，是否足以说明完整声明范围可跨卡迁移？ | 输入/setup与plain/dual机器码逐项同源；两卡各四条件×两变体×十进程，共复放160旧成功进程，不重标参数。 | plain中位变化仅+0.23%～+1.39%，但周期与有效频率仍分开变化；只有cfg_a/b参照，未取得cfg_c或独立跨卡留出通过。 | [原结果目录](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261011-V09-crosscard-references)、[本轮判定](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261011-V09-crosscard-references/README.md) |
+| a044 迁移（参照 120 槽＋前两包 720 槽） | 原二进制、参数与冻结 replay；只回传前两包 | 六参照的 plain 比旧卡高 1.85%–5.09%，约 2.1 h 后同卡又下降 1.48%–5.49%；720 槽中 700 次通过原数值与 trace，20 次暖机 CV>2% 失败。其余 720 槽与完整评分未执行 | [720 槽核验](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/v09-partial-720-report.md)、[参照漂移](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/v09-reference-drift.md) |
+| a044 原协议参照第二轮（作业 785484，10-27） | 与第一轮同输入、同采样协议；scratch 控制器、独占分配 | 120/120 槽成功。plain 比第一轮快 0.83%–5.92%，与 V09 参照相差 −0.46%～+0.66%；dual 频率比第一轮低 0.4%–1.4%。第一轮与 V09 参照之差主要来自第一轮作业本身，不是协议差异；第一轮相对旧卡的差也不能当作稳定的两卡差 | [第二轮结果](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261027-Q15-a044-reference-003/RESULTS.md) |
+| a044 恢复 7 包（作业 785493–785515，10-27） | 原 `run_v08.run_one`、原重试与停采规则 | 与 10-23 的 720 槽合并后，1412/1440 槽成功。52 个暖机失败 attempt 都集中在 M=N=768、K=256 的 G1 条件；cfg_a/b G1_base 耗尽重试，缺 28 槽。原卡同批条件有 27 个失败但都重试成功。完整评分未执行 | [恢复报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/v09-retry-r2-report.md) |
+| a044 完整条件子集评分（10-27，CPU） | 原冻结评分器与 policy 不变；只对四变体齐全的 34/36 条件汇总，两个 G1_base 留在声明集合中，记为原协议下未取得完整合格观测 | 27 个有数值预测的留出条件：中位误差 5.01%，最大误差 42.6%（`cfg_b_G6_base`），两项都不在 5%/10% 阈值内。原卡在同一组 27 个条件上为 4.33%/35.5%。这是子集结果，不代表 36 条件整体验收 | [子集报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/v09-complete-subset-report.md) |

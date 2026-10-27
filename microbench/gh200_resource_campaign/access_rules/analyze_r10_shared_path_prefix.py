@@ -122,8 +122,8 @@ def analyze(root,output):
         inputs[str(path)]=digest
         return digest
     def read(path):sha(path);return json.loads(path.read_text())
-    old=read(root/'20261010-R10-producer-delay/reanalysis/B-20261011-startup-absorption-v1/B-startup-absorption.json')
-    observed=read(root/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json')
+    old=read(root/'Q03-source-service/R10-layout-cache/20261010-R10-producer-delay/reanalysis/B-20261011-startup-absorption-v1/B-startup-absorption.json')
+    observed=read(root/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json')
     rehashed=set()
     for name,digest in old['input_sha256'].items():
         path=Path(name)

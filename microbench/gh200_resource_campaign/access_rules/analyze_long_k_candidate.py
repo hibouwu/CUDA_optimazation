@@ -136,8 +136,8 @@ def run(base, attribution_path, checkpoint_path, output):
     for path,digest in attribution['input_sha256'].items():
         if v06_run.sha(Path(path)) != digest:
             raise ValueError('attribution input changed: '+path)
-    freeze = base/'20261009-V09-freeze-job738972-r2'
-    observed = base/'20261009-V09-heldout-job739011'
+    freeze = base/'Q15-full-time/V09-component-validation/20261009-V09-freeze-job738972-r2'
+    observed = base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
     calibration = read(freeze/'frozen/calibration.json')
     frozen = read(freeze/'frozen/predictions.json')['predictions']
     manager = {c['case']:c for c in read(observed/'reanalysis/manager-results-v1/summary.json')['cases']}

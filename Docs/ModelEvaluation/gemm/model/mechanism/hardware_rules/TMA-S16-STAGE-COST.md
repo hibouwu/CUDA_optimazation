@@ -114,7 +114,7 @@ residual_AB = (T_B − T_A) − ΔT_schedule
 
 - [静态审计与迭代分析脚本](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_tma_s16_stage_cost.py)
 - [扩展的事件模型](../../../../../../microbench/gh200_resource_campaign/access_rules/tma_input_events.py)：默认成本为0，兼容旧调用。
-- [本轮结果、身份、SASS窗口与候选](../../../../../../results/gh200_resource_campaign/access_rules/20261013-tma-s16-stage-cost-v3/analysis.json)、[完整反汇编](../../../../../../results/gh200_resource_campaign/access_rules/20261013-tma-s16-stage-cost-v3/probe.sass)。v1/v2中间输出保留。
+- [本轮结果、身份、SASS窗口与候选](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-s16-stage-cost-v3/analysis.json)、[完整反汇编](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/S16-single-cta-control/20261013-tma-s16-stage-cost-v3/probe.sass)。v1/v2中间输出保留。
 
 8项事件测试通过；旧10个候选共70条预测按完整长度复算，与旧输出最大差约4.81×10⁻¹⁰ cycle/request。说明默认行为没有被本次候选修订改写，不表示新增假设通过硬件验证。
 

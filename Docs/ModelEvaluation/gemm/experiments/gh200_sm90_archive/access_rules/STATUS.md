@@ -9,7 +9,7 @@
 - R00：30点/216个正式进程已完成，15个最小验证点已完成。本地回收、离线重算与独立B审查通过，按有限条件接受。
 - 本次设备：romeo-a041，GPU-ec947ba1-3e15-9860-163d-330d6c66d1b4，GH200 120GB。不同UUID数据分别保存。
 - 分配734996已到期回收；正式运行在此前正常退出（formal_exit=0）。执行对话不得进入该作业。
-- 本地归档：`results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/`，844份源码和3个二进制身份已核对。
+- 本地归档：`results/gh200_resource_campaign/access_rules/Q05-wgmma/R00-anchor-target/20261006-r00-job734996/formal-v1/`，844份源码和3个二进制身份已核对。
 - 远端归档：`/gpfs/scratch/hibouwu/gh200_access_rules_20261006/{formal-v1,smoke-v9}`；早期失败目录smoke-v1至v8保留。
 - 下一步：A实现R04/V01，B实现R01/R06，C实现R03/R05；主对话完成R00离线复核，继续集成和验收。
 
@@ -40,7 +40,7 @@
 - 采样：最大正式CV0.78%，全部正式预热达到末5CV≤2%。FFMA/add独立流近噪声共同补10，大global512步按CV补10；全部保留，无失稳删除。
 - 结果：WGMMA N=64/128/256每步增量105/137/201cycle，ldmatrix58，shared30，global小/大287.49/627.17。均含循环/地址转换，WGMMA含commit/wait0。FFMA/add均29且1/4流窗口近似，循环推进影响强，不能作为裸依赖延迟。
 - SASS：19个计时specialization循环体/消费者检查通过，窗口无LDL/STL；三种N均一HGMMA+DEPBAR0；LDSM及load输出确实馈入下一地址。add实际VIADD/IADD3混合，不指定执行部件归因。
-- 本地：`results/gh200_resource_campaign/access_rules/20261006-b-job735060/formal-r01-v1/`，完整报告/图/规则与CPU复核代码已保存。远端原始scratch归档同名；持久副本 `/gpfs/projet/r260073/gh200_access_b_20261006/formal-r01-v1/`。
+- 本地：`results/gh200_resource_campaign/access_rules/Q08-register-residency/R01-R06-readiness/20261006-b-job735060/formal-r01-v1/`，完整报告/图/规则与CPU复核代码已保存。远端原始scratch归档同名；持久副本 `/gpfs/projet/r260073/gh200_access_b_20261006/formal-r01-v1/`。
 - 缺项/下一步：单CTA3次重复仅初步重复性证据；本GPU与R00不同UUID，不合并拟合。V01与完整kernel预测另按A/主对话的匹配证据验收；不宣称完整预测通过，无公共接口修改需求。
 
 - 分配735060：完整本地/持久远端源码、二进制、结果hash核对后已释放；不进入或续写原作业。
@@ -63,7 +63,7 @@
 - 编译：CUDA12.9，原生sm_90a；SASS每轮8条LDS/LDS.128、STS/STS.128、LDSM.16.M88.4或STSM.16.M88.4，未把初始化和读回指令混计。
 - 采样：每点3独立进程，共54；共同44693轮，最大CV约0.253%，末5次预热全收敛。CPU重算124800个输出通过。
 - 分配：735059，romeo-a041，GPU-ec947ba1-3e15-9860-163d-330d6c66d1b4；R03结束后同分配串行运行R05。
-- 证据：本地`results/gh200_resource_campaign/access_rules/20261006-c-job735059/{r03-smoke-v1,r03-formal-v1}/`；远端`/gpfs/scratch/hibouwu/gh200_access_c_20261006/`。报告、rules.json、cases.csv和plots/service.svg齐全；原始归档源码哈希保留，当前分析入口新增图。
+- 证据：本地`results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/{r03-smoke-v1,r03-formal-v1}/`；远端`/gpfs/scratch/hibouwu/gh200_access_c_20261006/`。报告、rules.json、cases.csv和plots/service.svg齐全；原始归档源码哈希保留，当前分析入口新增图。
 - R04代表点：128线程、连续lane16B、每轮8次、8槽轮转，load101.132、store92.564、ldmatrix115.066、stmatrix87.613请求B/cycle/CTA。load窗口包含4寄存器checksum与CTA会合，不能与无消费窗口直接拼接；全部正式值可读rules.json。
 - 适用域：1/4/8warp的条件查表；8warp仍有增量，不宣称已经严格饱和。主对话已复算输出/工作量/时间并核对来源与二进制；后续用于匹配条件，预测适用性未验证。
 <!-- END:R03 -->
@@ -79,7 +79,7 @@
 - 跨WG：先尝试八条单块async PTX仍有C7520，失败编译证据保留。最终保留真实串行条件，每条显式fence→MMA→commit/wait0，消除C7520；不声称恢复了理想wait1。实际等待和工作量由SASS/CFG解释。
 - 新采样：15个受影响LDS/CVT点×3=45正式进程；7个受影响跨WG点×3=21。短检查、8197单元代表长检查、完整输出CPU重算全部通过，误差0；LDS最大CV约0.000223%，跨WG约0。新SASS与旧版的同WG4 kernel及FFMA-only kernel逐字相同，没有重跑这些未受影响点或R00。
 - 新环境：735138，romeo-a041，GPU-7c184a2e-41ea-3d2b-df5b-1699c95fc1fe，CUDA12.9/sm90a。与旧099dda…和R00 ec947…分开，不合并拟合。新点缺匹配B-only时max/sum保持missing，不搬旧UUID基线补空。
-- 本地：`results/gh200_resource_campaign/access_rules/20261006-A-fix-job735138/{r04-volatile-formal-v1,r04-serial-formal-v1,r04-volatile-review,r04-serial-review}/`。源码、精确CUTLASS头文件、命令/编译日志、PTX、SASS、二进制、样本/输出、CFG与CPU重算器身份已保存。
+- 本地：`results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261006-A-fix-job735138/{r04-volatile-formal-v1,r04-serial-formal-v1,r04-volatile-review,r04-serial-review}/`。源码、精确CUTLASS头文件、命令/编译日志、PTX、SASS、二进制、样本/输出、CFG与CPU重算器身份已保存。
 - R03最小代表关系：本次已重测R04匹配的128线程/连续lane16B/固定地址/volatile/末次消费A-only代表点。同UUID本组联合点可使用此条件校准，不套用R03的8槽轮转/每次checksum/另一UUID的101.132 B/cycle；仍不宣称裸物理SMEM带宽或次数线性缩放。
 - 保留范围：新数据是条件观测；真实FP8提升、理想异步跨WG和跨环境完整联合模型尚未取得。下一步主对话复核CFG与计数边界。
 - 分配回收：735138的GPU采样已结束，全部必要证据完成本地回收及CPU/SHA/CFG核对后释放；squeue已无该作业。
@@ -96,7 +96,7 @@
 - 检查：1/2序列短输出（A/B完整输入trace、C旧代/新代源、D最终完整SW128 tile、E全GMEM有效区/padding），全部正式/pilot数值、源码/二进制/数值文件哈希本地复核通过。旧A只作数值与失败计量证据。CPU新入口及图单独保存在analysis-revision，不覆写冻结源码。
 - D：无计算消费者条件的供给观测，不是所有组织策略的严格上限。当前目标4stage输入192KiB；stage2/4固定预留此物理容量，活动在途量96/192KiB，保持1CTA资源条件。驻留上限1而非预设实际驻留；10进程均覆盖132SM。shared stage2/4中位55.454/55.475 B/cycle/CTA；independent15.264/15.261，需求48。实际访问15728640/253034496B，复访320/39Ktile；不证明物理L2命中，也不代替联合WGMMA/cluster。
 - E：128/144/160/256B窗口均值950714/1314624/966899/898909ns；144B约慢38.3%，160B接近128B。仅16-bit运输条件代表，不能当FP32 epilogue服务。
-- 本地完整证据：`results/gh200_resource_campaign/access_rules/20261006-c-job735059/{r05-smoke-v1,r05-formal-v2,r05-a-formal-v5}/`，报告、rules.json、cases.csv、图、source/build和全部原始数值均齐全。压缩总包52MiB及SHA256保留。
+- 本地完整证据：`results/gh200_resource_campaign/access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/{r05-smoke-v1,r05-formal-v2,r05-a-formal-v5}/`，报告、rules.json、cases.csv、图、source/build和全部原始数值均齐全。压缩总包52MiB及SHA256保留。
 - 失败：GPFS r05-formal-v1复制头文件时quota不足，无GPU采样；失败日志保留。正式原件曾在节点/tmp，已全部回收。job735059已退出squeue，sacct为CANCELLED（0:0），分配已释放。
 - 缺项/下一步：主对话条件观测验收通过，预测适用性未验证；A对话用于R04/V01匹配。没有FP32输出精确运输、联合竞争、cluster或完整GEMM预测检查。观测不升级为预测通过。
 <!-- END:R05 -->
@@ -112,7 +112,7 @@
 - 实值：62/94/128寄存器/thread，0spill；CTA/SM API上限8/5/4。单CTA61671/59639/59639cycle；整卡55017.6/52310.4/52537.6ns，即40.252/42.336/42.153有效TFLOP/s，仅128线程FFMA探针。
 - SASS：三个资源specialization计时内各8条FFMA、循环opcode序列相同、寄存器编号不同，无LDL/STL；消费者/barrier在窗口内。所有正式整卡点每SM均观测4个计时区间重叠，未测到并发减少；62档单CTA已更慢，不能将整卡差全部归因于驻留。
 - 落盘失败保留：scratch用户20GiB硬配额使94档整卡trial-04输出不完整，未接受。有效样本hash核对后复制到同节点/tmp，保留相同二进制并只补缺失进程；有效retry-1及resume源码/hash均保存。运行入口与CPU检查增加长度/完整数量校验，空/截断见证负检查通过。
-- 本地：`results/gh200_resource_campaign/access_rules/20261006-b-job735060/formal-r06-v1/`；持久远端 `/gpfs/projet/r260073/gh200_access_b_20261006/formal-r06-v1/`。scratch旧formal-r06-v1仅为失败/部分归档，不当完整结果。
+- 本地：`results/gh200_resource_campaign/access_rules/Q08-register-residency/R01-R06-readiness/20261006-b-job735060/formal-r06-v1/`；持久远端 `/gpfs/projet/r260073/gh200_access_b_20261006/formal-r06-v1/`。scratch旧formal-r06-v1仅为失败/部分归档，不当完整结果。
 - 缺项/下一步：128线程FFMA不能替代384线程目标TC组合；当前grid未压满低寄存器档资源上限，无驻留下降惩罚规则。不启用R06-A/setmaxnreg扩展，无公共接口修改需求。
 
 - 分配735060：完整本地/持久远端源码、二进制、结果hash核对后已释放；不进入或续写原作业。
@@ -132,7 +132,7 @@
 - 新留出38：预测文件先只创建保存，预测69154 cycle/CTA；运行前核对UUID、probe源码、目标完整SASS，3个记录的预测SHA256一致。实测69119–69228，中位69122，CV0.0898%；误差+0.0463%，完整输出CPU误差0。38从未用于校准，也不是旧已知检查点。
 - 选择性已知检查：只重跑受影响的small/target TC ×7/19/47×单CTA/整卡共12点/78正式进程，误差0，最大CV约1.507%。这些明确作为已知检查，不称留出。未重跑LDS组合、完整CUTLASS或R00。
 - 环境：735138，romeo-a041，GPU-7c184a2e-41ea-3d2b-df5b-1699c95fc1fe，CUDA12.9/sm90a；所有GPU工作串行，未改频率/功率或重试NCU。旧099dda…、R00 ec947…不参与本次拟合。
-- 本地：`results/gh200_resource_campaign/access_rules/20261006-A-fix-job735138/prediction-validation.md`、`prediction-k38-v1.json`；原校准`v01-calibration-v1/`、新留出`v01-heldout-k38-v1/`、CPU review与已知TC检查`v01-tc-checkpoints-v1/`。每次实际源码/精确头文件/二进制/编译命令/日志/PTX/SASS/完整输出已保存。
+- 本地：`results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261006-A-fix-job735138/prediction-validation.md`、`prediction-k38-v1.json`；原校准`v01-calibration-v1/`、新留出`v01-heldout-k38-v1/`、CPU review与已知TC检查`v01-tc-checkpoints-v1/`。每次实际源码/精确头文件/二进制/编译命令/日志/PTX/SASS/完整输出已保存。
 - 未闭合：理想异步TC、独立基础服务的广泛组合迁移、整卡共享供给/波次/缓存、CUTLASS MN布局/动态寄存器/cluster2×1×1及L3调度。新预测只支持当前明确域，不凑完整kernel预测。下一步主对话验收该窄域新长度预测与真实串行计账。
 - 分配回收：735138的GPU采样已结束，全部必要证据完成本地回收及CPU/SHA/CFG核对后释放；squeue已无该作业。
 <!-- END:V01 -->

@@ -1,8 +1,0 @@
-{
-  "files": {
-    "manifest.json": "4da484620027356060a7e89c3cde0d6c4fddbcddf3a74c48d8ff9f6e32f35607",
-    "collect.py": "20b308926cd1fa2b4c7ade436fe3305b1ce741faf00e506fbc1c1899b558a0ff",
-    "analyze.py": "a1380f002ec395b9824dff3715b1452a449962ab37fac7b26c17afdac671dc2d",
-    "run.sh": "3664f065fbc6085ba73403bb69f2782d10ab9bdc6a65e089551d6b9e706cbe0d"
-  }
-}

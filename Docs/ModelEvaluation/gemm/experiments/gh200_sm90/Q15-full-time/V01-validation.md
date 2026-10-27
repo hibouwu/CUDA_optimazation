@@ -85,10 +85,10 @@ e=\frac{\widehat T-T_{\mathrm{measured}}}{T_{\mathrm{measured}}}
 
 ## 数据
 
-- 异步版：[V01 报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-async-v01-r04/v01-offline-review/report.md)（作业 735203，GPU-7c184a2e…）。
-- 拟合与内插：[新长度报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-v01-followup/report.md)、[固定 CUTLASS 分阶段模型](../../../../../../results/gh200_resource_campaign/access_rules/20261006-cutlass-wait-matching/published/report.md)。
-- 辅助 LDS 完成边界：[报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-lds-completion/review/report.md)。
-- 旧版：`access_rules/20261006-A-job735062/`、`20261006-A-fix-job735138/`。
+- 异步版：[V01 报告](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/R04-R11-mixed-issue/20261007-async-v01-r04/v01-offline-review/report.md)（作业 735203，GPU-7c184a2e…）。
+- 拟合与内插：[新长度报告](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261006-v01-followup/report.md)、[固定 CUTLASS 分阶段模型](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261006-cutlass-wait-matching/published/report.md)。
+- 辅助 LDS 完成边界：[报告](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V01-V08-validation/20261006-lds-completion/review/report.md)。
+- 旧版：`access_rules/Q07-smem/R04-R11-mixed-issue/20261006-A-job735062/`、`20261006-A-fix-job735138/`。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/v01_predict.py --output <预测.json>
@@ -115,7 +115,7 @@ python3 <新目录>/source/analyze_v01.py --input <新目录>
 
 当前组件只定值到 cfg_b、132 SM、6 stage、完整 Ktile、A 行距对齐。R09 的 21 个训练条件全部 K=1024，计算工作与输出字节共线；这次迁移失败尚不能归因于某一个物理功耗来源。下一步先在 R09 做等名义计算/源请求量、不同 K 与输出次数的配对，分离这个缺口；不在这 13 个目标上追加自由修正项。
 
-[逐例结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/composition.json)与[CPU 检查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/cpu-checks.json)保留全部条件、实测频率诊断和 CTA 定位差距。13 条件的目标观测污染检查、输入不变检查、频率网格上的回调单调性与联立闭合检查通过；网格检查不替代对所有未来组织的证明。
+[逐例结果](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/composition.json)与[CPU 检查](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/R10-layout-cache/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/cpu-checks.json)保留全部条件、实测频率诊断和 CTA 定位差距。13 条件的目标观测污染检查、输入不变检查、频率网格上的回调单调性与联立闭合检查通过；网格检查不替代对所有未来组织的证明。
 
 
 ### 三配置与输出分类接入（2026-10-09）
@@ -129,14 +129,14 @@ job738496 在同一 GPU-43269fbc 上完成 29 个数值预检查和 1160 个正�
 
 后一版保留了分项更明确的输出关系，未因前一版中位误差略小就忽略输出类别。E0 只计 J+R；middle/last 已是 merged 窗口，不再加 R；整 case 的 T_max=1 才选 single 规则。whole-OOB 的输出和尾段非零；partial 按有效输出比例插值只是下一批待验证的假设。cfg_c 普通 T≥3 的 middle 仍借用 padding 中 real 输出的代理。零工作混合也只是固定端点参数的插值，不是物理功耗定律。
 
-[完整组合与参数](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-three-config-composition-v3/composition.json)保留全部条件及支持标记。plain/dual 协议换算只用实测 dual 包络与 plain event 拟合，不用不准确的组件预测吸收误差；三配置的校准最大换算残差为 2.13%/1.84%/1.22%。
+[完整组合与参数](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-three-config-composition-v3/composition.json)保留全部条件及支持标记。plain/dual 协议换算只用实测 dual 包络与 plain event 拟合，不用不准确的组件预测吸收误差；三配置的校准最大换算残差为 2.13%/1.84%/1.22%。
 
-[CTA 定位诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-critical-cta-v1/summary.json)检查的是此前 29 条件 phase/mix 版本：不少 CTA 在模型中完全并列，不能把第一个索引称作唯一最慢者；两例 cfg_a 长 K 行距条件的这个代表 CTA 仍比真正最后完成者短约 10%，虽然后者都在并列集合内。两个 cfg_a OOB 条件的真正最后完成者还会落在该集合外。关键 CTA 唯一定位尚未解决，局部慢窗口残差也不因总时间接近而消失。
+[CTA 定位诊断](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-critical-cta-v1/summary.json)检查的是此前 29 条件 phase/mix 版本：不少 CTA 在模型中完全并列，不能把第一个索引称作唯一最慢者；两例 cfg_a 长 K 行距条件的这个代表 CTA 仍比真正最后完成者短约 10%，虽然后者都在并列集合内。两个 cfg_a OOB 条件的真正最后完成者还会落在该集合外。关键 CTA 唯一定位尚未解决，局部慢窗口残差也不因总时间接近而消失。
 
 新 stage 组织的准备沿用公共框架：`stages=4` 选独立 cfg_b_s4 二进制，默认构建命令不变。job738599 在另一张 GH200 上完成默认/4-stage 的八个正确性检查；均 168 registers、16 HGMMA、无 spill，4-stage SMEM 为149504 B，仍1 CTA/SM。默认四变体 SASS 与 job738496 完全相同。这只证明合法构建与数值正确，检查中的时间不进入拟合；新组织的性能迁移留给 V09。
 
 
-首轮填零补测后，A/C first 各合并4个新条件，原 later 与 B19 保持不变；全部50个已见开发条件的[组合重放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-three-config-composition-v4/report.json)中有49个支持，支持子集 plain 误差为3.35%/7.98%。剩余 cfg_c_first_fill_oob_k1024 在自由预测频率下离开已识别供给分支；其数值只作诊断，不能把49个子集成绩称为50个全部通过。新 cfg_a 的后续窗口也仍有局部最大约40%的误差。下一步冻结现有模型并保留拒绝项，不为了凑齐支持继续增加模型项或补测。
+首轮填零补测后，A/C first 各合并4个新条件，原 later 与 B19 保持不变；全部50个已见开发条件的[组合重放](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/R13-async-retirement/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-three-config-composition-v4/report.json)中有49个支持，支持子集 plain 误差为3.35%/7.98%。剩余 cfg_c_first_fill_oob_k1024 在自由预测频率下离开已识别供给分支；其数值只作诊断，不能把49个子集成绩称为50个全部通过。新 cfg_a 的后续窗口也仍有局部最大约40%的误差。下一步冻结现有模型并保留拒绝项，不为了凑齐支持继续增加模型项或补测。
 
 
 <a id="v09-ablation"></a>
@@ -156,4 +156,4 @@ job738496 在同一 GPU-43269fbc 上完成 29 个数值预检查和 1160 个正�
 
 cfg_b G6用观测频率作诊断时，完整候选误差为+1.71%，聚合供给为+17.60%，完整V08形式为+23.16%；因此不能把全部差异归到共享时钟。另一方面，四组自由频率下都未解决长K失败。现阶段保留三个组件，先处理长K频率、行距/填零跨几何响应和首段，不增加新模型分支。
 
-完整条件、局部窗口、同卡拟合依据和复现命令见 [消融分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/model-simplification-v1/ablation/README.md)。V08结构与V09使用各自既定拟合策略，因此完整两模型的差距不能全部归因于供给；V08的X/边界总量修正也不被强造为局部事件。原冻结、拒绝项和评分不变。
+完整条件、局部窗口、同卡拟合依据和复现命令见 [消融分析](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/reanalysis/model-simplification-v1/ablation/README.md)。V08结构与V09使用各自既定拟合策略，因此完整两模型的差距不能全部归因于供给；V08的X/边界总量修正也不被强造为局部事件。原冻结、拒绝项和评分不变。

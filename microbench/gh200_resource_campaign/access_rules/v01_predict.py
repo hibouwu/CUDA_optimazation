@@ -18,11 +18,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 RESULTS = REPO / "results/gh200_resource_campaign"
-R00 = RESULTS / "access_rules/20261006-r00-job734996/formal-v1/cases.csv"
-R01 = RESULTS / "access_rules/20261006-b-job735060/formal-r01-v1/rules.json"
-R03 = RESULTS / "access_rules/20261006-c-job735059/r03-formal-v1/rules.json"
-R05 = RESULTS / "access_rules/20261006-c-job735059/r05-formal-v2/rules.json"
-R05A = RESULTS / "access_rules/20261006-c-job735059/r05-a-formal-v5/rules.json"
+R00 = RESULTS / "access_rules/Q05-wgmma/R00-anchor-target/20261006-r00-job734996/formal-v1/cases.csv"
+R01 = RESULTS / "access_rules/Q08-register-residency/R01-R06-readiness/20261006-b-job735060/formal-r01-v1/rules.json"
+R03 = RESULTS / "access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r03-formal-v1/rules.json"
+R05 = RESULTS / "access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-formal-v2/rules.json"
+R05A = RESULTS / "access_rules/Q07-smem/R03-access-demand/20261006-c-job735059/r05-a-formal-v5/rules.json"
 EXP15 = (
     RESULTS / "20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/"
     "node-sampling-v1/published-all68-v1/results.csv"

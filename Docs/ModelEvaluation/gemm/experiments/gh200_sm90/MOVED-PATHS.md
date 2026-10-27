@@ -65,3 +65,16 @@
 | `access_rules/V08-wider-validation.md` | [Q15-full-time/V08-wider-validation.md](Q15-full-time/V08-wider-validation.md) |
 | `access_rules/V09-component-validation.md` | [Q15-full-time/V09-component-validation.md](Q15-full-time/V09-component-validation.md) |
 | `access_rules/C1-01-selection.md` | [Q16-config-selection/C1-01-selection.md](Q16-config-selection/C1-01-selection.md) |
+
+## 2026-10-20 结果目录与轮次记录
+
+- **结果目录**：`results/gh200_resource_campaign/access_rules/` 下的 515 个轮次目录由平铺改为 `<问题>/<合并实验>/<原目录名>`，原目录名不变。逐项对照见 [MOVED-PATHS-20261020.tsv](../../../../../results/gh200_resource_campaign/access_rules/MOVED-PATHS-20261020.tsv)，分组索引见[结果目录索引](../../../../../results/gh200_resource_campaign/access_rules/README.md)。
+- **结果包内容**：各轮目录与整理前逐字节相同，只改变了存放位置。10-20 整理时曾改写过结果目录内 652 个 md／py／sh 中的路径，其中 554 个受上一轮或交付清单的 SHA256 绑定；复查后已全部恢复原字节。325 个绝对符号链接改指新位置，目标文件内容不变。Docs 与 microbench 中的路径已改为新布局。
+- **历史入口**：旧回放按 `access_rules/<原目录名>` 和 `parents[k]` 定位，须在旧布局视图中运行。先执行 `python -B microbench/gh200_resource_campaign/access_rules/flat_layout_view.py VIEW RUN [RUN ...]`，它会把所列轮次及其文本中提到的前序轮次，以 reflink 副本放回平铺位置，其余部分用符号链接；然后在 `VIEW` 内按原命令运行（需要时传 `--repo VIEW`）。VIEW 须为新目录，且与仓库同在 btrfs 文件系统上。已核对以下入口：
+  - 20261020-Q02-operand-control-model-001 的 run.py：10 份输出逐字节相同，上一轮 225 个文件未变；
+  - 20261017-cfg-b-system-001 的 verify_delivery.py：55 个源码哈希一致，三条件端点精确保持；
+  - 同一包的 replay_cfg_b_scores.py：替换视图路径前缀后，evidence 逐字节相同；
+  - 同一包 G3_base 的独立预测：47.434985708566025 µs，时间线 SHA 相同；
+  - 20261018-Q05-local-compute-service-001 与 20261018-Q04-exposed-control-002 的回放：输出与保存结果逐字节相同。
+- **轮次表**：原 `access_rules/README.md` 中按问题列出的“无编号轮次”（锚点 `#research-rounds-NN`、`#round-*`）已逐行迁入各合并实验的记录页，见[按问题索引](README.md#research-questions)。执行历史（`#history-*`）改由各合并实验目录的 README 列出全部轮次。
+- **逐轮日志**：项目 `PLAN.md`、`access_rules/EXECUTION.md` 以及规则页 TMA-GEMM-HYPOTHESES、TMA-SHARED-SERVICE、COMPUTE-SERVICE、SYNC-SERVICE 中的逐轮叙述，改由实验记录承担。原文见 git 历史，以及 `CUDA_optimazation_archive/consolidation-20261020/` 中的快照。

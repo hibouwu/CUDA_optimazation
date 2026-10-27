@@ -33,9 +33,9 @@
 
 开发数据先核对结果、机器码、活动覆盖、重叠与暖机，再比较六个形式的逐点残差。Hmax同时覆盖局部受限与共享受限分支、且局部分支有至少两点时，再检验`a、b1、Bg`的分别辨识；全局部条件只给`Bg`下界，全平台条件只给`a+B/Bg`的组合。形式及参数冻结后才执行留出；本轮留出检验同工作量和程序组织下活动规模的插值。候选预测无法分开的条件只约束服务范围。写与混合结果单列，不从读曲线推算它们的参数。
 
-[开发实测](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-execution-002/dev/summary.json)包含16条件／48独立进程，全部暖机收敛且性能资格通过；CUDA12.9.41的[九模板SASS审核](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/target-review.json)通过。固定S时，J1→4的吞吐改善约2.1倍，J4→8接近平台；固定J时吞吐随S近似线性增加。本组没有单独辨识共享平台或裸L2服务率。
+[开发实测](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-execution-002/dev/summary.json)包含16条件／48独立进程，全部暖机收敛且性能资格通过；CUDA12.9.41的[九模板SASS审核](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/target-review.json)通过。固定S时，J1→4的吞吐改善约2.1倍，J4→8接近平台；固定J时吞吐随S近似线性增加。本组没有单独辨识共享平台或裸L2服务率。
 
-按第2节预置单调规则，S32的J4三个进程窗口为353856–354592 ns，J8为355328–355552 ns，两个区间不重叠；中位数分别354528、355424 ns，J8反而增加约0.253%。[六形式判定](../../../../../../results/gh200_resource_campaign/access_rules/20261017-L2-01-fit-001/service.json)均为`refuted_stable_monotonic_reversal`，`selected=null`；判定在参数拟合前结束，没有参数、拟合误差或开发冻结，四个留出条件未采。
+按第2节预置单调规则，S32的J4三个进程窗口为353856–354592 ns，J8为355328–355552 ns，两个区间不重叠；中位数分别354528、355424 ns，J8反而增加约0.253%。[六形式判定](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/L2-01-saturation/20261017-L2-01-fit-001/service.json)均为`refuted_stable_monotonic_reversal`，`selected=null`；判定在参数拟合前结束，没有参数、拟合误差或开发冻结，四个留出条件未采。
 
 本轮排除的是`b(J)=b1·min(J,Jsat)`及其六个具体窗口形式在全部开发点上的共同单调预测，不将这一小幅逆向命名为某个物理资源原因。“局部供给与共享源服务共同限制”仍是待辨识的宽泛解释。本轮按既定停止条件收口，不扩点、不搜索新形式；写与混合选点保留原资格。
 

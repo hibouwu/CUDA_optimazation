@@ -1,8 +1,0 @@
-{
-  "raw_sha256": "3badf886976b0fc7bc4ec8cabbf451220bb18e366b29e5315f126733d8ad1c72",
-  "binary_sha256": "9fdbf10afe162a92f44a889a1fe3c87b89f57a0e73a5ec385abde32035742b55",
-  "prefix_input_sha256": "96a553ce65ef017680311b01d673fd737a0ade5a281c4bba0d5c7ca9485d88c9",
-  "extractor_sha256": "368c2ecbf74f486094887051f3199dd29e4013091183dee923a006b1f3b7b03a",
-  "execution": "post-acquisition prefix projection; not numeric precommit",
-  "target_validity_checked": false
-}

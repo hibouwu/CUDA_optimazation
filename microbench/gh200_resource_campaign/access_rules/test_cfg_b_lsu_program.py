@@ -5,6 +5,7 @@ import unittest
 import cfg_b_composition as aggregate
 import cfg_b_program
 import cfg_b_request_model as model
+from test_cfg_b_request_model import without_full_query_graph, without_full_query_report
 
 
 class LsuProgramTests(unittest.TestCase):
@@ -30,7 +31,7 @@ class LsuProgramTests(unittest.TestCase):
             self.assertIn('control', demand['constants']['coverage'])
 
     def test_six_programs_preserve_prior_results_and_only_add_demand_report(self):
-        source = aggregate.DEFAULT_ARCHIVE.parent/'20261017-REG-01-replay-001/source'
+        source = aggregate.DEFAULT_ARCHIVE.parents[2]/'Q08-register-residency/REG-01-SM-01-replay/20261017-REG-01-replay-001/source'
         spec = importlib.util.spec_from_file_location('register_stage_request_model', source/'cfg_b_request_model.py')
         prior = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(prior)
@@ -44,9 +45,11 @@ class LsuProgramTests(unittest.TestCase):
             for stages in (4,6):
                 with self.subTest(ktiles=ktiles, stages=stages):
                     program = self.program(ktiles,stages)
-                    self.assertEqual(cfg_b_program.expand_cta(program,0), prior_program.expand_cta(program,0))
+                    self.assertEqual(without_full_query_graph(cfg_b_program.expand_cta(program,0)),
+                                     prior_program.expand_cta(program,0))
                     baseline = model.simulate(program,parameters,producer_prefix_ns=50.,detailed_ctas=range(4))
-                    self.assertEqual(baseline, prior.simulate(program,parameters,producer_prefix_ns=50.,detailed_ctas=range(4)))
+                    self.assertEqual(without_full_query_report(baseline), without_full_query_report(
+                        prior.simulate(program,parameters,producer_prefix_ns=50.,detailed_ctas=range(4))))
                     reported = model.simulate(program,parameters,producer_prefix_ns=50.,
                                               detailed_ctas=range(4),ordinary_lsu=True)
                     demand = reported['modules'].pop('ordinary_lsu')['demands']
