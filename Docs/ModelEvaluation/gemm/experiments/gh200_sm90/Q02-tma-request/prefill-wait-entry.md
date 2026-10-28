@@ -2,6 +2,8 @@
 
 10 个目录（10-18、10-22）：在单 CTA TMA 探针上定位行距增量出现在首次预填还是逐组推进，以及推迟 full 等待入口能否隐藏它。原 row-stride 族的一部分。
 
+代码入口、快照版本、逐轮差异与已验证的重评分方式见[族 README](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/prefill-wait-entry/README.md#代码)；这套探针的全部现行代码集中在[阅读目录](../../../../../../microbench/gh200_resource_campaign/access_rules/read-single-cta-tma/README.md)。
+
 ## 结论
 
 - Q4 的 A16 增量 363–513 cycle 全部出现在首次预填，之后为 0；Q1 初始增量 0、完整增量中位 6806 cycle（752176）。

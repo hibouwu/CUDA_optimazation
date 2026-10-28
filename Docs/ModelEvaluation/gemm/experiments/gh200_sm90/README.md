@@ -8,6 +8,8 @@
 
 当前进行：[a044 锁频完整重测与逐阶段说明](Q10-time-mapping/A044-REMEASUREMENT.md)。旧卡结果保持原样，新轮次单独比较。
 
+实验代码按探针集中在四个阅读目录中（单 CTA TMA、驻留链、多 CTA tensor、插桩 GEMM），请求级组合模型另有一个，入口见 [microbench 的“按探针阅读代码”](../../../../../microbench/gh200_resource_campaign/access_rules/README.md#按探针阅读代码)。
+
 问题 1–10 沿用[机制分解](../../model/mechanism/README.md#3-机制分解)的 ①–⑫，④⑥、⑦⑧ 各合为一组。当前规则、支持与排除、反例和下一步由路径页维护；实验可被多个问题引用，原记录只保留一份；原始轮次按“问题／合并实验”存放，[结果目录索引](../../../../../results/gh200_resource_campaign/access_rules/README.md)列出每组全部轮次，[非实验清单](access_rules/README.md#non-experiment-results)单列。验收类型按 [GOALS](../../GOALS.md) 区分 C2 机制主张、C3 完整时间、C1 配置选择。
 
 | 问题 | 定价的事件 | 当前假设与规则入口 | 各轮实验 | 验收类型 | 状态 |

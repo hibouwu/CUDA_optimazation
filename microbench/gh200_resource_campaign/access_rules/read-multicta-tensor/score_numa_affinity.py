@@ -1,0 +1,1 @@
+../score_numa_affinity.py

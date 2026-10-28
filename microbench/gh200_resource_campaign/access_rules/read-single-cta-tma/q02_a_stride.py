@@ -1,0 +1,1 @@
+../q02_a_stride.py

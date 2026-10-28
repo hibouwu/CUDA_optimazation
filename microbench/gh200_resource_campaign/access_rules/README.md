@@ -1,5 +1,18 @@
 # GH200 访问规则微基准入口
 
+## 按探针与模型阅读代码
+
+本目录的模块是平铺的。下面的阅读目录用相对软链接，把同一套探针（以及常读的请求级组合模型）的代码集中到一处；全部探针文件的索引见 [probes/README.md](probes/README.md)。
+
+| 阅读目录 | 代码内容 | 主要结果族 |
+|---|---|---|
+| [read-single-cta-tma](read-single-cta-tma/README.md) | 单 CTA TMA 探针 `tma_gemm_sources.cu` | Q02 request-shape-response、prefill-wait-entry、probe-control |
+| [read-resident-chain](read-resident-chain/README.md) | 驻留链 A→E（计算、交接、TMA 供给、pingpong） | COMPUTE-01-04、Q02 native-d-chain、source-organization、Q04、Q05 |
+| [read-multicta-tensor](read-multicta-tensor/README.md) | 多 CTA tensor TMA、GPC 分组、NUMA | TRANSFER-01、multi-cta-gpc-sharing、shared-source-forms、storage-domain-numa |
+| [read-cfg-b-gemm-trace](read-cfg-b-gemm-trace/README.md) | 插桩完整 GEMM `r18.cu` 与调用内时钟 R07／R09 | V09、C1、Q14 的 G3 实验、R13、Q09 |
+| [read-cfg-b-model](read-cfg-b-model/README.md) | 请求级组合模型（不是探针）：程序展开、请求绑定、输入服务候选、事件推进 | Q14 的 G3 回放、Q02/Q03 的 GEMM 负载实验、C1/V09 的组合预测 |
+
+
 [V04失效项补测计划](../../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/PLAN.md)规定本轮R10/R13/R15/R14与V05的范围。各组使用自己的`run_rXX.py`、`analyze_rXX.py`和`probes/rXX.cu`；唯一新增公共头`probes/gaps_common.hpp`提供显式stride、padding与数值见证。本轮采样与独立验收已交付，V05迁移未整体通过；可用规则与观测限制见对应实验页。下面保留已有R00的使用说明。
 
 ## R00：完整 GEMM 与目标 WGMMA

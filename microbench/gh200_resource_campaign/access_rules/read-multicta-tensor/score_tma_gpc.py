@@ -1,0 +1,1 @@
+../score_tma_gpc.py
