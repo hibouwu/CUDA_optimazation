@@ -1,6 +1,6 @@
 # 原生 TMA D 链（单 CTA）
 
-24 个目录（10-18 至 10-21）：把真实三请求 TMA（A 16 KiB、B0/B1 各 8 KiB、SW128）接入驻留计算链，研究搬运→就绪→full 返回的局部连接。
+18 个目录（10-18 至 10-21）：把真实三请求 TMA（A 16 KiB、B0/B1 各 8 KiB、SW128）接入驻留计算链，研究搬运→就绪→full 返回的局部连接。
 
 ## 结论
 
@@ -16,8 +16,6 @@
 
 **不可辨识**
 - 首组 full 返回前的 773 cycle 无法由现有窗口拆分：输入就绪与阻塞返回之间存在连续等价族。
-
-- empty后准备0→640的同binary对照：九进程资格通过，R→N0桥接通过；窗口响应6618–6699cycle，名义模型2176cycle，冻结成本域无法解释。停止本校准形式、S4未采（774214／774221）。随后逐轮准备类通过独立长度响应：K4为2153–2163、K32为16044–16166cycle，首段形式被排除（774347）。N0−R随长度增长，固定J及P／源残量的分配仍未解释，见[本轮结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-preparation-length-001/README.md)。
 
 **接口交付**
 - 目的服务、源受理与信用归还、程序请求合同。旧 producer 控制合同因夹具失败停止；当前轮已接入 empty 后准备、请求受理与 acquire／关键路径的对应关系。
@@ -46,13 +44,7 @@
 | 首次等待时序能否区分输入窗口放置（CPU） | 固定两个价格放置与producer发出，只延迟首次consumer full进入；S4/S6、K13、R0/4096 | 4096／3188cycle响应带分开，默认报告保持，15项测试及异目录复现通过；尚未实现新GPU干预 | [时间线、端点与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261019-Q02-first-wait-entry-001/README.md) |
 | 旧H773预算能否映射真实请求推进（CPU） | 保存六局部图与三份新端点；闭式筛查零发出族，再用既有回调接一组按操作区分的producer推进 | 统一平移及ready／return分配均不能修复旧物理映射；一组代数见证保持886项下游关系与六窗口，满足21项新端点约束，价格未辨识 | [反例、可执行接线与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261020-Q02-issue-budget-connection-001/README.md) |
 | 首组A实际发出与producer推进 | 固定B／full观察，只增首代A工厂前后戳；旧版／新版关闭／新版开启 | 758758九进程60资格通过；观察程序A412–475cycle、A→B21–179cycle，旧见证的直接映射及统一平移失败；原程序A起点与观察干预未分开 | [有限轮次](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261020-Q02-first-a-issue-001/README.md) |
-| producer程序控制与源准入分工（CPU） | 固定源／计算／同步价格；分开empty后准备与各请求受理返回 | 73／81条producer指令、八零默认报告保持；新完整入口夹具失败，两修复用完并恢复活动代码，候选未接入；186请求372端点字段核对通过 | [有限轮次](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261020-Q02-producer-control-contract-001/README.md) |
 | 首组三请求issue至full完成能否约束局部分配 | 在合格full旁路观察上增加B0/B1请求对前后戳；S6/K4旧版／新版关闭／新版开启，各三进程 | 758626九进程36资格通过；联合成功返回后戳，三个issue→full区间为425–607／425–609／425–599cycle，1／773两具体价格映射均不相容；原冻结评分保留 | [原始评分、联合边界及复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261020-Q02-first-issue-completion-001/README.md) |
-| 生产者节流能否区分已有控制放置（CPU） | 固定S6/K13、两解释及H必要界端点，仅把组间隔0改为1024cycle | 八调用、拟合/GPU0；两解释均预测plain增6144cycle，存在相同可行响应，不补测 | [计划、预测与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-control-placement-intervention-001/README.md) |
 | g11等待路径身份能否区分已有控制放置（CPU） | 固定S6/K13、两个解释与H两端，只比较full就绪相对wait进入 | 四调用、拟合/GPU0；四份图均预测快等待，布尔量不可分，停止该观察选题 | [计划、四份事件与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-wait-path-screen-001/README.md) |
-| empty 后程序准备与请求受理接线（CPU） | 固定原硬件价格，准备7/5/3ns及名义640cycle干预；同步／异步与局部／完整入口同序 | 八默认报告逐字保持，47项测试通过；140/160调用、GPU0。两个解释的S4−S6响应带可分，实机程序成本待下一轮约束 | [接口、反例与推导](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-program-preparation-001/README.md) |
-| empty后准备能否区分两控制解释 | 固定旧硬件价格与H；S6原程序／同binary0／640各三进程，成本与资格通过后冻结S4同配对 | 774214两有效进程后执行器失败，774221按同计划继续剩余七个；九进程资格通过。响应6618–6699cycle对名义2176，校准超域，未测S4 | [测前计划与执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-preparation-delay-001/README.md) |
-| 原有准备是否逐轮限制请求推进（CPU） | 固定H总预算、计算/同步；两个控制形式各16相关见证，核旧六条件与新两条件；首段类另作必要界 | 256/256核对通过；逐轮准备P=240–309.75cycle可保持旧六窗口并解释新响应；首段类上界3737cycle低于观测6617 | [计划与结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-recurrent-preparation-001/README.md) |
-| 逐轮准备能否预测独立长度 | 固定S6及旧R/N binary，K4／K32各三臂三进程；K4通过才测K32；四个留出条件、两个R桥接条件 | 774347十八进程资格／桥接通过；K4响应2153–2163、K32响应16044–16166cycle，均在冻结门槛内；首段形式被排除，N0−R长度差未解 | [冻结预测与执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/native-d-chain/20261021-Q02-preparation-length-001/README.md) |
 | a044 跨卡复核（mechanism-r3，780769） | native-input-growth 12 次，原评分器 | 开发判定“输入被覆盖形式通过”保持 | [Q02 报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/q02-returned-report.md) |
 | a044 保序修复（785518–785575） | first-wait-native 9、native-input-validation 15、startup-prediction 12、first-a-issue 9、first-issue-completion 9 次，原顺序与环境，原评分器 | 4 轮判定不变。first-issue-completion：seed 3 的 issue→completion 区间 273–587 cycle，与 ready_773 预测带 734–812 不相容（seed 22/41 仍相容），保留形式变为空；layout 程序查询 7 次逐字节相同 | [修复报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-repair-r2-report.md#q02q04q05-原评分器重评) |

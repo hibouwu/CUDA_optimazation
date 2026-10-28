@@ -46,11 +46,11 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
 
 ## 5. 固定分配的B行距开发判别
 
-[新准备轮次](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261017-Q02-tma-stride-001/README.md)固定B分配与真实tensor请求，比较四行距及Q1／Q4端点。范围为首两轮源坐标，当前只做CPU准备。
+[新准备轮次](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261017-Q02-tma-stride-001/README.md)固定B分配与真实tensor请求，比较四行距及Q1／Q4端点。范围为首两轮源坐标，当前只做CPU准备。
 
-目标执行包见[002](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261017-Q02-tma-stride-002/README.md)：先核对原生12.9前后构建及18臂完整数值，再采同6条件的18臂plain；独立评分从原始NDJSON重算。
+目标执行包见[002](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261017-Q02-tma-stride-002/README.md)：先核对原生12.9前后构建及18臂完整数值，再采同6条件的18臂plain；独立评分从原始NDJSON重算。
 
-751907完成[目标执行与开发判定](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261017-Q02-tma-stride-002/EXECUTION.md)：18数值臂零错误、18plain臂完成；Q4下B32近零，B80/B112中位cycle增加约4%–5%、ns包络增加约7%–11%，Q1的包络响应不稳定同向。固定分配下地址响应仍存在且受在途组织影响，先据此筛查源服务规则；未新增独立C2或组合价格。
+751907完成[目标执行与开发判定](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261017-Q02-tma-stride-002/EXECUTION.md)：18数值臂零错误、18plain臂完成；Q4下B32近零，B80/B112中位cycle增加约4%–5%、ns包络增加约7%–11%，Q1的包络响应不稳定同向。固定分配下地址响应仍存在且受在途组织影响，先据此筛查源服务规则；未新增独立C2或组合价格。
 
 ## 相关轮次
 

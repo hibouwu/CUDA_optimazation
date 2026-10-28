@@ -270,7 +270,7 @@ class InputNetworkTests(unittest.TestCase):
         from pathlib import Path
         import cfg_b_system as system
         repo = Path(__file__).resolve().parents[3]
-        old_path = repo/'results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-program-intervention-001/source/cfg_b_system.py'
+        old_path = repo/'results/gh200_resource_campaign/access_rules/non-experiment/integration/20261022-Q14-program-intervention-001/source/cfg_b_system.py'
         spec = importlib.util.spec_from_file_location('prior_system', old_path)
         old = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(old)

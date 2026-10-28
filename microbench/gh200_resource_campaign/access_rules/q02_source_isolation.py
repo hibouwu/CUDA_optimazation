@@ -34,10 +34,10 @@ def digest(path):
 def prepare(args):
     repo = Path(__file__).resolve().parents[3]
     base = repo / "results/gh200_resource_campaign/access_rules"
-    old = base / "Q02-tma-request/row-stride/20261017-Q02-tma-stride-001"
-    measured = base / "Q02-tma-request/row-stride/20261017-Q02-tma-stride-002"
-    sharing = base / "Q02-tma-request/gemm-source-candidates/20261015-tma-source-sharing-development-001"
-    state = base / "Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-development-001/domain-layout/replay.json"
+    old = base / "Q02-tma-request/request-shape-response/20261017-Q02-tma-stride-001"
+    measured = base / "Q02-tma-request/request-shape-response/20261017-Q02-tma-stride-002"
+    sharing = base / "Q02-tma-request/gemm-source-reuse/20261015-tma-source-sharing-development-001"
+    state = base / "Q02-tma-request/gemm-source-reuse/20261015-tma-gemm-source-development-001/domain-layout/replay.json"
     package = args.package.resolve()
     package.mkdir(exist_ok=False)
     (package / "source").mkdir()

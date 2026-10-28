@@ -1,0 +1,14 @@
+{
+  "original_directory_count": 113,
+  "unique_assignment_rows": 113,
+  "unassigned_directories": 0,
+  "compute_series_directories_in_Q14": 15,
+  "Q14_directories": 35,
+  "Q02_incoming": 45,
+  "Q02_projected": 258,
+  "source_documents_sha256_unchanged": 292,
+  "relative_report_links_checked": 141,
+  "missing_report_links": [],
+  "moves_performed": 0,
+  "experiment_commands_executed": 0
+}

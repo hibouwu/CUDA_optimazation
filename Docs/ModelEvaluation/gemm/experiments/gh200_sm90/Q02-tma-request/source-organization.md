@@ -1,6 +1,6 @@
 # 源组织：共享源与独立源
 
-26 个目录（10-19 至 10-21）：在原生 D 链（真实三请求）上把 CTA 数扩到 132，并固定分配，只改变源 batch 的共享身份；另含后续代次观察的准备与采前核对。
+20 个目录（10-19 至 10-21）：在原生 D 链（真实三请求）上把 CTA 数扩到 132，并固定分配，只改变源 batch 的共享身份；另含后续代次观察的准备与采前核对。
 
 ## 结论
 
@@ -17,12 +17,7 @@
 
 **未完成**
 - 66源响应已获局部支持，现用服务的绝对价格及CTA结束分布仍未解释；[同条件比较](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-source-count-build-002/score.json)保留两种排序的残差。
-- 实际每调用清写和导出的8.25MiB输出未接入旧D源回放；沿用现有写分配规则补入后，132源稳态保持、66源的FIFO预测过慢，八个绝对端点均失败，停止该固定接线，见[CPU回放](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-output-state-replay-001/README.md)。
-- 将缓存／HBM发起移到既有GPC受理时刻后，132源仍全miss、66源仍全命中，包络只变−2.320／+25.094ns，八个绝对端点仍失败，停止该固定连接。
-- 用保存描述符的实际A/B基址替换旧假设后，B的106496/219648次行访问home归属改变，但四组528个CTA结束时刻逐值保持，仍未修复残差，见[输入核对](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-source-base-replay-001/README.md)。
-- 未完成填充不占缓存容量、完成时才插入的固定形式，使132源在暖机后也全命中，66／132源响应变为0；原冻结响应及八个绝对端点均失败，停止该形式，见[填充完成回放](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-fill-completion-replay-001/README.md)。
-- 保留发出时占位、只为完成时尚存条目增加MRU更新，FIFO／132源仍全miss，132个CTA及5148请求逐值保持；13调用即在首项停止，不继续扩展LRU更新，见[完成时替换顺序](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-fill-recency-replay-001/README.md)。
-- 受理后查找同时反馈producer后继，FIFO／132源末调用4723次延后，包络／跨度只变−45.444／+13.953ns，13调用即停止；439296条源线互不重复，原价后端连续忙15.681µs，见[固定受理反馈](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-admission-feedback-replay-001/README.md)。
+- 输出写入状态、受理后发起数据分支、实际分配基址、填充完成插入与完成时 LRU 更新五个缓存回放已移到 [cache-organization](../Q03-source-service/cache-organization.md)，均未修复绝对端点。
 - 数据准备的超额延迟改为约束GPC服务进入，末调用5148请求全部生效，132源包络／跨度仍未通过；13调用收口，停止该固定连接，见[数据准备约束共享服务](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-data-gated-service-001/README.md)。
 - wait0 返回与尾部的观察实现改变了循环或未过扰动门。
 - 后续槽代次的旁路观察经用户授权追加零GPU构建772273后编译成功，但REG167→174、两条主循环改变，停止当前观察实现；full／empty端点仍缺，见[追加构建](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-late-slot-observer-001/rebuild-20261021/README.md)。
@@ -51,13 +46,7 @@
 | 多CTA是否接收与独立模块相同的producer控制输入（CPU） | 只透传既有组内／组间间隔；四形状单／组合及双CTA受理返回核对 | 8默认报告保持，452关系及27测试通过；异目录一致，80调用、拟合／修复／GPU0，硬件价格未选 | [接口反例、接线及收口](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261019-Q02-producer-control-input-001/README.md) |
 | 独立搬运输入能否表达源batch对照 | 固定服务，只补batch坐标与分配内偏移，核矩阵地址及端点接线 | 20592请求地址核对、四默认报告及23测试通过；两地复现，GPU0 | [源batch输入合同](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261019-Q02-source-batch-input-001/RESULTS.md) |
 | 多CTA D是否共用一次源服务状态 | 固定价格，将CTA与batch映射接入既有引擎 | 四默认报告、132CTA同次状态及52916端点约束通过；26测试，两地复现，GPU0 | [多CTA独立入口](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261019-Q02-cta-group-entry-001/README.md) |
-| D输出写入是否遗漏共享源状态（CPU） | 固定66／132源、两排序及全部旧价格，只接每调用8.25MiB输出清写与CTA计时后导出；44调用 | 八个绝对端点失败，FIFO66源多1744.975ns且跨度更小；132源与CTA优先稳态保持，停止固定接线，不扩大S4或完整组合 | [计划、评分与结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-output-state-replay-001/README.md) |
-| 数据分支是否应在GPC受理后开始（CPU） | 固定所有价格及服务范围，只将缓存查找／新miss提交移到既有service_start；66／132源、两排序及零服务等价检查，46调用 | 零服务精确保持、5148查找按时间推进；八个绝对端点失败，响应带保持，停止固定连接，不接S4／完整组合 | [计划、评分与结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-admitted-data-replay-001/README.md) |
-| 实际分配基址是否改变现用home映射（CPU） | 固定服务／映射规则，只将旧A0/B152MiB换成保存描述符的实际基址；66／132源×两排序，44调用 | 48组编码对应通过；B有106496次home变化，但528个CTA结束逐值保持，八绝对端点仍失败，保留实际输入及反例，不扩大 | [输入、回放与结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-source-base-replay-001/README.md) |
 | 首full完成跨度能否区分两种同刻推进 | 固定两源数及旧价格，K13暖机后正式K4，不复用slot0；先44次CPU预测，再核无consumer打点的旁路区间观察 | 44次CPU回放的两顺序预测可分；四次零GPU构建均未进入测量，当前旁路形式停止，两顺序均信息不足 | [有限计划](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-first-full-span-001/README.md) |
-| 填充完成后的缓存插入能否修复共享推进 | 固定实际基址、容量、全部价格及并发组织；未完成填充单列，ready时插入及替换；46次CPU调用 | 零延迟单CTA精确保持；132源暖机后全命中，源计数响应退化为0，八绝对端点失败；停止固定形式，不接S4或完整模型 | [规则、保存预测与评分](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-fill-completion-replay-001/README.md) |
-| 保留在途占位后，完成时LRU更新能否修复推进 | 容量及发出占位保持，只在fill完成时将尚存条目移到MRU；FIFO／132源13调用 | 零延迟等价保持；132CTA和5148请求逐值不变，首项包络与跨度失败即停；未扩大，不改完整模型 | [规则、反例与评分](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-fill-recency-replay-001/README.md) |
-| 状态化源受理能否通过producer后继改变共享推进 | 受理后查找保持，只将service_start接回producer返回；固定实际基址、D程序及旧价格；13调用 | 零排队等价保持；4723请求反馈生效，但包络／跨度仍失败；首项即停，不改完整模型 | [连接、工作守恒与评分](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-admission-feedback-replay-001/README.md) |
 | 后续代次的full／empty旁路区间能否实现（CPU） | S4/S6、K13，读取既有generation后只观察最后使用的slot0；用户另准一次零GPU构建、最多10分钟 | 765495缺参数失败保留；追加772273编译成功、宏关闭精确，但REG167→174且两循环改变，原门槛失败，停止当前实现；GPU／模型／拟合0 | [原有限构建](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-late-slot-observer-001/README.md)、[追加构建与差异](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-late-slot-observer-001/rebuild-20261021/README.md) |
 | 数据准备是否应约束共享服务进入（CPU） | 保留旧数据查找时点与全部价格，以超出local hit的就绪延迟推迟GPC队列进入；先local-hit等价再132源 | 13次CPU调用；local-hit逐值保持，132源包络17111.935ns／跨度1335.226ns均失败，停止固定连接，未扩展，GPU／拟合0 | [有限连接与判定](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261020-Q02-data-gated-service-001/README.md) |
 | g11同二进制观察能否区分已有控制放置 | 固定S6／S4、K13、CTA1；已有消费者继续／ready full返回两形式，H全必要界传播；R／N0／N1有限执行 | 16次CPU调用复现六窗口，预测族间距87.449cycle；773094修正构建通过，773099的S6九进程观察与桥接通过，区间宽576cycle，信息不足；未测S4，不重复相同轮询 | [计划、预测、源码与构建日志](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/source-organization/20261021-Q02-late-slot-switch-001/README.md) |

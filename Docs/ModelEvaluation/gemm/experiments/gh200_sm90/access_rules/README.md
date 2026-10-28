@@ -64,13 +64,13 @@
 
 | 实验记录 | 问题 | 主要结论 |
 |---|---|---|
-| [行距响应](../Q02-tma-request/row-stride.md) | 2 | 单 CTA 下行距只增加可隐藏的单请求延迟；完整 GEMM 的响应取决于并发 CTA 的源共享，未接入 |
+| [行距响应](../Q02-tma-request/request-shape-response.md) | 2 | 单 CTA 下行距只增加可隐藏的单请求延迟；完整 GEMM 的响应取决于并发 CTA 的源共享，未接入 |
 | [探针控制预算](../Q02-tma-request/probe-control.md) | 2 | 零搬运控制 565 cycle/组等探针事实；复合预算属于探针，与直接端点矛盾，不迁移 |
 | [原生 D 链](../Q02-tma-request/native-d-chain.md) | 2 | 长度增长与驻留链相同，冻结外推通过；观察开启时首组最后 B 发出→full 为 425–607 cycle |
 | [共享源固定形式](../Q02-tma-request/shared-source-forms.md) | 2 | 十余个固定形式被排除；逐 SM 窗口在相同运行间变化 11%–17% |
 | [源组织](../Q02-tma-request/source-organization.md) | 2 | 共享／独立源窗口 5.09／17.89 µs；结束分布未解释 |
 | [GPC 共享通路](../Q02-tma-request/multi-cta-gpc-sharing.md) | 2 | 每 GPC 两槽服务冻结留出通过（3.64%） |
-| [源订阅与共享关系](../Q02-tma-request/gemm-source-candidates.md) | 2 | 共享关系缩短窗口；四个订阅版本被反证 |
+| [源订阅与共享关系](../Q02-tma-request/gemm-source-reuse.md) | 2 | 共享关系缩短窗口；四个订阅版本被反证 |
 | [S16 单 CTA 控制](../Q02-tma-request/S16-single-cta-control.md)、[首填](../Q02-tma-request/first-fill.md) | 2 | 完成尾单独解释失败；首填不能跨配置共用 |
 | [源状态](../Q03-source-service/source-state-candidates.md) | 3 | 工作集、先前写入、暖机次序与两存储域获支持 |
 | [局部同步链](../Q04-sync-slot/local-sync-chain.md) | 4 | 冻结外推误差 ≤1.5%；迁移到 GEMM 失败 |

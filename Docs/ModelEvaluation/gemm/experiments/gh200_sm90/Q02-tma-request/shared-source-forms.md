@@ -1,6 +1,6 @@
 # 多 CTA 共享源的固定形式筛查
 
-21 个目录（10-18），基于既有 Q1/Q2 起步偏移（skew）多 CTA 探针及新测的相位、源移动与单点观察。
+18 个目录（10-18），基于既有 Q1/Q2 起步偏移（skew）多 CTA 探针及新测的相位与源移动；单点完成观察已移到 [completion-observation](completion-observation.md)。
 
 ## 结论
 
@@ -18,9 +18,7 @@
 
 **信息不足**
 - source-rotation：同一条件的配对符号不一致。
-- ready-snapshot：SM 映射轮换，资格失败。
-- ready-fixed-ports：包络范围 14%。
-- full-side-warp：稳定性与扰动资格未过。
+- 单点完成观察（ready-snapshot、ready-fixed-ports、full-side-warp）的资格均未过，见 [completion-observation](completion-observation.md)。
 
 **判断**
 - 共享源条件下，逐 CTA、逐 SM 的窗口在相同运行间本身就不可复现，用确定性固定形式去对齐逐组窗口并不稳妥。
@@ -47,9 +45,6 @@
 | 自身源不变的背景响应与慢流归属 | 48份Q1 raw，固定自身源CTA37/73；源共享20trace及旧七plain锚点 | 自身源/SM未变仍增加约27%；控制恒定，进入plain源移动判别 | [复核](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-source-following-audit-001/EXECUTION.md) |
 | plain源移动的冻结判别 | 同REG40 binary，source_tile_shift0/1各三进程；不加内部观察 | 753347完成12进程；原对照桥接及shift1符号失败，信息不足，收口 | [执行与等待](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-source-rotation-001/EXECUTION.md) |
 | 局部量化源与轮转共享完成 | 旧r10仲裁接实际局部受理/max完成；首prior早晚 | 早窗通过、晚窗高25.217514%，固定连接停止 | [执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-local-rr-completion-001/EXECUTION.md) |
-| 同源两遍的单点barrier完成状态 | 同binary/plain/g8/g40；保留原wait、phase及三请求 | 753444数值三臂零错；CTA→SM轮换，映射资格失败，正式0，收口 | [执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-ready-snapshot-001/EXECUTION.md) |
-| 固定每SM源/起步的单点完成 | 保持32CTA与三观察条件；按预声明SM/source_rank配对 | 753464身份/数值通过；plain范围14.063657%、逐SM差17.903066%，原5%失败，收口 | [执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-ready-fixed-ports-001/EXECUTION.md) |
 | 每调用匿名共享初态 | 两槽按事前seed17/29/43匿名优先序；价格/局部/完成连接固定 | 早窗低18.451419%、晚窗过门；具体形式停止 | [执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-call-order-state-001/EXECUTION.md) |
-| 同代次旁路warp完成区间 | plain/g8/g40同binary三条件，原consumer wait保持 | 183/192取得125–128cycle区间；原稳定/扰动资格失败，信息不足并停止 | [执行](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-full-side-warp-001/EXECUTION.md) |
 | 共享未完是否通过局部槽反馈（CPU开发） | 原2active/1waiting及两套价格；进入active才预约core，占用到max(local_end,core.end) | 六prior过原双5%；重排15.413612%及跨度574.935495ns仍失败，固定连接停止 | [八条件、87552请求审计与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-shared-held-local-slot-001/EXECUTION.md) |
 | 两active能否持有到源就绪（CPU必要界） | 原局部工作/尾及Q1三请求，取零共享争用最快界 | 612.557674ns／1221.930048cycle仍超原双5%允许上界，固定解释停止 | [闭式、事件核对与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/shared-source-forms/20261018-Q02-ready-held-slot-bound-001/EXECUTION.md) |

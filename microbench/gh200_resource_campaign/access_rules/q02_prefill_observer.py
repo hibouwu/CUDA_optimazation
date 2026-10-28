@@ -168,7 +168,7 @@ def prepare_source_step(root,reference):
     for name in ('q02_tma_stride.py','l2_saturation.py','r00_common.hpp','cutlass-3.9.2-include.tar.gz'):
         shutil.copy2(reference/'source'/name,root/'source'/name)
     shutil.copy2(reference/'source/tma_gemm_sources.cu',root/'source-before/tma_gemm_sources.cu')
-    previous=HERE.parents[2]/'results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261018-Q02-operand-split-001/source/tma_gemm_sources.cu'
+    previous=HERE.parents[2]/'results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261018-Q02-operand-split-001/source/tma_gemm_sources.cu'
     shutil.copy2(previous,root/'reference/before-source-step.cu')
     shutil.copy2(reference/'worklist.txt',root/'worklist.txt')
     shutil.copy2(HERE.parents[2]/'Docs/ModelEvaluation/gemm/PLAN.md',root/'reference/campaign-PLAN.md')

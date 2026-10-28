@@ -24,12 +24,12 @@ def load_profile(repo):
     """读取现用服务及运行前频率版本；不读取待预测条件的观测。"""
     base = Path(repo)/'results/gh200_resource_campaign/access_rules'
     paths = dict(
-        reference=base/'Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-development-001/gemm-phase-state-001/replay.json',
-        state=base/'Q02-tma-request/gemm-source-candidates/20261015-tma-gemm-source-development-001/domain-layout/replay.json',
-        group=base/'Q02-tma-request/gemm-source-candidates/20261015-tma-source-sharing-development-001/predictions.json',
+        reference=base/'Q02-tma-request/gemm-source-reuse/20261015-tma-gemm-source-development-001/gemm-phase-state-001/replay.json',
+        state=base/'Q02-tma-request/gemm-source-reuse/20261015-tma-gemm-source-development-001/domain-layout/replay.json',
+        group=base/'Q02-tma-request/gemm-source-reuse/20261015-tma-source-sharing-development-001/predictions.json',
         clock_reference=base/'Q09-frequency/frequency-mechanism/20261015-tma-clock-scaling-heldout-001/plan.json',
-        frequency=base/'Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002/frequency_model.json',
-        phase_frequency=base/'Q09-frequency/frequency-mechanism/20261015-phase-frequency-development-001/fit-001/model.json',
+        frequency=base/'Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-002/frequency_model.json',
+        phase_frequency=base/'Q09-frequency/frequency-prediction/20261015-phase-frequency-development-001/fit-001/model.json',
         calibration=base/'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/frozen/calibration.json')
     contents = {key:read(path) for key,path in paths.items()}
     return dict(other_parameters=contents['reference']['other_parameters'],

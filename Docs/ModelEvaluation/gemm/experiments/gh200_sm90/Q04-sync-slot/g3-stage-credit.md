@@ -9,6 +9,8 @@
 - 这是关于完整模型 stage 残差最直接的证据。它与“满载时的有效供给延迟落在 4 槽盖不住、6 槽盖得住的区间”这一解释相容，但原判定只支持有限输入信用，未给出延迟数值。组合模型方向正确，幅度为 3.9%，实测 10.5%。
 - 重复计算改造程序另有约 1.25 万 cycle 的额外控制（[gemm-connection](../Q14-composition/gemm-connection.md)），其绝对时间不迁移到原 cfg_b。
 
+- 固定物理 S6 时已有活动槽响应：4−6 槽两段 L 增 2647.5／5635 cycle，物理布局变化不是必要条件（由 Q14 移入）。
+
 ## 轮次
 
 按日期排列；全部结果目录见[Q04-sync-slot/g3-stage-credit](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/README.md)。
@@ -17,3 +19,4 @@
 |---|---|---|---|
 | stage反例是否只由编译或SMEM分配造成（746729，开发） | 固定同一S6二进制、215040 B SMEM、描述符与输出，只改变运行时活动槽4/5/6。 | 4槽相对6槽的plain增加9.85%，5槽第二L只增0.99%，编译或分配变化不足，保留缓冲额度与供给／释放交互。 | [干预与结果](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-active-stages-development-001/README.md)、[有限递推审计](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-active-stages-development-001/analysis-stage-audit/README.md)、[阶段时钟](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-active-stages-development-001/phase-clock.json) |
 | 计算能否隐藏槽数附加成本（746824，冻结判别） | 固定同一S6布局及每Ktile的TMA、commit、wait、release次数，交叉改变活动4/6槽与1/3遍WGMMA。 | 两段4槽−6槽差值的三遍／单遍比为−0.00150／0.01260，支持有限输入信用、排除固定不可隐藏的stage附加周期。 | [冻结与范围](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/README.md)、[结果](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/RESULTS.md)、[评分](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/score.json)；[746816 alpha审核失败](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-001)、[746817 grid审核失败](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-002)归本轮执行历史。 |
+| 固定物理S6是否仍有活动槽响应（CPU） | 746729活动4/6的10份保存raw，固定源、物理资源及binary | 2640窗复现原值，4−6槽两段L增2647.5／5635cycle；暂缓新增物理布局对照，模型／GPU0 | [复核与研究决定](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261019-Q14-stage-scope-screen-001/README.md) |

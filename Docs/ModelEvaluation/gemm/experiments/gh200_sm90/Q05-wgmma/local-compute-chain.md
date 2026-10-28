@@ -18,6 +18,8 @@
 - 独立计算入口 `cfg_b_compute_chain.compute_timeline` 与完整请求引擎共用同一转换。
 - d95 接入完整 GEMM 后，S6/S4 plain 只变化约 +0.06 µs，stage 响应 3.903%→3.899%。规则见 [COMPUTE-SERVICE](../../../model/mechanism/hardware_rules/COMPUTE-SERVICE.md)。
 
+- 接回真实 G3（由 Q14 移入）：计算完成 d95 使 stage 响应 3.899%（实测 10.467%），基本不变；正常 wait0 的冻结预测为 d0 下 S6 不变、d95 下增加 15.6%，752070 实测 S6 +21.6%、S4 +15.5%，但一个进程暖机 CV 超门槛，记为信息不足，d0 的“S6 不变”已明显不符。
+
 ## 轮次
 
 按日期排列；全部结果目录见[Q05-wgmma/local-compute-chain](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/README.md)。
@@ -37,3 +39,6 @@
 | Q05软件分支契约能否外推K2（756100，关联问题5） | 同一binary，K4 plain／trace桥接后执行K2两未采留出；三seed，预测及原5%门测前固定 | 12进程、24项资格全过；K2完整窗口1799对1793、软件返回476对476通过，保留局部外推；22输入及两地原始评分保持 | [冻结与验证](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261019-Q05-return-branch-validation-001/README.md) |
 | a044 跨卡复核（mechanism-r3，780769） | wait0/1 共 18 次、commit-lead 15 次、first-group 12 次、return-branch 12 次，原评分器 | K32 冻结预测误差 0.0175%/0.0204%，通过；commit-lead 剂量差 29 cycle，仍未过等剂量资格；K1 commit→tail 为 449 cycle，再次排除 476/351；return-branch 周期端点全部匹配，但 K2 seed3 的 plain/trace 差 64 ns（6.06%），本轮资格未过 | [等待复核](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/q05-wait-returned-report.md)、[分支复核](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/q05-returned-branches-report.md) |
 | a044 保序修复（785518–785575） | commit-lead-002 15 次，原顺序与环境，原评分器 | zero/dev/heldout 资格通过，无保留形式，与旧卡相同 | [修复报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-repair-r2-report.md#q02q04q05-原评分器重评) |
+| 真实GEMM正常wait0迁移预测（CPU） | G3 S6／S4，正常wait1改wait0；d0／d95原服务及其他模块固定，首组与tail保留 | 44调用完成；S6的d0／d95预测增量0／7.412µs可区分，S4两形式均会变慢；实机判别见下一轮 | [私有预测包](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q14-gemm-wait-prediction-001/README.md) |
+| 真实GEMM正常wait0的四条件判别（信息不足） | G3 S6／S4×wait1／wait0，fixed10暖机、同seed17；plain／原dual各三进程，正常wait之外的kernel与资源保持 | 752070构建通过；20/24进程合格，p20暖机CV2.095854%超门槛后停止，不完整批不作候选判定 | [冻结与执行](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q14-gemm-wait-001/EXECUTION.md) |
+| d95接入能否修复G3 stage（CPU迁移） | 原默认S6回归11调用、显式d95的S6/S4各11调用；其余模块与原频率固定 | 默认JSON精确；普通释放、CTA跨度保持，stage响应3.898566%对实测10.466624%；停止扩大并保留默认 | [同条件比较与版本](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q14-compute-completion-transfer-001/EXECUTION.md) |

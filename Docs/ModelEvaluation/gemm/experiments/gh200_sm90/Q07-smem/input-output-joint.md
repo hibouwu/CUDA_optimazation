@@ -11,6 +11,8 @@
 - 同批条件化检验774013完成12开发进程；input1/seed3暖机与input4周期稳定性未过，未冻结或采并发单组留出，两个联合形式仍未判定。
 - 重叠收益存在，但幅度是该程序的联合性质，不拆成逐指令价格；cfg_b 输出仍用 V09 复合服务。见 [SMEM-SERVICE](../../../model/mechanism/hardware_rules/SMEM-SERVICE.md)。
 
+- TMA 与 WGMMA 的共同 SMEM 服务（由 Q14 移入）：全部逻辑引用共同收费的形式被原生 D 的 K32 窗口反证；本地输入／计算共同服务（34 调用，后续条件未求解）与源片段整理（产生 7551／5972 cycle 行距增长，但第一 L 仍低 17.8%，后续 full 仅 1/126 未完成）两个固定版本均未解释 A16 持续 full 未完成。
+
 ## 轮次
 
 按日期排列；全部结果目录见[Q07-smem/input-output-joint](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/README.md)。
@@ -22,3 +24,8 @@
 | 输入组数能否区分联合额外窗口（关联问题7） | 固定J与J×groups/4；只改输入4→1组，其他链与资源固定 | 756133的7进程数值及资源保持；input1/seed22暖机CV3.827328%超原2%，停止、无留出、两形式未判定 | [计划、原始失败与复核](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261019-Q07-joint-count-001/README.md) |
 | 同批条件化联合额外窗口能否外推输入组数 | 已审查binary不改；四组对照导出共同J，固定两形式再预测一组并发；4开发+1留出、各三进程 | 774013完成12开发进程、数值983424值通过；input1/seed3暖机失败，input4周期范围6.591%超门；未冻结、未采留出，信息不足，本轮收口 | [计划、原始数据与评分](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261021-Q07-joint-count-same-batch-001/README.md) |
 | a044 跨卡复核（mechanism-r3，780769） | 五轮共 57 次调用，原见证检查与评分 | prepared-joint 的 `max` 通过 6/6，串行 4/6；bank-layout 输入窗口三进程范围 5.23%（cycle）/6.38%（ns），资格失败；joint-count 7 次计时通过，但开发集合仍不全；同批 joint-count 的 input1 ns 范围 6.45%，未通过 | [内存服务报告](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-storage-stage-report.md) |
+| 逻辑操作数是否都可通过共同SMEM服务收费（CPU） | 固定原生D三个长度、A及R12；比较全部引用共同128B/cycle、相邻B复用共同服务与独立路径，不拟合 | D的K32窗口低于第一形式必要下界，即使沿原5%门槛也失败；其余两形式保留，模型引擎／GPU0 | [下界、原始窗口与复算](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261022-Q14-joint-smem-bound-001/README.md) |
+
+[本地输入／计算共同服务](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261023-Q14-local-joint-service-001/README.md)与[受理后查询缓存](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/cache-organization/20261023-Q14-port-ordered-cache-001/README.md)各完成34调用，固定版本均未解释A16持续full未完成，后续条件未求解。[真实输入路径计数定位](../../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/gemm-source-workset/20261023-Q14-input-counter-localization-001/README.md)四plain进程合格；两次NCU因参数／kernel过滤错误未采集计数，信息不足，未改变两种工作量解释或独立验收结论。
+
+[源片段整理与计算共同服务](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261023-Q14-gather-joint-service-001/README.md)将每CTA输入工作由逻辑payload改为实际源128B片段引用；零拟合产生7551／5972cycle行距增长，第一L仍低17.828%，后续full仅1/126未完成。固定版本停止；含一次A16执行恢复共51调用，GPU0，原12和独立验收保持。

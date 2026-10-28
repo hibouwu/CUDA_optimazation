@@ -87,7 +87,7 @@ class FrozenCompositionTests(unittest.TestCase):
         from pathlib import Path
         import cfg_b_predict
         base = Path('results/gh200_resource_campaign/access_rules')
-        for run in ('Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-001', 'Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002'):
+        for run in ('Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-001', 'Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-002'):
             root = base/run
             with self.subTest(run=run):
                 result = cfg_b_predict.predict_cases(

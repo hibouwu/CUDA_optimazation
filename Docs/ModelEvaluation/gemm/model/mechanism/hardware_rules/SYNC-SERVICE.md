@@ -36,7 +36,7 @@ wait_return = eligibility + r_path
 
 启用`input_release_delay_ns`时，完整图将软件发布`release_emit`与empty完成`release`分别绑定；消费者后继及末组`main_end`依赖发布，producer槽复用及tail依赖完成。[接线修复](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/local-sync-chain/20261020-Q04-empty-completion-contract-001/README.md)通过23项测试、独立／完整入口104端点及四CTA跨输出依赖核对，八零默认报告逐位保持；释放价格仍由调用方给定。
 
-P0存在、首次进入参数为0时，首个consumer从共同入口0等待；正`consumer_entry_delay_ns`按producer_first_work为原点换算，producer就绪端点同样带前缀，其余组按既有推进换算。[首次入口接线修复](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/local-sync-chain/20261020-Q04-wait-entry-prefix-contract-001/README.md)保留显式进入时刻，零价格与无钩子的对应端点一致。首轮前缀不会把尚未就绪的等待改判为ready。未启用接口时不增加报告字段；显式零价格保留原事件值。
+P0存在、首次进入参数为0时，首个consumer从共同入口0等待；正`consumer_entry_delay_ns`按producer_first_work为原点换算，producer就绪端点同样带前缀，其余组按既有推进换算。[首次入口接线修复](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/full-ready-return/20261020-Q04-wait-entry-prefix-contract-001/README.md)保留显式进入时刻，零价格与无钩子的对应端点一致。首轮前缀不会把尚未就绪的等待改判为ready。未启用接口时不增加报告字段；显式零价格保留原事件值。
 
 普通arrival的B/C局部入口为[cfg_b_handoff_chain.timed_lifecycle](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_handoff_chain.py)：计时前预填，full仅一次普通arrival且事务字节为0；显式输出计算完成、full返回、wait1返回、empty发布／最后到达和producer再取得槽。生产者控制在empty检查前推进，声明延迟在第一次复用的empty返回后执行；消费者本地继续与empty最后到达分开。当前q512／lead256及d0／驻留d95的零额外控制版本通过已有长度增长、未通过延迟响应，见[局部模型交付](../../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/local-sync-chain/20261018-Q04-local-handoff-001/README.md)；原GEMM同步价格保持。
 

@@ -23,7 +23,7 @@ cfg_b：128×128×64 pingpong、cluster 1×1、6 stage；同一组合另跑 4 st
 |---|---|---|
 | 工作映射 | `v08_model.scheduled_work` 的持久调度移植（含 swizzle、raster、补齐与 OOB tile），grid 取 setup | 已核对：739011 的 12 个 cfg_b 条件、120 个成功 dual 进程，逐 CTA 工作坐标与 pingpong 消费者归属一致；2 次失败尝试保留在报告中 |
 | 程序依赖与槽代次 | [CUTLASS 程序图](program/cutlass_program_graph.md) §2–3 的 pingpong 顺序：`math_wg_order_barrier.wait → mma → arrive → mma_tail → wait → store → store_tail → arrive`；`release(g) → acquire(g+S)` | 已核对：cfg_b 已有独立图导出，S6/S4 请求与槽规则对应冻结源码和构建；单CTA的B/C、D已有逐组软件端点，E已有真实三输出端点；观察扰动不支持迁移到plain，原全GEMM逐Ktile内部时刻未获对应验证 |
-| 入口前缀 | `entry→producer_first_work` 使用冻结 V09 的 `events_ns.cfg_b.P0=1608 ns`，每 CTA、每调用一次；只连接生产者首路径，消费者许可保留原依赖 | 经验替代：[固定前缀接入](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-prefix-001/README.md)；PROD→首 A 及消费者准备沿用原未单独定价假设 |
+| 入口前缀 | `entry→producer_first_work` 使用冻结 V09 的 `events_ns.cfg_b.P0=1608 ns`，每 CTA、每调用一次；只连接生产者首路径，消费者许可保留原依赖 | 经验替代：[固定前缀接入](../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/startup-prefix/20261016-cfg-b-prefix-001/README.md)；PROD→首 A 及消费者准备沿用原未单独定价假设 |
 | 整段主循环（聚合模式） | V09 的 first/later 主循环 L（[supply_model](../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)），按输出 tile 给出，已含计算下限 | 经验替代：只给 tile 端点，不提供请求就绪时刻 |
 | TMA 输入服务（细事件模式） | [多 CTA 共享服务](hardware_rules/TMA-SHARED-SERVICE.md)的共享范围候选，以及[候选与反例](hardware_rules/TMA-GEMM-HYPOTHESES.md)中保留的“有限槽＋源共享＋独立目的投递”；[阶段4接口](hardware_rules/TMA-SHARED-SERVICE.md#stage-4-service)可独立接入异步源、目的投递和信用定时事件 | 假设：请求完成端点与路径约束已接通；旧证据已回放，[D开发路径](../../experiments/gh200_sm90/Q14-composition/COMPUTE-01-resident-chain.md#d-measured)数值核对完成，服务价格尚未辨识 |
 | L2与源地址状态 | `ProgramGemmSource`的两域缓存、128 B行、LRU、pending fill、远端返回及每GPC两槽服务；实际case行距、分配和CTA分组进入同一对象 | 假设：当前地址状态与服务候选仍有反例。[L2并发曲线](hardware_rules/L2-SERVICE.md)开发完成，六形式按预置单调反例停止，无冻结或请求级替换参数 |
@@ -35,7 +35,7 @@ cfg_b：128×128×64 pingpong、cluster 1×1、6 stage；同一组合另跑 4 st
 | 普通L1／LSU需求（可选） | [L1／LSU服务](hardware_rules/L1-LSU-SERVICE.md)：`ordinary_lsu=True`保存冻结alpha条件下的普通global／local需求及静态常量读取覆盖 | 已核对：源码与分支推导普通global动态请求为0，local为0；参数控制保留现有复合时间，六图原端点保持 |
 | SM容量与活动（可选） | [驻留服务](hardware_rules/residency.md)：`sm_activity=True`核对S4/S6容量并输出已求解的计算服务、输出准备／写块和输入在途窗口；[联合服务](hardware_rules/joint_service.md)提供完整条件合同 | 已核对：两构建均1 CTA/SM；活动窗沿原假设，六图原端点保持。cfg_b无匹配联合合同；E已取得真实三输出trace端点，但未形成可迁移的相位价格，入口分布仍待测 |
 | 输出服务 | V09 的 pingpong 输出：E 与 `epilogue_end` 的重叠服务，参数 E、r、w、we、Etail 取自冻结的 `events_ns.cfg_b`，递推见[程序图 §4](program/cutlass_program_graph.md#recurrence)。single/multi、real/OOB 规则只校准了 cfg_a、cfg_c，[output_model](../../../../../microbench/gh200_resource_campaign/access_rules/output_model.py) 拒绝将该规则用于非 cooperative 调度，不接入。细事件开发接线使用 `shared_stage_events` 的八个 D 子块、两源缓冲与共享服务候选；同一状态转换的独立运行入口见[SMEM服务 §2](hardware_rules/SMEM-SERVICE.md#2-可执行写块假设) | 经验替代：聚合模式；细事件模式为假设 |
-| 有效频率 | 聚合模式使用 V09 的输入相关时钟（[clock_model](../../../../../microbench/gh200_resource_campaign/access_rules/clock_model.py)），与包络联立求解；可替换为运行前预测器。细事件模式可使用[阶段频率开发模型](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-phase-frequency-development-001/README.md)，输入为 case、静态工作列表和输出序号 | 经验替代 |
+| 有效频率 | 聚合模式使用 V09 的输入相关时钟（[clock_model](../../../../../microbench/gh200_resource_campaign/access_rules/clock_model.py)），与包络联立求解；可替换为运行前预测器。细事件模式可使用[阶段频率开发模型](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-prediction/20261015-phase-frequency-development-001/README.md)，输入为 case、静态工作列表和输出序号 | 经验替代 |
 | 包络到 plain 时间 | 两种模式均可使用 V09 的 `T_plain = F + κ·W`，F、κ 由参照条件的 dual 包络与 plain event 拟合（[MODEL-CANDIDATES](../semi_empirical/MODEL-CANDIDATES.md#v09-model)） | 经验替代 |
 
 模块级交付与有限实测按[微基准地图](hardware_rules/MICROBENCH-ROADMAP.md)记录；其中 §4 给出 cfg_b 实际计算／同步短链，§5 对应当前源服务、目的投递、计算和控制接口。新增结果按相同外部端点替换上表对应复合服务，模块资格仍按已有证据登记。
@@ -104,9 +104,9 @@ Python 接口为 `predict(program, calibration, services={...})`。替换项及�
 
 请求级 CPU 入口为 [cfg_b_request_model.py](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_request_model.py)，Python 接口为 `simulate(program, parameters, share_inflight_sources=..., detailed_ctas=...)`。输入服务参数统一使用 ns；控制节点未单独定价时取前驱最晚时刻，并在报告中列出。当前接入完整输入/输出 tile、全部 CTA 活跃、每输出至少两个 Ktile 的默认 cfg_b 程序，以及 `parameters['epilogue_defer']=1/2` 的首输出分支；依赖及四条件回放见[输出干预接线](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-epilogue-defer-001/EXECUTION.md)。
 
-`profile.input_network` 可选择[请求应答网络](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_input_network.py)：缓存数据可用后进入GPC共享PS2，再逐CTA投递；参数 `reply_cycles_per_16KiB`、`split_cycles_per_128_extra_lines` 分别定价基本请求和跨128B行的额外工作，按现用运行前阶段频率换算ns。它替换旧输入core/max接法，状态和投递由原事件引擎求解；资格为假设，当前共同参数约束及反例回放见[本轮](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-request-reply-network-001/README.md)。
+`profile.input_network` 可选择[请求应答网络](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_input_network.py)：缓存数据可用后进入GPC共享PS2，再逐CTA投递；参数 `reply_cycles_per_16KiB`、`split_cycles_per_128_extra_lines` 分别定价基本请求和跨128B行的额外工作，按现用运行前阶段频率换算ns。它替换旧输入core/max接法，状态和投递由原事件引擎求解；资格为假设，当前共同参数约束及反例回放见[本轮](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-request-reply-network-001/README.md)。
 
-`profile.input_network.routing="address_banks"` 选择地址路由候选：实际128B行片段进入每域48个读取分区，再接GPC应答／CTA投递；两公共参数为 `bank_cycles_per_fragment` 与 `reply_cycles_per_16KiB`，均按运行前阶段频率换算ns。固定映射与服务资格为假设，见[本轮计划](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-address-routed-input-001/plan.json)。
+`profile.input_network.routing="address_banks"` 选择地址路由候选：实际128B行片段进入每域48个读取分区，再接GPC应答／CTA投递；两公共参数为 `bank_cycles_per_fragment` 与 `reply_cycles_per_16KiB`，均按运行前阶段频率换算ns。固定映射与服务资格为假设，见[本轮计划](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-address-routed-input-001/plan.json)。
 
 同一 S6 二进制的活动 4／6 槽与 1／3 遍计算也已接入[同版回放](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-runtime-intervention-001/EXECUTION.md)。活动槽改变复用依赖，物理资源保持；重复计算只放大既有单遍计算服务，commit 提前量和完成尾保持。暖机与目标调用使用同一接法。该工作量缩放仍为服务假设，原完整模型及独立验收状态保持。
 
@@ -129,7 +129,7 @@ PYTHONPATH=microbench/gh200_resource_campaign/access_rules \
 ```bash
 python -B microbench/gh200_resource_campaign/access_rules/cfg_b_request_model.py \
   --case v09d_cfg_b_G3_base --candidate shared --cta 55 \
-  --phase-frequency results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-phase-frequency-development-001/fit-001/model.json \
+  --phase-frequency results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-prediction/20261015-phase-frequency-development-001/fit-001/model.json \
   --output /tmp/cfg-b-G3-S6-phased-requests.json
 ```
 
@@ -151,7 +151,7 @@ Python 接口为 `predict(program, parameters, frequency_model, calibration, ...
 | 依赖 | 状态 |
 |---|---|
 | 程序图静态导出与整图核对 | cfg_b 的 CPU 导出和历史工作映射已交付；细化范围与剩余观察缺口见[程序图 §5](program/cutlass_program_graph.md#5-给机制组合的交付与缺口) |
-| TMA 共享服务候选的参数辨识 | tensor 原生正确性、Q2 校准与首批机制判别完成；首批与源分区候选未通过，工作集状态干预获得支持，量化服务规则开发中；细事件模式须提供 cfg_b 实际 tensor 请求的服务：每个 Ktile 为 A 一次 128×64（16 KiB）、B 沿 N 分两次 64×64（各 8 KiB），TMA SMEM swizzle 为 128B，见[程序请求](program/cutlass_program_graph.md#2-对象操作与依赖)；完整编码字段与实际 launch params 的绑定见[746953 描述符查询](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-descriptor-query-001/RESULTS.md) |
+| TMA 共享服务候选的参数辨识 | tensor 原生正确性、Q2 校准与首批机制判别完成；首批与源分区候选未通过，工作集状态干预获得支持，量化服务规则开发中；细事件模式须提供 cfg_b 实际 tensor 请求的服务：每个 Ktile 为 A 一次 128×64（16 KiB）、B 沿 N 分两次 64×64（各 8 KiB），TMA SMEM swizzle 为 128B，见[程序请求](program/cutlass_program_graph.md#2-对象操作与依赖)；完整编码字段与实际 launch params 的绑定见[746953 描述符查询](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261015-cfg-descriptor-query-001/RESULTS.md) |
 | 计算完成与输入槽释放的服务（细事件模式） | [746824计算量干预](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/RESULTS.md)支持有限槽复用对停顿的影响；首版保留复合计算服务，issue、commit、wait的拆分随证据再细化 |
 | 运行前频率预测器 | RBF 通过首次 8 条频率留出后，完整时间留出仅 4/8 通过；按工作分布修正的饱和响应式在下一轮 8 条 C3 全部通过，最大时间误差 2.96%；`cfg_b_frequency.StaticFrequency` 已可替换聚合频率模块，版本与支持域见[频率结论](hardware_rules/FREQUENCY-MECHANISM.md#4-结论) |
 
@@ -159,10 +159,10 @@ Python 接口为 `predict(program, parameters, frequency_model, calibration, ...
 
 没有 NCU 时，程序操作继续用源码、SASS 和已有 trace 核对；硬件服务按对应路径页的竞争假设设计干预，分别测请求就绪、计算完成/槽释放、频率和输出端点。首版计算服务保留复合节点，获得区分证据后再拆 issue、commit、wait；未能区分的机制按 GOALS 记录为信息不足。
 
-`profile.input_network.routing="address_banks_inflight_merge"` 在上述读取阶段共享同域、同128B源行且尚未完成的服务，应答与投递仍逐接收者独立。纯tensor探针通过现有事件引擎的 `source_async` 接口复用该服务；输入形状与控制生命周期由探针提供。固定价格开发结果及重放命令见[本轮](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-read-sharing-network-001/README.md)。
+`profile.input_network.routing="address_banks_inflight_merge"` 在上述读取阶段共享同域、同128B源行且尚未完成的服务，应答与投递仍逐接收者独立。纯tensor探针通过现有事件引擎的 `source_async` 接口复用该服务；输入形状与控制生命周期由探针提供。固定价格开发结果及重放命令见[本轮](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261023-Q14-read-sharing-network-001/README.md)。
 
-该读取共享候选的 `profile.input_network.max_read_subscribers=4` 限制每次在途读取的总订阅数，含首次；后续请求另建读取，应答与投递独立。未设置时沿无限订阅规则。公开折叠转写已恢复原bank位；源服务标定及有限订阅的开发失配见[本批结果](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-bounded-read-fanout-001/README.md)。
+该读取共享候选的 `profile.input_network.max_read_subscribers=4` 限制每次在途读取的总订阅数，含首次；后续请求另建读取，应答与投递独立。未设置时沿无限订阅规则。公开折叠转写已恢复原bank位；源服务标定及有限订阅的开发失配见[本批结果](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261023-Q14-bounded-read-fanout-001/README.md)。
 
-`profile.input_network.routing="address_banks_local_joint"` 用逐CTA共同日历替换独立目的投递；TMA写与相邻B复用后的计算读按 `local_bytes_per_cycle` 预留空闲区间，`compute_service` 回调把争用传至计算完成、wait与槽释放。旧目的价格被替换，额外计算时长参与加权图重建。固定128 B/cycle的开发版已在G3必要门停止，源码／时间线／比较见[共同服务结果](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-local-joint-service-001/README.md)，资格为假设。
+`profile.input_network.routing="address_banks_local_joint"` 用逐CTA共同日历替换独立目的投递；TMA写与相邻B复用后的计算读按 `local_bytes_per_cycle` 预留空闲区间，`compute_service` 回调把争用传至计算完成、wait与槽释放。旧目的价格被替换，额外计算时长参与加权图重建。固定128 B/cycle的开发版已在G3必要门停止，源码／时间线／比较见[共同服务结果](../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261023-Q14-local-joint-service-001/README.md)，资格为假设。
 
-`profile.input_network.routing="address_banks_port_lookup"` 将cache查询置于128B读取分区服务之后，按事件时间改变缓存状态，合并保留至数据返回；应答和目的投递独立。固定参数版未产生G3行距增长，已停止，见[受理后查询结果](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-port-ordered-cache-001/README.md)，资格为假设。
+`profile.input_network.routing="address_banks_port_lookup"` 将cache查询置于128B读取分区服务之后，按事件时间改变缓存状态，合并保留至数据返回；应答和目的投递独立。固定参数版未产生G3行距增长，已停止，见[受理后查询结果](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/cache-organization/20261023-Q14-port-ordered-cache-001/README.md)，资格为假设。

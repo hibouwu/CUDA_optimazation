@@ -25,7 +25,7 @@
 
 | 操作/事件 | 源与目的 | 必要软件前驱或后继 | 来源 |
 |---|---|---|---|
-| `entry` / `producer_first_work` | thread 0 的入口与首个生产者工作循环端点 | producer 首路径由 entry 进入；PROD 在坐标生成、acquire 和首条 A 请求之前 | 739011 `v06_entry` / `v06_begin`；[端点与SASS核对](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-prefix-001/README.md#2-假设与接线) |
+| `entry` / `producer_first_work` | thread 0 的入口与首个生产者工作循环端点 | producer 首路径由 entry 进入；PROD 在坐标生成、acquire 和首条 A 请求之前 | 739011 `v06_entry` / `v06_begin`；[端点与SASS核对](../../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/startup-prefix/20261016-cfg-b-prefix-001/README.md#2-假设与接线) |
 | `producer_acquire` | 等待输入 SMEM 槽可重用 | 同槽上一代的消费者释放；首代按 empty 初态 | collective `load` / pipeline |
 | 发 A/B TMA 请求 | 本 GPU global 分配 → 目标 CTA 本地 SMEM；cluster 按 multicast mask 投递 | acquire 完成、descriptor 与事务计数就绪 | collective `load` |
 | `full_query` | 消费者到达当前槽的查询位置 | 上组计算等待与软件推进；首次由数学组许可进入 | collective `mma` 的当前 `smem_pipe_read` |
@@ -39,7 +39,7 @@ TMA 完成如何耗时、并发请求如何仲裁、WGMMA 的持续服务率不�
 
 cfg_b 每个 Ktile 的实际输入为 A 一次 16 KiB、B0/B1 各一次 8 KiB，共同登记 32768 B 的 full barrier。数学 A 为 128×64、B 为 64×128；B 沿 N 分为两个 64×64 请求。S6/S4 的 plain SASS 每轮各有三个 `UTMALDG.3D`；构建日志的 A atom 为 131072 bit、B atom 为 65536 bit。来源为冻结目录的 `build/cfg_b_plain.{log,sass}` 和 `build/cfg_b_s4_plain.{log,sass}`。
 
-源请求使用 A 的 M×K、B 的 N×K 坐标；每个 Ktile 将第二维增加 64。目的位置记录操作数缓冲区内的 stage 偏移与槽代次，B1 相对 B0 偏移 8192 B。TMA 的 SMEM swizzle 为 128B，独立于 case 的调度 swizzle。[746953 实例查询](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-descriptor-query-001/RESULTS.md)已核对八候选、两种形状的 32 个 A/B 描述符及其实际 launch params 绑定：搬运类型为 UINT16、rank 3、interleave NONE、L2 promotion 128B、OOB fill NONE、element stride `[1,1,1]`；完整编码参数、原始 128 字节和各次分配地址已归档。
+源请求使用 A 的 M×K、B 的 N×K 坐标；每个 Ktile 将第二维增加 64。目的位置记录操作数缓冲区内的 stage 偏移与槽代次，B1 相对 B0 偏移 8192 B。TMA 的 SMEM swizzle 为 128B，独立于 case 的调度 swizzle。[746953 实例查询](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261015-cfg-descriptor-query-001/RESULTS.md)已核对八候选、两种形状的 32 个 A/B 描述符及其实际 launch params 绑定：搬运类型为 UINT16、rank 3、interleave NONE、L2 promotion 128B、OOB fill NONE、element stride `[1,1,1]`；完整编码参数、原始 128 字节和各次分配地址已归档。
 
 cfg_b的FP32输出实际采用普通`STS.64`。冻结S6/S4 SASS均为每输出8个64×32子块，每子块128线程各8次8 B写入，共8 KiB；两个源槽相距8192 B。`SM90_U32x4_STSM_N`用于构造复制布局，实际`CopyOpR2S`在[sm90_common.inl](../../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/source/cutlass/include/cutlass/epilogue/collective/builders/sm90_common.inl)中为FP32选择普通向量复制。程序接口`smem_demands`列出输入投递、WGMMA操作数引用、输出STS与TMA源读取；`epilogue_smem_addresses`恢复完整lane地址，已与冻结CuTe的两槽4096个word逐项核对，见[SMEM-01](../../../experiments/gh200_sm90/Q07-smem/SMEM-01-replay.md)。首子块的8条STS之间穿插后续FMUL，后七子块多为连续STS；共同写块价格及准备／写入的可加性仍由[SMEM服务](../hardware_rules/SMEM-SERVICE.md)声明为组合假设。
 
@@ -109,14 +109,14 @@ CPU 检查覆盖 G3 S6/S4 的全部 132 个 CTA，每 CTA 128 个输入组、384
 
 TMA 请求完成和计算完成/槽释放的候选已接到这些端点，CPU 入口与检查结果见[组合 §4](../composition.md#4-输出)。已有 trace 只观察输出 tile 级端点，逐请求完成和逐槽释放时刻仍需对应实验。
 
-[cooperative_program.py](../../../../../../microbench/gh200_resource_campaign/access_rules/cooperative_program.py)提供cfg_c S4的`build_program`、`expand_cluster`和`bind_trace`。已核对2304×3072×1024条件：66个cluster、132个CTA，展开131850个节点、10368个源请求、13824次投递，包含跨rank multicast、四路empty到达、持久槽代次和两个计算WG的观察映射。10个dual进程的1320个CTA、19920个角色端点均匹配；完整来源、范围与重算命令见[cfg_c程序交付](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-c-program-001/README.md)。
+[cooperative_program.py](../../../../../../microbench/gh200_resource_campaign/access_rules/cooperative_program.py)提供cfg_c S4的`build_program`、`expand_cluster`和`bind_trace`。已核对2304×3072×1024条件：66个cluster、132个CTA，展开131850个节点、10368个源请求、13824次投递，包含跨rank multicast、四路empty到达、持久槽代次和两个计算WG的观察映射。10个dual进程的1320个CTA、19920个角色端点均匹配；完整来源、范围与重算命令见[cfg_c程序交付](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-c-program-001/README.md)。
 
-同一入口已接入cfg_a S6，复用现有跨rank依赖并展开六槽producer-tail等待。739011的K1024/K4096两条件各20个plain/dual记录通过核对，共74400个trace端点、163840个输出校验值；22项归档哈希及9个重放产物逐字一致。每rank每Ktile为本地A 16KiB、向两个rank多播的B0/B1各4KiB；B逻辑形状为[N,K]=[64,32]，rank1从K+32起。构建trait的B尺寸经descriptor构造按num_multicast=2截半，源码依据、支持范围与复现命令见[cfg_a程序交付](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-program-001/README.md)。
+同一入口已接入cfg_a S6，复用现有跨rank依赖并展开六槽producer-tail等待。739011的K1024/K4096两条件各20个plain/dual记录通过核对，共74400个trace端点、163840个输出校验值；22项归档哈希及9个重放产物逐字一致。每rank每Ktile为本地A 16KiB、向两个rank多播的B0/B1各4KiB；B逻辑形状为[N,K]=[64,32]，rank1从K+32起。构建trait的B尺寸经descriptor构造按num_multicast=2截半，源码依据、支持范围与复现命令见[cfg_a程序交付](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-program-001/README.md)。
 
-cfg_a S4 已接入同一入口，2048×8064×640 条件的 528 个 trace CTA、33312 个角色端点和 57344 个输出校验值通过核对；S6 的两份完整实例保持一致。构建、槽代次、原始记录和复现命令见 [S4 程序交付](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-stage4-program-001/README.md)。
+cfg_a S4 已接入同一入口，2048×8064×640 条件的 528 个 trace CTA、33312 个角色端点和 57344 个输出校验值通过核对；S6 的两份完整实例保持一致。构建、槽代次、原始记录和复现命令见 [S4 程序交付](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-stage4-program-001/README.md)。
 
-cfg_a S4/S6 的程序入口现覆盖 M/N 为64倍数的边界，保留越界rank的multicast、槽协议及名义输出子块。16个非零输入case覆盖两stage和全部M/N边界类别，144个历史进程的2032个CTA、22112个角色端点、589824个输出校验值通过核对；见[边界程序交付](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-boundary-program-001/README.md)。
+cfg_a S4/S6 的程序入口现覆盖 M/N 为64倍数的边界，保留越界rank的multicast、槽协议及名义输出子块。16个非零输入case覆盖两stage和全部M/N边界类别，144个历史进程的2032个CTA、22112个角色端点、589824个输出校验值通过核对；见[边界程序交付](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-boundary-program-001/README.md)。
 
-[长工作列表核对](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-long-trace-program-001/README.md)复用四个非零进程，覆盖S4/S6、每CTA最多119个输出及Ktiles≤stages的边界；528个CTA、427296个角色端点与既有程序依赖相容，16384个输出校验值通过，未新增服务价格。
+[长工作列表核对](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-long-trace-program-001/README.md)复用四个非零进程，覆盖S4/S6、每CTA最多119个输出及Ktiles≤stages的边界；528个CTA、427296个角色端点与既有程序依赖相容，16384个输出校验值通过，未新增服务价格。
 
-[cfg_c1程序入口](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_c1_program.py)已接入单CTA的A32KiB、B0/B1各8KiB与256次线程到达计数。图保留八个warp各32线程的释放可见集合，MAIN观察点与其他warp到达分别表示。五条件的45个进程、620个trace CTA、8056个角色端点和184320个数值样本通过核对，覆盖d332及四种M/N边界组合；[程序交付](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-c1-program-001/README.md)保留来源、字节守恒、源码/SASS及旧调度工作列表回归，尚未新增服务价格。
+[cfg_c1程序入口](../../../../../../microbench/gh200_resource_campaign/access_rules/cfg_c1_program.py)已接入单CTA的A32KiB、B0/B1各8KiB与256次线程到达计数。图保留八个warp各32线程的释放可见集合，MAIN观察点与其他warp到达分别表示。五条件的45个进程、620个trace CTA、8056个角色端点和184320个数值样本通过核对，覆盖d332及四种M/N边界组合；[程序交付](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-c1-program-001/README.md)保留来源、字节守恒、源码/SASS及旧调度工作列表回归，尚未新增服务价格。

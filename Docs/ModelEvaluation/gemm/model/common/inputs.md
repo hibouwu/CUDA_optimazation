@@ -35,8 +35,8 @@
 | setup：`grid`、`tile`、`cluster`、`epilogue_tile`、`threads`、`smem`、`smem_epilogue`、`max_active_ctas_per_sm`、`scheduler_sm_count`、`gpu_uuid` | `--mode setup` 的构建查询结果，解析后传给读取方 | 以 setup 为准 | 半经验、机制 |
 | setup：`requested_sm_count` | setup 回显的请求 SM 数，用于核对 case 的 `sm_count` | 须与 case 一致 | 实测 |
 | setup：`active_stages`、`wgmma_repeats`、`epilogue_alpha` | 同一 S6 二进制的活动槽数、同一 commit 内的 WGMMA 遍数及输出缩放 | [746824](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261015-g3-compute-credit-discrimination-003/README.md)回显活动 4／6 槽、1／3 遍及 α=1／FP32(1/3)；普通构建缺省为 `stages`、1、1 | 机制程序图、请求级组合、实测 |
-| setup：`fold_a_source`、`store_target_ctas` | 正式调用的 A 源折叠开关与执行 global 输出 TMA 的 CTA 阈值 | 缺省为 0、全部 CTA；[等值源实验](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-004/README.md)的 G3 S6 dyadic 分支将 A 的 m17–21 改为 m0–4，输出阈值为1。本地STS与提交／等待保留 | 机制程序图、请求级组合、实测 |
-| setup：`private_source`、`allocated_a_elements`、`allocated_b_elements` | 正式调用的逐CTA等值A/B副本开关，以及每份完整分配的元素数 | 开关缺省0；每CTA源偏移为CTA编号×每份元素数×2 B，未回显元素数时按存储行数与分配行距推导；[实际副本实验](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-private-source-001/README.md) | 机制程序图、请求级组合、实测 |
+| setup：`fold_a_source`、`store_target_ctas` | 正式调用的 A 源折叠开关与执行 global 输出 TMA 的 CTA 阈值 | 缺省为 0、全部 CTA；[等值源实验](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-reuse/20261022-Q14-equal-value-source-004/README.md)的 G3 S6 dyadic 分支将 A 的 m17–21 改为 m0–4，输出阈值为1。本地STS与提交／等待保留 | 机制程序图、请求级组合、实测 |
+| setup：`private_source`、`allocated_a_elements`、`allocated_b_elements` | 正式调用的逐CTA等值A/B副本开关，以及每份完整分配的元素数 | 开关缺省0；每CTA源偏移为CTA编号×每份元素数×2 B，未回显元素数时按存储行数与分配行距推导；[实际副本实验](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/gemm-source-workset/20261023-Q14-private-source-001/README.md) | 机制程序图、请求级组合、实测 |
 | 构建身份 | 二进制与 SASS 哈希、编译命令、CUDA 与 CUTLASS 版本 | 构建记录：`binary_hashes.json`、`sass_hashes.json`、`commands.json` | 实测 |
 | 变体 | plain、wide、stamped、dual 的编译选项与观察端点 | 由任务声明 | 实测 |
 
@@ -63,7 +63,7 @@
 |---|---|---|
 | `mode` | 运行模式；`warm` 为测量，`setup` 为构建查询 | warm |
 | `warmup_policy` | adaptive：最多 30 次预热，至少 8 次后最后 5 次的 CV ≤2% 即停，否则报错；common-sw1-16：固定 16 次 swizzle 1 预热；fixed-count：按声明次数预热 | adaptive |
-| `warmup_fixed_calls` | fixed-count实验构建的预热调用次数，单位为次；当前30–33；[构建与协议](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-candidates/20261015-d226-fixed-history-discrimination-001/README.md)读取 | fixed-count为30 |
+| `warmup_fixed_calls` | fixed-count实验构建的预热调用次数，单位为次；当前30–33；[构建与协议](../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/work-placement/20261015-d226-fixed-history-discrimination-001/README.md)读取 | fixed-count为30 |
 | `history_mode`、`history_source`、`mirror_target_slot` | 调用历史观察（R09 用） | off、original、0 |
 | setup：`warmup_fold_a_source`、`warmup_store_ctas` | 源折叠实验前缀调用使用的程序分支，与正式调用共用源状态 | 0、全部 CTA；调用数由组合协议 `calls` 给出，最后一次为正式调用 |
 | setup：`warmup_private_source` | 前缀调用使用原源或逐CTA副本 | 缺省与正式`private_source`相同；最后一次为正式调用 |

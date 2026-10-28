@@ -1,0 +1,60 @@
+{
+  "directory_count": 113,
+  "question_counts": {
+    "Q01": 1,
+    "Q02": 45,
+    "Q03": 7,
+    "Q04": 5,
+    "Q05": 3,
+    "Q06": 3,
+    "Q07": 3,
+    "Q10": 1,
+    "Q14": 35,
+    "Q15": 1,
+    "混合批次": 1,
+    "非实验": 8
+  },
+  "by_old_family": {
+    "COMPUTE-01-04-resident-chain": {
+      "Q14": 15
+    },
+    "cfg-b-composition": {
+      "Q15": 1,
+      "Q02": 10,
+      "Q14": 5,
+      "Q01": 1,
+      "混合批次": 1,
+      "非实验": 1
+    },
+    "gemm-connection": {
+      "Q05": 3,
+      "Q14": 15,
+      "Q04": 5,
+      "Q06": 3,
+      "Q02": 34,
+      "Q03": 6,
+      "Q10": 1,
+      "Q07": 3,
+      "非实验": 1
+    },
+    "program-graph-export": {
+      "非实验": 6,
+      "Q02": 1,
+      "Q03": 1
+    }
+  },
+  "mixed_children_count": 27,
+  "mixed_children_counts": {
+    "Q02": 14,
+    "Q14": 4,
+    "Q03": 7,
+    "Q05": 1,
+    "Q04": 1
+  },
+  "q02_existing": 213,
+  "q02_incoming": 45,
+  "q02_projected_before_other_outgoing": 258,
+  "source_documents": 292,
+  "original_results_modified": false,
+  "original_results_moved": false
+}

@@ -488,11 +488,11 @@ r4纠正提案的grid维度：该cfg_b 2816×1536×4096、stage6、heuristic Alo
 
 CPU侧已实现`r09_clock_brackets.observer_L_window(tile_words,arm)`，严格解码12word的一个原角色L；matched与guarded不可互相回退。函数返回原生cycle/ns，guarded另给FIRST/MAIN三元戳及精确cycle区间，可直接接既有`common_rate_interval`。六项数学/拒绝测试覆盖字段位置、uint64、零值、原角色顺序与可行/不可行交集；原740048的264个dual10 tile在两种新arm下全部拒绝。它只完成tile到数学窗口，不替代调用者对协议、源码/二进制、前序、CTA/角色/SM/工作完整性及观察资格的检查，也未生成新设备观测。
 
-740070已完成目标CUDA12.9的实际cfg_b/stage6 CPU构建。本组[独立只读审查](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261011-R09-guarded-frame-build/reanalysis/A-frame-compile-audit-v1/README.md)核对860份源SHA、四个二进制/SASS与编译资源：原overlay逐字节相同，plain/matched/guarded/prefix均168寄存器、2barrier、零stack/spill；动态寄存器池仍为消费者232、生产者40。实际FIRST在`1a60/1af0/1ba0`、MAIN在`24e0/2570/2620`保留两半比较、真实BRA、最多两次读与全零退出；SASS写者条件仍只接受thread128/256，新增存储偏移符合字段10/11。
+740070已完成目标CUDA12.9的实际cfg_b/stage6 CPU构建。本组[独立只读审查](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R09-plain-prefix/20261011-R09-guarded-frame-build/reanalysis/A-frame-compile-audit-v1/README.md)核对860份源SHA、四个二进制/SASS与编译资源：原overlay逐字节相同，plain/matched/guarded/prefix均168寄存器、2barrier、零stack/spill；动态寄存器池仍为消费者232、生产者40。实际FIRST在`1a60/1af0/1ba0`、MAIN在`24e0/2570/2620`保留两半比较、真实BRA、最多两次读与全零退出；SASS写者条件仍只接受thread128/256，新增存储偏移符合字段10/11。
 
 四kernel模板类型相同，overlay与plain的`SharedStorage`定义逐字节相同，启动/occupancy入口均使用`GemmKernel::SharedStorageSize`和384线程。编译报告的1024B静态shared不等于该动态启动字节数；本次没有执行二进制，未核定动态字节数值或查询运行时occupancy。审查通过的是上述编译接口条件，硬件读取包围、数值、扰动及归档身份完整绑定仍未资格化，不能进入30进程机制采样。
 
-740071后续三臂各一次记录检查由主集成执行。本组[独立只读复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261011-R09-guarded-record-check/reanalysis/A-smoke-boundary-audit-v1/README.md)再次绑定原始源/二进制/模块/snapshot/raw，独立精确复算12288个不同抽样位置；plain无trace，matched/guarded各264角色。三target返回动态SMEM215040B、epilogue18432B、API最大1CTA/SM、实际与scheduler132SM一致，仍不是执行期间occupancy采样。FIRST原生括号宽度min/median/max为73/77/130cycle，MAIN为73/74/138cycle。
+740071后续三臂各一次记录检查由主集成执行。本组[独立只读复核](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R09-plain-prefix/20261011-R09-guarded-record-check/reanalysis/A-smoke-boundary-audit-v1/README.md)再次绑定原始源/二进制/模块/snapshot/raw，独立精确复算12288个不同抽样位置；plain无trace，matched/guarded各264角色。三target返回动态SMEM215040B、epilogue18432B、API最大1CTA/SM、实际与scheduler132SM一致，仍不是执行期间occupancy采样。FIRST原生括号宽度min/median/max为73/77/130cycle，MAIN为73/74/138cycle。
 
 直接以Fraction重算132个CTA首/后L的交集、精确最小预算及最小点可行性，原128ns总区间预算下0/132可行；所需最小总区间容差min/median/max为1149.598/1212.218/1242.163ns，与主集成报告逐项一致。结论以GLOBALTIMER硬件取样落在前后CLOCK为前提，不证明前提，也不改变128ns预算。每臂只有一进程，观察扰动和空间资格未取得，原现象判读仍`inconclusive`、`observation_qualified=false`。
 
@@ -500,7 +500,7 @@ CPU侧已实现`r09_clock_brackets.observer_L_window(tile_words,arm)`，严格�
 
 在同一硬件包围假设下，进一步允许全卡任意连续非负F，而将每个原三元戳完整用于`Cb≤offset_sm+F(t)≤Ca`、`t∈[N−ε,N+ε]`。每SM原点自由，不跨SM相减clock64。共同≤1.98分支最小可行整数额外单端点容差为187ns，无上限共同分支为177ns；各SM独立≤1.98时，全部132个SM都在零额外容差下可行。有限上限的实数最小值在`(186,187]`，无上限下确界仅定位到`[176,177]`且可取性未证。它说明只放宽全卡共同周期演化，仍不能在零额外容差下解释这些记录；不能据此认定SM物理独立或把177/187ns当timer误差、物理频率修正或服务价。
 
-[共同曲线条件反例](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261011-R09-guarded-record-check/reanalysis/A-guarded-common-curve-v1/README.md)保留6份共同图证书及132份独立局部见证；138份证书、1584个原括号通过无求解器复验。只使用已有guarded单次调用的FIRST/MAIN，未加入未包围的其他端点；曲线由目标观测条件构造，不能成为自由预测输入。硬件包围与扰动资格仍是未完成的因果边界。
+[共同曲线条件反例](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R09-plain-prefix/20261011-R09-guarded-record-check/reanalysis/A-guarded-common-curve-v1/README.md)保留6份共同图证书及132份独立局部见证；138份证书、1584个原括号通过无求解器复验。只使用已有guarded单次调用的FIRST/MAIN，未加入未包围的其他端点；曲线由目标观测条件构造，不能成为自由预测输入。硬件包围与扰动资格仍是未完成的因果边界。
 
 进一步把未界定的读取误差显式分开：每个三元戳允许`Cb−κ≤offset_sm+F(t)≤Ca+κ`、`t∈[N−ε,N+ε]`。ε是额外单端点timer位移，单位ns；κ向已记录CLOCK区间两侧各扩张，单位原生cycle。二者是条件相容变量，不是读开销、硬件误差测量或修正量，也不同于原128ns总窗口预算。固定ε后，图边界对κ为仿射函数；严格负闭环给必要有理下界，在下界处可行的势证明精确最小κ。此时最小κ可取到，包括无速率上限分支；不能与改变ε时的无上限下确界混淆。
 
@@ -517,7 +517,7 @@ CPU侧已实现`r09_clock_brackets.observer_L_window(tile_words,arm)`，严格�
 
 ε=32的105cycle下界可只用四端点核对：SM39的WG1_FIRST→WG2_MAIN相对SM115同切点起晚96ns、终早224ns，±32ns后仍是内部区间。共同非负F要求内部周期增量不超过外部；原括号给内部至少`66787−2κ`、外部至多`66367+2κ`，故κ≥105。完整528戳在105处又有可行证书，所以此处下界精确。它是同SM计数器区间，跨原WG切点，只用于一致性，不是角色L或服务价格；没有跨SM相减原始clock。
 
-[联合读取误差边界](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261011-R09-guarded-record-check/reanalysis/A-guarded-robustness-v1/README.md)保留20个精确边界点、46份证书和10560次原戳反演；无求解器复验通过。[纯数学入口](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/r09_guarded_clock_robustness.py)另经5项解析/平移/拒绝测试，相关R09共88项通过。现有数据既与各SM独立曲线、零额外容差相容，也与全卡共同曲线、例如ε=0/κ=106相容；缺少独立读取误差界时不能选择物理解释。若要把条件反例升级为物理结论，需要独立建立的ε/κ联合界落在不可行区域，不能用目标端点构造的边界自证。该要求针对物理归因，不替代自由时间规则自身的新留出、分项、整调用和跨卡验证；本批资格仍false。
+[联合读取误差边界](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R09-plain-prefix/20261011-R09-guarded-record-check/reanalysis/A-guarded-robustness-v1/README.md)保留20个精确边界点、46份证书和10560次原戳反演；无求解器复验通过。[纯数学入口](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/r09_guarded_clock_robustness.py)另经5项解析/平移/拒绝测试，相关R09共88项通过。现有数据既与各SM独立曲线、零额外容差相容，也与全卡共同曲线、例如ε=0/κ=106相容；缺少独立读取误差界时不能选择物理解释。若要把条件反例升级为物理结论，需要独立建立的ε/κ联合界落在不可行区域，不能用目标端点构造的边界自证。该要求针对物理归因，不替代自由时间规则自身的新留出、分项、整调用和跨卡验证；本批资格仍false。
 
 ### 同plain前序接口的两进程冒烟证明了什么？
 
@@ -534,7 +534,7 @@ gap由相邻CUDA event相减，包含准备、主机与设备路径，不能命�
 
 这一个dual调用的原角色首/后L周期率中位为1.58318/1.76108 GHz，同CTA单常数换算的必要单端点容差中位为529.73 ns。它只表明新接口下仍有需要解释的端点算术；没有重复分布、夹取read跨度或误差界，不能据此判定物理频率或认证旧观察版本。最小下一步仍是审查采样包围关系，而不是增加phase时钟价格。
 
-[独立审计结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261011-R09-prefix-host-check-r5/reanalysis/A-history-contract-audit-v1/prefix-history-audit.json)绑定原始样本、源包与有效trace include路径；[本组入口](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/r09_plain_prefix_audit.py)独立验证plain模块身份，不修改公共reader。源包中overlay trace有两个同名成员，最后的stub引用`source/probes/v06_trace.hpp`；审计保留两成员哈希并读取该有效实现，避免将较早成员误当实际编译源。
+[独立审计结果](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R09-plain-prefix/20261011-R09-prefix-host-check-r5/reanalysis/A-history-contract-audit-v1/prefix-history-audit.json)绑定原始样本、源包与有效trace include路径；[本组入口](../../../../../../../../../microbench/gh200_resource_campaign/access_rules/r09_plain_prefix_audit.py)独立验证plain模块身份，不修改公共reader。源包中overlay trace有两个同名成员，最后的stub引用`source/probes/v06_trace.hpp`；审计保留两成员哈希并读取该有效实现，避免将较早成员误当实际编译源。
 
 公共reader增加显式prefix协议/准备身份后，原740048 r5应以`undeclared plain-prefix protocol`拒绝，不能补写原metadata追认为新协议。本组入口改用仅接受这两份原raw SHA的历史诊断解码，重新核对各4096值、dual的132个CTA/264个输出和原端点；明确`current_prefix_protocol_qualified=false`，不调用或放宽公共身份验证。[当前公共reader下的复放](../../../../../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/R07-R09-inkernel-clock/20261010-R09-R13-R18-failure-controls/reanalysis/A-local-clock-consistency-current-reader-v1/current-reader-verification.json)保留两份拒绝，21进程全部旧数值记录逐项相同；原失败目录与旧输出不追改。
 

@@ -50,7 +50,7 @@ def main():
             processes.append(dict(case=row['id'],trial=rec['trial'],stage=row.get('stages',6),
                                   evidence='development repeated stage process',**audit(observed['ctas'])))
             provenance[str(root/rec['raw'])]=rec['raw_sha256']
-    smoke=base/'Q09-frequency/R07-R09-inkernel-clock/20261011-R09-prefix-host-check-r5/returned'
+    smoke=base/'Q09-frequency/R09-plain-prefix/20261011-R09-prefix-host-check-r5/returned'
     raw=smoke/'dual.jsonl.gz'
     observed=replay_historical_smoke(smoke,'dual')
     digest=observed['raw_sha256']

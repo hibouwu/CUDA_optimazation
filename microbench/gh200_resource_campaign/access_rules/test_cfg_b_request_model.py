@@ -517,7 +517,7 @@ class RequestCompositionTests(unittest.TestCase):
 
 class HistoricalCandidateTests(unittest.TestCase):
     def test_phase_frequency_inference_preserves_development_snapshot(self):
-        root = aggregate.DEFAULT_ARCHIVE.parents[2]/'Q09-frequency/frequency-mechanism/20261015-phase-frequency-development-001'
+        root = aggregate.DEFAULT_ARCHIVE.parents[2]/'Q09-frequency/frequency-prediction/20261015-phase-frequency-development-001'
         model = aggregate.load_json(root/'fit-001/model.json')
         rows = aggregate.load_json(root/'rows.json')['rows']
         audit = aggregate.load_json(root/'audit.json')['cases']

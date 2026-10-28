@@ -258,6 +258,6 @@ if __name__ == '__main__':
     parser.add_argument('--single-reference', type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
-    reference = (args.reference or root.parents[2]/'Q02-tma-request/row-stride/20261018-Q02-tma-length-001').resolve()
-    single_reference = (args.single_reference or root.parents[2]/'Q02-tma-request/row-stride/20261018-Q02-tma-single-cta-001').resolve()
+    reference = (args.reference or root.parents[2]/'Q02-tma-request/request-shape-response/20261018-Q02-tma-length-001').resolve()
+    single_reference = (args.single_reference or root.parents[2]/'Q02-tma-request/request-shape-response/20261018-Q02-tma-single-cta-001').resolve()
     print(json.dumps(check(root, reference, single_reference), ensure_ascii=False, indent=2))

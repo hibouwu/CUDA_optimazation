@@ -1,0 +1,46 @@
+{
+  "themes": {
+    "计算与程序": [
+      5,
+      11
+    ],
+    "等待与完成": [
+      4,
+      9
+    ],
+    "输出路径": [
+      3,
+      4
+    ],
+    "源共享": [
+      3,
+      14
+    ],
+    "读取与请求服务": [
+      5,
+      13
+    ],
+    "发布与时序": [
+      3,
+      10
+    ],
+    "局部规则迁移": [
+      4,
+      8
+    ],
+    "重复性与契约": [
+      2,
+      2
+    ]
+  },
+  "review_flags": {
+    "path_dependency": 1405,
+    "freeze_or_identity_candidate": 1690
+  },
+  "symlinks": 630,
+  "broken_symlinks": 0,
+  "external_symlinks": 293,
+  "backup_tar_count": 75,
+  "backup_tar_bytes": 24100362240,
+  "backup_status": "existing remote recovery archives found; not a complete results snapshot; archive contents not fully hash-verified"
+}

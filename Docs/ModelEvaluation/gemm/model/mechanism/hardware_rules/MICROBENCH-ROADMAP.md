@@ -134,7 +134,7 @@
 
 **最小补测：** 首轮直接用 cfg_b 的 A16 KiB＋B0/B1各8 KiB、128B SMEM swizzle 和已查询的实际描述符。固定物理缓冲分配，分步改变活动槽数、请求并发和消费者释放延迟，再从单 CTA 扩到多 CTA；多 CTA 共享范围实验可独立于单 CTA 内部拆分推进。cp.async 只在实际方案使用时补匹配工作集与组控制，独立维护参数。
 
-**交付与接入：** tensor 请求形成、源与目的服务、就绪／释放事件和共享规则。输出路径分别给出源读取完成与目的写完成；输入槽复用由最后消费者释放推进。具体完成与等待观测设计引用[TMA 路径页](TMA-SHARED-SERVICE.md)和[窗口最小证据缺口](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/STATUS.md)。
+**交付与接入：** tensor 请求形成、源与目的服务、就绪／释放事件和共享规则。输出路径分别给出源读取完成与目的写完成；输入槽复用由最后消费者释放推进。具体完成与等待观测设计引用[TMA 路径页](TMA-SHARED-SERVICE.md)和[窗口最小证据缺口](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/STATUS.md)。
 
 ### 3.8 同步：条件满足与线程返回
 
@@ -216,7 +216,7 @@ S4第一次复用在第5 Ktile，S6在第7 Ktile；4项短链不能单独决定�
 |---|---|---|---|
 | 1 | 同步与释放 | 原索引／递增回绕×首次复用D0／4096，先plain响应 | [同步服务](SYNC-SERVICE.md)、[当前轮次](../../../experiments/gh200_sm90/README.md#research-questions) |
 | 2 | 计算 | 驻留长度约束及wait0／wait1条件对照，检验提交与完成 | [计算服务](COMPUTE-SERVICE.md)；[Q05冻结长度验证](../../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q05-compute-wait-002/EXECUTION.md)两wait通过原5%标准，固定截距形式wait0失败；已有Q04迁移响应仍未通过 |
-| 3 | 异步搬运 | 固定G5分配的四种B行距，Q1／Q4端点配对 | [TMA共享服务](TMA-SHARED-SERVICE.md)；[行距开发结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261017-Q02-tma-stride-002/EXECUTION.md)已完成，Q4的B32近零、B80/B112约增加4.3%–5.4%；[CPU源定位](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/row-stride/20261018-Q02-source-isolation-001/score.json)确认现有源就绪及最终响应均为0 |
+| 3 | 异步搬运 | 固定G5分配的四种B行距，Q1／Q4端点配对 | [TMA共享服务](TMA-SHARED-SERVICE.md)；[行距开发结果](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261017-Q02-tma-stride-002/EXECUTION.md)已完成，Q4的B32近零、B80/B112约增加4.3%–5.4%；[CPU源定位](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-service-rules/20261018-Q02-source-isolation-001/score.json)确认现有源就绪及最终响应均为0 |
 | 4 | L2共享源 | 复用源重排及两域反例；共享／独立源与次序最小配对 | [L2服务](L2-SERVICE.md) |
 | 5 | HBM | 固定工作集／活动规模的相同比例串行与交错读写 | [HBM服务](HBM-SERVICE.md) |
 | 6 | SMEM与输出 | 实际STS.64输出链与TMA输入的独立／串行／并发四组织 | [SMEM服务](SMEM-SERVICE.md)；[Q07开发结果](../../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261018-Q07-input-output-001/EXECUTION.md)12进程合格，并发比串行少918–955 cycle、比单独窗口max多730–742 cycle；含计时内fragment准备及两阶段join，机制信息不足 |
@@ -241,7 +241,7 @@ S4第一次复用在第5 Ktile，S6在第7 Ktile；4项短链不能单独决定�
 
 每阶段按 [GOALS §5.6](../../../GOALS.md#56-一轮研究)先登记有限条件、重复、候选及成本，再执行。转段交付包含已完成证据、可执行规则或明确工作假设及接口、有限结论和剩余观测；规则被反证或信息不足也须保存结果后收口。准备完成、实测完成与独立验收分别记录；等待GPU只阻塞依赖该观测的部分，后续独立离线准备可以继续。
 
-每阶段先复用已有结果，按PLAN依赖选择最小对照，不展开全参数组合。原C1/C2/C3标准、旧阈值和失败记录保留；频率／暖机、C1续跑、其他配置、前端和设备保持原暂停范围。本轮九阶段首版有限交付及当前状态统一见[交付包](../../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261017-module-campaign-001/README.md)。
+每阶段先复用已有结果，按PLAN依赖选择最小对照，不展开全参数组合。原C1/C2/C3标准、旧阈值和失败记录保留；频率／暖机、C1续跑、其他配置、前端和设备保持原暂停范围。本轮九阶段首版有限交付及当前状态统一见[交付包](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261017-module-campaign-001/README.md)。
 
 ## 7. 资料与使用位置
 

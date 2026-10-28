@@ -5,6 +5,8 @@
 - 本组在 4 个 CTA 的网格上逐 tile 记录了供给、主循环、交接和输出事件，供 V05 校准。
 - V05 显示两处不能迁移：4 CTA 下的初始供给等待放到整卡上偏差 49–61%；pingpong 的交接在中等 K 与大输出时实为重叠，本组校准给出的是间隙。V06 改为整卡校准与逐事件递推。
 
+- 由 Q14 移入三轮：独立计算模块在跨输出时保持服务进度的接口修复；wait0 返回与完整结束分工的观察实现两次修复后停止，同 binary 最后 wait0 观察跨度资格失败，两位置未判定。
+
 ## 问题
 
 固定 4 CTA 的 persistent GEMM，FP16 输入、FP32 累加与输出，α=1、β=0。
@@ -101,7 +103,6 @@ critical每进程取四CTA局部首尾跨度最大值，再跨10进程取中位�
 
 表中为局部SM cycle跨度；不能与其他组参数直接相加后声称重建了这一次时间线。
 
-
 ## 适用范围与复现
 
 参数限定本页4CTA、tile/cluster/stage、角色映射及观测边界。V05须推导实际scheduler的工作
@@ -135,3 +136,11 @@ output先使用K4096代表；supply/critical使用K512。CUDA输入完全相同�
 | critical | [逐条件统计](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261007-R14-job735985-v8-critical/analysis-main-v1/summary.json) | [范围与参数复核](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261007-R14-job735985-v8-critical/independent-review-D/report.md) |
 
 短K历史负结果和配额中断原证据独立保留，见[恢复记录](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261007-R14-job735985-v6-main/recovery-v1/README.md)。
+
+## 相关轮次
+
+| 研究轮次与检验主张 | 固定与改变的条件 | 改变的判定 | 证据与相关产物 |
+|---|---|---|---|
+| wait0返回与完整结束的分工（CPU） | 保留原四臂、请求与释放；Record／既有SMEM暂存的循环外端点 | 两构建关闭宏逐位保持；启用版本消费者循环改变，两修复后停止、活动源码恢复，GPU0 | [有限计划、SASS与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-wait0-boundary-001/README.md) |
+| 同binary能否观察最后wait0 | runtime开关只控制循环外单时戳，两模式共用K循环；保持原begin/end | 757920构建与两地复核通过；757982两上下文／八臂数值及完整窗口桥接通过，跨度资格失败，余四上下文停止，两位置未判定。两修复用完；保留联合端点，节点5秒／预约20GPU秒 | [构建与控制路径](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-runtime-tail-001/README.md)、[有限观察验证](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-runtime-tail-001/measurement/README.md) |
+| 独立计算模块能否延续跨输出服务状态（CPU） | 固定完整引擎和全部价格，核源码交接顺序；S6／S4、K2和晚输入四组织各三输出 | 原入口在提前交接时丢失进度；增加显式初始进度后762端点相同，九旧独立例及四完整引擎报告保持，90调用、GPU0 | [反例、接口与收口](../../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-compute-handoff-contract-001/EXECUTION.md) |

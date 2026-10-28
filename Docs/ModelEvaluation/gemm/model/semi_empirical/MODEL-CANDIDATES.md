@@ -91,11 +91,11 @@ r2 还按静态必零乘积比例 z 混合该输入模式与全零端点的 d/e�
 
 ### cfg_b 频率替换版 v2（限定 C3 通过）
 
-保留 V09 的供给、输出和 plain 映射，只将频率换为运行前饱和响应式。设 `q = 输出 tile 数 × Ktile 数 × 512 / 132 / 100000`，`φ = 输出 tile 数 / (132 × 最忙 CTA 的输出数)`，频率为 `fmax(input) − a(input)·φ^p·(1 − exp(−max(0,q−q0)/τ)) + δdual`。八个系数及来源哈希只在[冻结参数](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002/frequency_model.json)维护；[开发数据](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-frequency-development-002/README.md)共 45 行、按几何分组选择公式。
+保留 V09 的供给、输出和 plain 映射，只将频率换为运行前饱和响应式。设 `q = 输出 tile 数 × Ktile 数 × 512 / 132 / 100000`，`φ = 输出 tile 数 / (132 × 最忙 CTA 的输出数)`，频率为 `fmax(input) − a(input)·φ^p·(1 − exp(−max(0,q−q0)/τ)) + δdual`。八个系数及来源哈希只在[冻结参数](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-002/frequency_model.json)维护；[开发数据](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-prediction/20261015-frequency-development-002/README.md)共 45 行、按几何分组选择公式。
 
-首轮 RBF 替换的 C3 仅 4/8 通过，失败原样保留。v2 在四个新几何的[8 条独立留出](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002/README.md)全部达到逐条件 5% 标准：时间绝对误差中位数 0.81%、最大 2.96%，频率最大误差 2.45%。验证范围为清单中的 cfg_b S6、dyadic seed17、连续完整 tile、请求 SM66/99/132、固定参考卡和原暖机协议。stage、错位、输入类型及跨卡的原失败仍由各自任务处理。
+首轮 RBF 替换的 C3 仅 4/8 通过，失败原样保留。v2 在四个新几何的[8 条独立留出](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-002/README.md)全部达到逐条件 5% 标准：时间绝对误差中位数 0.81%、最大 2.96%，频率最大误差 2.45%。验证范围为清单中的 cfg_b S6、dyadic seed17、连续完整 tile、请求 SM66/99/132、固定参考卡和原暖机协议。stage、错位、输入类型及跨卡的原失败仍由各自任务处理。
 
-CPU 预测入口为 [cfg_b_predict.py](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_predict.py)，输入为共同 case/setup、V09 校准文件和频率参数；输出包括逐 CTA/tile 端点、有效频率、plain 时间及输入哈希。复现命令见[交付记录](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002/README.md)。
+CPU 预测入口为 [cfg_b_predict.py](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_predict.py)，输入为共同 case/setup、V09 校准文件和频率参数；输出包括逐 CTA/tile 端点、有效频率、plain 时间及输入哈希。复现命令见[交付记录](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-002/README.md)。
 
 ### 开发候选：共享需求与B源组响应
 
@@ -177,6 +177,6 @@ V07 的事件递推、手算和分项未通过记录见 [V07](../../experiments/
 | R08 波次、R09 时钟及 R10/R13/R18 条件价 | 各原实验的当时模型与冻结文件；V09 采用者以 r2 参数为准 | 历史开发/校准；测后修正不能覆盖正式成绩 |
 | 共享 B 源响应 | 本页 `source-sharing-dev` 与所链接参数域 | 开发失败，未接入 V09 |
 | C1-01 的 wave_roofline、structural 等 | [C1-01](../../experiments/gh200_sm90/Q16-config-selection/C1-01-selection.md)的模型清单与该轮冻结产物 | 半经验比较对象；规格参照另见[计算入口](../spec/spec_baseline.md)，TileSight 为公开模型比较对象 |
-| cfg_b 频率替换版 v2 | [冻结参数与绑定](../../../../../results/gh200_resource_campaign/access_rules/Q09-frequency/frequency-mechanism/20261015-cfg-b-time-heldout-002/README.md)、[运行前预测入口](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_predict.py) | 8 条独立 C3 全部通过；限定范围见本页；频率机制另由[频率任务](../mechanism/hardware_rules/FREQUENCY-MECHANISM.md)检验 |
+| cfg_b 频率替换版 v2 | [冻结参数与绑定](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261015-cfg-b-time-heldout-002/README.md)、[运行前预测入口](../../../../../microbench/gh200_resource_campaign/access_rules/cfg_b_predict.py) | 8 条独立 C3 全部通过；限定范围见本页；频率机制另由[频率任务](../mechanism/hardware_rules/FREQUENCY-MECHANISM.md)检验 |
 
 新增版本必须单列公式入口、参数文件、开发数据、冻结身份与评分链接。原实验保留“当时用何参数得到何结论”，不承担当前参数维护。

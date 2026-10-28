@@ -12,7 +12,7 @@ import statistics as st
 
 BASE = Path('gh200_resource_campaign/access_rules')
 FULL = BASE / 'Q14-composition/cfg-b-composition/20261015-cfg-b-full-matrix-001'
-PREFIX = BASE / 'Q14-composition/cfg-b-composition/20261016-cfg-b-prefix-001'
+PREFIX = BASE / 'Q01-scheduling/startup-prefix/20261016-cfg-b-prefix-001'
 V09 = BASE / 'Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011'
 ANCHORS = {
     FULL / 'delivery-manifest.json': '595a97c68982ab539607209aa1e741cc58b9b0ed828c3fc229a80063de662d18',

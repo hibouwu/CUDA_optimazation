@@ -1,6 +1,6 @@
 # 探针控制预算与源参数（单 CTA）
 
-32 个目录（10-18、10-20），其中约 15 轮有 GPU 测量。研究对象是 REG52 单 CTA TMA 探针自身的控制推进、首次预填与源完成预算。
+29 个目录（10-18、10-20）。研究对象是 REG52 单 CTA TMA 探针自身的控制推进、首次预填与源完成预算。
 
 ## 结论
 
@@ -32,11 +32,8 @@
 
 | 研究轮次与检验主张 | 固定与改变的条件 | 改变的判定 | 证据与相关产物 |
 |---|---|---|---|
-| 同步源的发出返回连接（CPU） | 固定全部价格，只透传可选issue_return_ns并约束producer后继；三合成例、G3 S6/S4两系统回归 | 三合成核对及S6/S4全部报告／时间线精确回归通过，共25引擎调用；只交付连接，未选择硬件返回事件或新增价格 | [执行与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-issue-return-001/EXECUTION.md) |
 | plain零搬运共同控制窗口：752444／752449 | 同一752232设备程序，mask0的Q1／Q4 G16／32及加载控制六开发条件；只用Q1定共同斜率，冻结后测两G64留出 | 565 cycle／284 ns的复合推进长度规则通过；G64周期精确、ns误差0.173913%，旧九价与请求成本仍待分配，默认组合保留 | [执行、评分与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-control-floor-001/EXECUTION.md) |
-| 异步源实际准入返回接线（CPU） | 准入与就绪分开，容量2 PS第三请求等待及后到延后先到；旧async／sync／零价完整报告对照 | 准入10、ready30/100时B0均11；第三请求4发出／22准入，旧报告逐值保持 | [接线与回归](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-async-admission-001/README.md) |
 | 连续单CTA源服务（CPU） | 共同覆盖价、跨组两槽PS、source_start返回；十请求Q1／零搬运、同版Q4基础与真实S6/S4接线 | Q1实现通过，三控制分配Q4均慢6.121–6.832%，停止固定版本；A16缺测 | [后端、回放与反例](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-continuous-source-001/EXECUTION.md) |
-| 队列受理返回（CPU） | 只改入队即返回，原工作价／两槽PS／尾与FIFO固定；三预定k分配、Q1及真实程序接线 | k565 Q4误差4.077727%通过、Q1保持，保留开发假设；另两分配停止 | [同条件比较、选择与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-queue-return-001/EXECUTION.md) |
 | 同版Q4基础/A16独立外推 | 固定queue_acceptance/k565及原价、保存native与分配；三verify＋三formal的基础/A16配对 | 752522观测合格；两窗通过，增长206.059预测对363实测失败，固定版本停止 | [独立结果与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-q4-stride-heldout-001/EXECUTION.md) |
 | 同代码Q4首次预填定位 | 固定REG52 binary，A0/A16×trace0/−1；原始四臂同进程比较首次四组发完前后 | 752532观测合格，ΔP363／ΔR0cycle，发出推进需替换；控制分配仍缺锚点 | [开发定位与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-q4-prefill-localization-001/EXECUTION.md) |
 | 同代码无搬运前缀锚点 | A0固定，mask0/7×普通/单点；保留c565并定位无搬运控制及加入copy后的净前缀 | 752539合格，P0/P7=952/1606、R0/R7=17569/22723cycle；控制分布得到锚点 | [开发定位与复现](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/probe-control/20261018-Q02-q4-control-prefill-001/EXECUTION.md) |
