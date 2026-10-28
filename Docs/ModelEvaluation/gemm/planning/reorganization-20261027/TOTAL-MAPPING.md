@@ -1,8 +1,10 @@
 # 总对应表：Q02、Q14、Q03、Q04、Q09 一次执行
 
+执行注（2026-10-28）：下文保留执行前方案。最终移动 **193** 个目录（含 d332 改归 Q16），更新旧映射 **124** 行，新增映射 **193** 行；实际以 [TOTAL-MAPPING.tsv](TOTAL-MAPPING.tsv) 和[执行记录](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/reorganization-20261028/README.md)为准。
+
 [TOTAL-MAPPING.tsv](TOTAL-MAPPING.tsv) 共 456 行，即这五个问题当前的全部目录：Q02 213 个、Q14 113 个、Q03 39 个、Q04 42 个、Q09 49 个。其中 192 个需要移动。
 - 依据：
-  - Q02 和 Q14，见 [联合对应表](JOINT-MAPPING.md)；
+  - Q02 和 Q14，见 联合对应表（已并入本表）；
   - Q03、Q04、Q09，见下文的分族；它们也覆盖联合表中移入 Q03、Q04 的目录。
 - 核对：新旧路径各自互不重复；所有目录都存在；新旧路径都是三层；移动目标都不存在，也不与现有目录重名。
 - Q16 不动，其余问题只接收移入的目录。

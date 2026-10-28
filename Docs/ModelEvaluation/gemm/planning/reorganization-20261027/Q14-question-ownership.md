@@ -68,7 +68,7 @@
 
 交叉引用：Q10;Q14。
 
-- [20261016-cfg-b-prefix-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-prefix-001/README.md)
+- [20261016-cfg-b-prefix-001](../../../../../results/gh200_resource_campaign/access_rules/Q01-scheduling/startup-prefix/20261016-cfg-b-prefix-001/README.md)
 
 ### Q02（45 个目录）
 
@@ -82,16 +82,16 @@
 
 交叉引用：Q03;Q14。
 
-- [20261015-cfg-b-async-source-interface-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-async-source-interface-001/README.md)
-- [20261015-cfg-b-dual-granule-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-dual-granule-service-001/README.md)
-- [20261015-cfg-b-program-source-adapter-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-program-source-adapter-001/README.md)
-- [20261015-cfg-b-resident-arbitration-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-resident-arbitration-001/README.md)
-- [20261015-cfg-b-return-credit-candidate-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-return-credit-candidate-001/README.md)
-- [20261015-cfg-b-service-price-check-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-service-price-check-001/README.md)
-- [20261015-cfg-b-sharing-spatial-audit-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-sharing-spatial-audit-001/README.md)
-- [20261015-cfg-b-size-lanes-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-size-lanes-service-001/RESULTS.md)
-- [20261015-cfg-b-source-scope-discrimination-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-source-scope-discrimination-001/README.md)
-- [20261015-cfg-b-stateful-probe-replay-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261015-cfg-b-stateful-probe-replay-001/README.md)
+- [20261015-cfg-b-async-source-interface-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-async-source-interface-001/README.md)
+- [20261015-cfg-b-dual-granule-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-dual-granule-service-001/README.md)
+- [20261015-cfg-b-program-source-adapter-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-program-source-adapter-001/README.md)
+- [20261015-cfg-b-resident-arbitration-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-resident-arbitration-001/README.md)
+- [20261015-cfg-b-return-credit-candidate-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-return-credit-candidate-001/README.md)
+- [20261015-cfg-b-service-price-check-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-service-price-check-001/README.md)
+- [20261015-cfg-b-sharing-spatial-audit-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-sharing-spatial-audit-001/README.md)
+- [20261015-cfg-b-size-lanes-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-size-lanes-service-001/RESULTS.md)
+- [20261015-cfg-b-source-scope-discrimination-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-source-scope-discrimination-001/README.md)
+- [20261015-cfg-b-stateful-probe-replay-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261015-cfg-b-stateful-probe-replay-001/README.md)
 
 **真实请求描述符**
 
@@ -103,7 +103,7 @@
 
 交叉引用：non-experiment/integration（程序图）;Q01。
 
-- [20261015-cfg-descriptor-query-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-descriptor-query-001/README.md)
+- [20261015-cfg-descriptor-query-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-shape-response/20261015-cfg-descriptor-query-001/README.md)
 
 **请求准备、形成与返回**
 
@@ -115,10 +115,10 @@
 
 交叉引用：Q03;Q04;Q14。
 
-- [20261021-Q14-producer-preparation-transfer-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261021-Q14-producer-preparation-transfer-001/README.md)
-- [20261023-Q14-address-matched-return-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-address-matched-return-001/README.md)
-- [20261023-Q14-formation-before-cache-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-formation-before-cache-001/README.md)
-- [20261023-Q14-formation-return-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-formation-return-001/README.md)
+- [20261021-Q14-producer-preparation-transfer-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261021-Q14-producer-preparation-transfer-001/README.md)
+- [20261023-Q14-address-matched-return-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261023-Q14-address-matched-return-001/README.md)
+- [20261023-Q14-formation-before-cache-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261023-Q14-formation-before-cache-001/README.md)
+- [20261023-Q14-formation-return-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261023-Q14-formation-return-001/README.md)
 
 **请求共享、路由与应答**
 
@@ -130,15 +130,15 @@
 
 交叉引用：Q03;Q14。
 
-- [20261022-Q14-address-routed-input-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-address-routed-input-001/README.md)
-- [20261022-Q14-bounded-sector-merge-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-bounded-sector-merge-001/README.md)
-- [20261022-Q14-domain-line-pool-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-domain-line-pool-001/README.md)
-- [20261022-Q14-line-subscription-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-line-subscription-screen-001/README.md)
-- [20261022-Q14-request-reply-network-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-request-reply-network-001/README.md)
-- [20261022-Q14-source-line-pool-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-source-line-pool-001/README.md)
-- [20261023-Q14-bounded-read-fanout-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-bounded-read-fanout-001/README.md)
-- [20261023-Q14-read-sharing-network-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-read-sharing-network-001/README.md)
-- [20261023-Q14-source-only-calibration-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-source-only-calibration-001/README.md)
+- [20261022-Q14-address-routed-input-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-address-routed-input-001/README.md)
+- [20261022-Q14-bounded-sector-merge-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-bounded-sector-merge-001/README.md)
+- [20261022-Q14-domain-line-pool-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-domain-line-pool-001/README.md)
+- [20261022-Q14-line-subscription-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-line-subscription-screen-001/README.md)
+- [20261022-Q14-request-reply-network-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-request-reply-network-001/README.md)
+- [20261022-Q14-source-line-pool-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-source-line-pool-001/README.md)
+- [20261023-Q14-bounded-read-fanout-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261023-Q14-bounded-read-fanout-001/README.md)
+- [20261023-Q14-read-sharing-network-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261023-Q14-read-sharing-network-001/README.md)
+- [20261023-Q14-source-only-calibration-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261023-Q14-source-only-calibration-001/README.md)
 
 **源组与逻辑工作组的空间跟随**
 
@@ -152,9 +152,9 @@
 
 交叉引用：Q01;Q03。
 
-- [20261022-Q14-completion-spatial-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-completion-spatial-screen-001/README.md)
-- [20261022-Q14-raster-age-discrimination-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-raster-age-discrimination-001/README.md)
-- [20261022-Q14-raster-contrast-prediction-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-raster-contrast-prediction-001/README.md)
+- [20261022-Q14-completion-spatial-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-completion-spatial-screen-001/README.md)
+- [20261022-Q14-raster-age-discrimination-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-raster-age-discrimination-001/README.md)
+- [20261022-Q14-raster-contrast-prediction-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-raster-contrast-prediction-001/README.md)
 
 **输入读取和目的投递的容量约束**
 
@@ -166,9 +166,9 @@
 
 交叉引用：Q03;Q14。
 
-- [20261022-Q14-copy-work-bound-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-copy-work-bound-001/README.md)
-- [20261022-Q14-gpc-delivery-bound-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-gpc-delivery-bound-001/README.md)
-- [20261023-Q14-independent-service-bounds-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-independent-service-bounds-001/README.md)
+- [20261022-Q14-copy-work-bound-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-copy-work-bound-001/README.md)
+- [20261022-Q14-gpc-delivery-bound-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261022-Q14-gpc-delivery-bound-001/README.md)
+- [20261023-Q14-independent-service-bounds-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-input-network/20261023-Q14-independent-service-bounds-001/README.md)
 
 **等值源重用干预**
 
@@ -180,11 +180,11 @@
 
 交叉引用：Q03;Q14。
 
-- [20261022-Q14-equal-value-source-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-001/README.md)
-- [20261022-Q14-equal-value-source-002](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-002/README.md)
-- [20261022-Q14-equal-value-source-003](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-003/README.md)
-- [20261022-Q14-equal-value-source-004](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-equal-value-source-004/README.md)
-- [20261022-Q14-source-fold-replay-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-source-fold-replay-001/README.md)
+- [20261022-Q14-equal-value-source-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-reuse/20261022-Q14-equal-value-source-001/README.md)
+- [20261022-Q14-equal-value-source-002](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-reuse/20261022-Q14-equal-value-source-002/README.md)
+- [20261022-Q14-equal-value-source-003](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-reuse/20261022-Q14-equal-value-source-003/README.md)
+- [20261022-Q14-equal-value-source-004](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-reuse/20261022-Q14-equal-value-source-004/README.md)
+- [20261022-Q14-source-fold-replay-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/gemm-source-reuse/20261022-Q14-source-fold-replay-001/README.md)
 
 **发布到请求完成的观测与核对**
 
@@ -196,16 +196,16 @@
 
 交叉引用：Q04;Q14。
 
-- [20261022-Q14-full-entry-mask-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-full-entry-mask-001/README.md)
-- [20261022-Q14-full-entry-mask-002](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-full-entry-mask-002/README.md)
-- [20261022-Q14-producer-publication-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-producer-publication-001/README.md)
-- [20261022-Q14-producer-publication-002](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-producer-publication-002/README.md)
-- [20261022-Q14-producer-publication-003](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-producer-publication-003/README.md)
-- [20261022-Q14-publication-time-alignment-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-publication-time-alignment-001/README.md)
-- [20261022-Q14-published-request-age-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-published-request-age-001/README.md)
-- [20261023-Q14-full-boundary-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-full-boundary-screen-001/README.md)
-- [20261023-Q14-operand-completion-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-operand-completion-001/README.md)
-- [20261023-Q14-query-return-connection-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-query-return-connection-001/README.md)
+- [20261022-Q14-full-entry-mask-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-full-entry-mask-001/README.md)
+- [20261022-Q14-full-entry-mask-002](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-full-entry-mask-002/README.md)
+- [20261022-Q14-producer-publication-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-producer-publication-001/README.md)
+- [20261022-Q14-producer-publication-002](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-producer-publication-002/README.md)
+- [20261022-Q14-producer-publication-003](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-producer-publication-003/README.md)
+- [20261022-Q14-publication-time-alignment-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-publication-time-alignment-001/README.md)
+- [20261022-Q14-published-request-age-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261022-Q14-published-request-age-001/README.md)
+- [20261023-Q14-full-boundary-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261023-Q14-full-boundary-screen-001/README.md)
+- [20261023-Q14-operand-completion-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261023-Q14-operand-completion-001/README.md)
+- [20261023-Q14-query-return-connection-001](../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/completion-observation/20261023-Q14-query-return-connection-001/README.md)
 
 ### Q03（7 个目录）
 
@@ -219,7 +219,7 @@
 
 交叉引用：Q10;Q14。
 
-- [20261015-g3-allocation-query-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-g3-allocation-query-001/README.md)
+- [20261015-g3-allocation-query-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/gemm-source-workset/20261015-g3-allocation-query-001/README.md)
 
 **缓存与源地址状态**
 
@@ -231,9 +231,9 @@
 
 交叉引用：Q02;Q14。
 
-- [20261022-Q14-banked-source-cache-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-banked-source-cache-001/README.md)
-- [20261023-Q14-port-ordered-cache-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-port-ordered-cache-001/README.md)
-- [20261023-Q14-public-fold-correction-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-public-fold-correction-001/README.md)
+- [20261022-Q14-banked-source-cache-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/cache-organization/20261022-Q14-banked-source-cache-001/README.md)
+- [20261023-Q14-port-ordered-cache-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/cache-organization/20261023-Q14-port-ordered-cache-001/README.md)
+- [20261023-Q14-public-fold-correction-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/cache-organization/20261023-Q14-public-fold-correction-001/README.md)
 
 **源读取工作量计数**
 
@@ -245,7 +245,7 @@
 
 交叉引用：Q02。
 
-- [20261023-Q14-input-counter-localization-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-input-counter-localization-001/README.md)
+- [20261023-Q14-input-counter-localization-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/gemm-source-workset/20261023-Q14-input-counter-localization-001/README.md)
 
 **逐 CTA 私有源工作集**
 
@@ -257,8 +257,8 @@
 
 交叉引用：Q02;Q14。
 
-- [20261023-Q14-private-source-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-private-source-001/README.md)
-- [20261023-Q14-private-source-transfer-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-private-source-transfer-001/README.md)
+- [20261023-Q14-private-source-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/gemm-source-workset/20261023-Q14-private-source-001/README.md)
+- [20261023-Q14-private-source-transfer-001](../../../../../results/gh200_resource_campaign/access_rules/Q03-source-service/gemm-source-workset/20261023-Q14-private-source-transfer-001/README.md)
 
 ### Q04（5 个目录）
 
@@ -272,10 +272,10 @@
 
 交叉引用：Q02;Q14。
 
-- [20261018-Q14-full-wait-policy-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-full-wait-policy-001/README.md)
-- [20261018-Q14-runtime-full-wait-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-runtime-full-wait-001/README.md)
-- [20261020-Q14-full-wait-plain-002](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261020-Q14-full-wait-plain-002/README.md)
-- [20261023-Q14-stride-wait-policy-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-stride-wait-policy-001/README.md)
+- [20261018-Q14-full-wait-policy-001](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/full-wait-policy/20261018-Q14-full-wait-policy-001/README.md)
+- [20261018-Q14-runtime-full-wait-001](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/full-wait-policy/20261018-Q14-runtime-full-wait-001/README.md)
+- [20261020-Q14-full-wait-plain-002](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/full-wait-policy/20261020-Q14-full-wait-plain-002/README.md)
+- [20261023-Q14-stride-wait-policy-001](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/full-wait-policy/20261023-Q14-stride-wait-policy-001/README.md)
 
 **活动槽与复用**
 
@@ -287,7 +287,7 @@
 
 交叉引用：Q07;Q14。
 
-- [20261019-Q14-stage-scope-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261019-Q14-stage-scope-screen-001/README.md)
+- [20261019-Q14-stage-scope-screen-001](../../../../../results/gh200_resource_campaign/access_rules/Q04-sync-slot/g3-stage-credit/20261019-Q14-stage-scope-screen-001/README.md)
 
 ### Q05（3 个目录）
 
@@ -301,9 +301,9 @@
 
 交叉引用：Q04;Q14。
 
-- [20261018-Q14-compute-completion-transfer-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-compute-completion-transfer-001/README.md)
-- [20261018-Q14-gemm-wait-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-gemm-wait-001/README.md)
-- [20261018-Q14-gemm-wait-prediction-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261018-Q14-gemm-wait-prediction-001/README.md)
+- [20261018-Q14-compute-completion-transfer-001](../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q14-compute-completion-transfer-001/README.md)
+- [20261018-Q14-gemm-wait-001](../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q14-gemm-wait-001/README.md)
+- [20261018-Q14-gemm-wait-prediction-001](../../../../../results/gh200_resource_campaign/access_rules/Q05-wgmma/local-compute-chain/20261018-Q14-gemm-wait-prediction-001/README.md)
 
 ### Q06（3 个目录）
 
@@ -317,9 +317,9 @@
 
 交叉引用：Q05;Q10。
 
-- [20261019-Q14-compute-handoff-contract-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261019-Q14-compute-handoff-contract-001/README.md)
-- [20261019-Q14-runtime-tail-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261019-Q14-runtime-tail-001/README.md)
-- [20261019-Q14-wait0-boundary-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261019-Q14-wait0-boundary-001/README.md)
+- [20261019-Q14-compute-handoff-contract-001](../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-compute-handoff-contract-001/README.md)
+- [20261019-Q14-runtime-tail-001](../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-runtime-tail-001/README.md)
+- [20261019-Q14-wait0-boundary-001](../../../../../results/gh200_resource_campaign/access_rules/Q06-handoff-output/R14-stage-handoff/20261019-Q14-wait0-boundary-001/README.md)
 
 ### Q07（3 个目录）
 
@@ -333,9 +333,9 @@
 
 交叉引用：Q02;Q05;Q14。
 
-- [20261022-Q14-joint-smem-bound-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-joint-smem-bound-001/README.md)
-- [20261023-Q14-gather-joint-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-gather-joint-service-001/README.md)
-- [20261023-Q14-local-joint-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261023-Q14-local-joint-service-001/README.md)
+- [20261022-Q14-joint-smem-bound-001](../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261022-Q14-joint-smem-bound-001/README.md)
+- [20261023-Q14-gather-joint-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261023-Q14-gather-joint-service-001/README.md)
+- [20261023-Q14-local-joint-service-001](../../../../../results/gh200_resource_campaign/access_rules/Q07-smem/input-output-joint/20261023-Q14-local-joint-service-001/README.md)
 
 ### Q10（1 个目录）
 
@@ -347,7 +347,7 @@
 
 归属理由：用于判断测量/桥接是否可靠，没有操纵输入或计算的硬件服务。
 
-- [20261022-Q14-bridge-null-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-bridge-null-001/README.md)
+- [20261022-Q14-bridge-null-001](../../../../../results/gh200_resource_campaign/access_rules/Q10-time-mapping/plain-repeat/20261022-Q14-bridge-null-001/README.md)
 
 ### Q14（35 个目录）
 
@@ -510,7 +510,7 @@
 
 交叉引用：Q10;Q14。
 
-- [20261011-V09-gate-audit](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261011-V09-gate-audit/README.md)
+- [20261011-V09-gate-audit](../../../../../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261011-V09-gate-audit/README.md)
 
 ### 混合批次（1 个目录）
 
@@ -524,7 +524,7 @@
 
 交叉引用：Q02;Q03;Q04;Q05;Q14。
 
-- [20261016-cfg-b-window-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/README.md)
+- [20261016-cfg-b-window-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/README.md)
 
 ### 非实验（8 个目录）
 
@@ -538,12 +538,12 @@
 
 交叉引用：Q01;Q02;Q04;Q06;Q12;Q14。
 
-- [20261015-cfg-a-boundary-program-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-boundary-program-001/README.md)
-- [20261015-cfg-a-long-trace-program-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-long-trace-program-001/README.md)
-- [20261015-cfg-a-program-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-program-001/README.md)
-- [20261015-cfg-a-stage4-program-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-a-stage4-program-001/README.md)
-- [20261015-cfg-c-program-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-c-program-001/README.md)
-- [20261015-cfg-c1-program-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/program-graph-export/20261015-cfg-c1-program-001/README.md)
+- [20261015-cfg-a-boundary-program-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-boundary-program-001/README.md)
+- [20261015-cfg-a-long-trace-program-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-long-trace-program-001/README.md)
+- [20261015-cfg-a-program-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-program-001/README.md)
+- [20261015-cfg-a-stage4-program-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-a-stage4-program-001/README.md)
+- [20261015-cfg-c-program-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-c-program-001/README.md)
+- [20261015-cfg-c1-program-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261015-cfg-c1-program-001/README.md)
 
 **多问题模块交付汇总**
 
@@ -555,7 +555,7 @@
 
 交叉引用：Q01–Q14。
 
-- [20261017-module-campaign-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261017-module-campaign-001/README.md)
+- [20261017-module-campaign-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261017-module-campaign-001/README.md)
 
 **跨模块程序接入**
 
@@ -567,7 +567,7 @@
 
 交叉引用：Q02;Q06;Q14。
 
-- [20261022-Q14-program-intervention-001](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/gemm-connection/20261022-Q14-program-intervention-001/README.md)
+- [20261022-Q14-program-intervention-001](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/integration/20261022-Q14-program-intervention-001/README.md)
 
 ## 混合窗口内 27 个子轮：只调整逻辑归属
 
@@ -575,33 +575,33 @@
 
 | 包内子轮 | 主归属 | 检验对象 |
 |---|---|---|
-| [r01-domain-return](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r01-domain-return/RESULTS.md) | Q02 | 共享域返回服务 |
-| [r02-output-admission](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r02-output-admission/RESULTS.md) | Q14 | 输入/输出共用接入槽 |
-| [r03-domain-credit](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r03-domain-credit/RESULTS.md) | Q02 | 输入行信用 |
-| [r04-sector-weight](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r04-sector-weight/RESULTS.md) | Q02 | 请求覆盖计费 |
-| [r05-compute-issue-gate](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r05-compute-issue-gate/RESULTS.md) | Q14 | 计算活跃排斥 producer 发出 |
-| [r06-commit-issue-gate](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r06-commit-issue-gate/RESULTS.md) | Q14 | 提交前计算活动约束发出 |
-| [r07-sector-subscription](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r07-sector-subscription/RESULTS.md) | Q02 | 逐 sector 订阅 |
-| [r08-tag-weight](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r08-tag-weight/RESULTS.md) | Q02 | 请求 tag 覆盖计费 |
-| [r09-cache-after-core](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r09-cache-after-core/RESULTS.md) | Q03 | 缓存访问时点 |
-| [r10-cta-round-robin](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r10-cta-round-robin/RESULTS.md) | Q02 | 输入源服务仲裁 |
-| [r11-miss-only-pool](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r11-miss-only-pool/RESULTS.md) | Q03 | HBM miss 容量 |
-| [r12-eligible-hbm](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r12-eligible-hbm/RESULTS.md) | Q03 | HBM 发出准入 |
-| [r13-remote-sector-replica](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r13-remote-sector-replica/RESULTS.md) | Q03 | 缓存副本 sector 有效性 |
-| [r14-dirty-owner-writeback](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r14-dirty-owner-writeback/RESULTS.md) | Q03 | dirty owner 写回 |
-| [r15-cache-source-backpressure](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r15-cache-source-backpressure/RESULTS.md) | Q14 | 缓存慢路向请求源槽反压 |
-| [r16-composite-completion-boundary](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r16-composite-completion-boundary/RESULTS.md) | Q05 | 计算提交与完成连接 |
-| [r17-home-routed-source](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r17-home-routed-source/RESULTS.md) | Q02 | 按 home 路由请求服务 |
-| [r18-trace-preparation](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r18-trace-preparation/RESULTS.md) | Q03 | 调用前清零带来的缓存初态 |
-| [r19-core-home-join](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r19-core-home-join/RESULTS.md) | Q02 | 输入 atom 接入与 home 分部汇合 |
-| [r20-gpc-destination](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r20-gpc-destination/RESULTS.md) | Q02 | 共享目的投递 |
-| [r21-gpc-credit](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r21-gpc-credit/RESULTS.md) | Q02 | GPC 输入信用 |
-| [r22-remote-return](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r22-remote-return/RESULTS.md) | Q03 | 缓存远端副本返回路径 |
-| [r23-destination-chunks](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r23-destination-chunks/RESULTS.md) | Q02 | 目的分块轮转 |
-| [r24-explicit-release](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r24-explicit-release/RESULTS.md) | Q04 | wait1/release 软件窗口 |
-| [r25-request-completion](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r25-request-completion/RESULTS.md) | Q02 | 请求完成计量 |
-| [r26-local-setup](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r26-local-setup/RESULTS.md) | Q02 | 请求本地准备与接入 |
-| [r27-parallel-destination](../../../../../results/gh200_resource_campaign/access_rules/Q14-composition/cfg-b-composition/20261016-cfg-b-window-001/r27-parallel-destination/RESULTS.md) | Q02 | 目的并发及参数校准 |
+| [r01-domain-return](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r01-domain-return/RESULTS.md) | Q02 | 共享域返回服务 |
+| [r02-output-admission](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r02-output-admission/RESULTS.md) | Q14 | 输入/输出共用接入槽 |
+| [r03-domain-credit](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r03-domain-credit/RESULTS.md) | Q02 | 输入行信用 |
+| [r04-sector-weight](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r04-sector-weight/RESULTS.md) | Q02 | 请求覆盖计费 |
+| [r05-compute-issue-gate](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r05-compute-issue-gate/RESULTS.md) | Q14 | 计算活跃排斥 producer 发出 |
+| [r06-commit-issue-gate](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r06-commit-issue-gate/RESULTS.md) | Q14 | 提交前计算活动约束发出 |
+| [r07-sector-subscription](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r07-sector-subscription/RESULTS.md) | Q02 | 逐 sector 订阅 |
+| [r08-tag-weight](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r08-tag-weight/RESULTS.md) | Q02 | 请求 tag 覆盖计费 |
+| [r09-cache-after-core](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r09-cache-after-core/RESULTS.md) | Q03 | 缓存访问时点 |
+| [r10-cta-round-robin](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r10-cta-round-robin/RESULTS.md) | Q02 | 输入源服务仲裁 |
+| [r11-miss-only-pool](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r11-miss-only-pool/RESULTS.md) | Q03 | HBM miss 容量 |
+| [r12-eligible-hbm](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r12-eligible-hbm/RESULTS.md) | Q03 | HBM 发出准入 |
+| [r13-remote-sector-replica](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r13-remote-sector-replica/RESULTS.md) | Q03 | 缓存副本 sector 有效性 |
+| [r14-dirty-owner-writeback](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r14-dirty-owner-writeback/RESULTS.md) | Q03 | dirty owner 写回 |
+| [r15-cache-source-backpressure](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r15-cache-source-backpressure/RESULTS.md) | Q14 | 缓存慢路向请求源槽反压 |
+| [r16-composite-completion-boundary](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r16-composite-completion-boundary/RESULTS.md) | Q05 | 计算提交与完成连接 |
+| [r17-home-routed-source](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r17-home-routed-source/RESULTS.md) | Q02 | 按 home 路由请求服务 |
+| [r18-trace-preparation](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r18-trace-preparation/RESULTS.md) | Q03 | 调用前清零带来的缓存初态 |
+| [r19-core-home-join](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r19-core-home-join/RESULTS.md) | Q02 | 输入 atom 接入与 home 分部汇合 |
+| [r20-gpc-destination](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r20-gpc-destination/RESULTS.md) | Q02 | 共享目的投递 |
+| [r21-gpc-credit](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r21-gpc-credit/RESULTS.md) | Q02 | GPC 输入信用 |
+| [r22-remote-return](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r22-remote-return/RESULTS.md) | Q03 | 缓存远端副本返回路径 |
+| [r23-destination-chunks](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r23-destination-chunks/RESULTS.md) | Q02 | 目的分块轮转 |
+| [r24-explicit-release](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r24-explicit-release/RESULTS.md) | Q04 | wait1/release 软件窗口 |
+| [r25-request-completion](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r25-request-completion/RESULTS.md) | Q02 | 请求完成计量 |
+| [r26-local-setup](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r26-local-setup/RESULTS.md) | Q02 | 请求本地准备与接入 |
+| [r27-parallel-destination](../../../../../results/gh200_resource_campaign/access_rules/non-experiment/campaigns/20261016-cfg-b-window-001/r27-parallel-destination/RESULTS.md) | Q02 | 目的并发及参数校准 |
 
 ## 审阅状态
 
