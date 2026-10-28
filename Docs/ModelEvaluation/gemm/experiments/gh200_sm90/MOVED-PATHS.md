@@ -65,6 +65,8 @@
 | `access_rules/V08-wider-validation.md` | [Q15-full-time/V08-wider-validation.md](Q15-full-time/V08-wider-validation.md) |
 | `access_rules/V09-component-validation.md` | [Q15-full-time/V09-component-validation.md](Q15-full-time/V09-component-validation.md) |
 | `access_rules/C1-01-selection.md` | [Q16-config-selection/C1-01-selection.md](Q16-config-selection/C1-01-selection.md) |
+| `Q02-tma-request/row-stride.md`（10-28 拆分） | [请求形状与次序](Q02-tma-request/request-shape-response.md)、[预填与等待入口](Q02-tma-request/prefill-wait-entry.md)、[请求服务规则检验](Q02-tma-request/request-service-rules.md) |
+| `Q02-tma-request/gemm-source-candidates.md`（10-28 删除） | 正文结论与所列轮次由 [GEMM 源复用](Q02-tma-request/gemm-source-reuse.md)承接；旧族另有轮次归入[发出位置干扰](Q02-tma-request/issue-placement-interference.md)与[工作放置](Q01-scheduling/work-placement.md) |
 
 ## 2026-10-20 结果目录与轮次记录
 

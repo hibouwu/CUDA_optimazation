@@ -2,12 +2,15 @@
 
 ## 当前结论
 
-更新：2026-10-20。
+更新：2026-10-28。
 
 - **完整 cfg_b 机制组合未通过。** 现行默认为 10-16 前缀版，原12条件 plain 绝对误差中位 10.225%、最大 25.422%。误差集中在行距响应（A16／B80／B112 实测 +18%～+29%，模型 0）、stage 响应（预测 3.9%，实测 10.5%）和短 GEMM 启动段；G3 S6 主循环已接近计算受限。见 [cfg_b 组合](../Q14-composition/cfg-b-composition.md)。
 - **半经验 [V09](../Q15-full-time/V09-component-validation.md) 整体未通过**（29 个受支持预测 4.11%／35.46%）；[V07](../Q15-full-time/V07-rule-validation.md) 在限定范围内总时间通过（3.06%／8.71%）。现行公式见 [MODEL-CANDIDATES](../../../model/semi_empirical/MODEL-CANDIDATES.md#v09-model)。
 - **获有限支持的局部规则：** 单 CTA 计算—等待—释放递推（冻结外推 ≤1.5%）、每 GPC 两槽共享服务（3.64%）、运行前频率模块（限定范围 C3 2.96%）、普通 L1 快复用（限定条件）。都不能单独改善完整模型。
 - **当前缺口：** 满载多 CTA 下的源服务，包括 stage 延迟、行距与 CTA 结束时刻分布。逐 SM 端点在相同运行间不可复现，跨 CTA 推进应按分布评价。
+- **a044 重测按原资格逐轮复核。** 前 11 个资源家族的 3,951 次调用通过原审计，378 个原发布条件满足原统计门槛；部分局部机制结论因新卡上的观察扰动、暖机或配对资格不足转为信息不足。1980 MHz 是设置目标，周期与时间换算仍使用实际执行窗口的有效频率。见 [a044 阶段说明](../Q10-time-mapping/A044-REMEASUREMENT.md)和[机制原评分复核](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/mechanism-repair-r2-report.md)。
+- **V09 a044 的 34 条件子集未达标。** 36 个声明条件中，34 个取得四变体完整观测；其中 27 个有数值预测的留出条件误差中位／最大为 5.01%／42.6%，超过原 5%／10% 门槛。两个 G1_base 条件未取得完整观测，本次不作原 36 条件整体验收。见[子集评分](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261023-a044-remeasurement/v09-complete-subset-report.md)。
+- **C1 a044 已取得全部 30 个开发块，模型比较、冻结与 120 条件独立留出尚未执行。** 360 条件中 359 个可用、356 个观测完整。两卡共同完整的 304 条件中，242 个最快候选相同；沿用旧卡实测最快候选的 regret 中位为 0、最大为 8.1%。这是卡与频率同时变化后的开发数据和实测排序对照。见 [C1 开发结果](../../../../../../results/gh200_resource_campaign/access_rules/Q16-config-selection/C1-01-selection/20261023-Q16-a044-development-001/RESULTS.md)。
 
 ## 实测与验证索引
 
@@ -58,47 +61,13 @@
 | [V08](../Q15-full-time/V08-wider-validation.md) 更宽留出 | 实测 | 半经验（C1/C3）；分项供机制诊断 | 整体未通过 | 36 条件为 2.61% / 35.34%；21 条件子集见上 |
 | [V09](../Q15-full-time/V09-component-validation.md) 组件组合 | 实测 | 半经验（C1/C3）；分项供机制诊断 | 整体未通过 | 30条件实测；29预测为4.11%/35.46%，另1拒绝 |
 
-## 合并实验记录
-
-2026-10-20 起，原“无编号轮次”与执行历史按合并实验并入各问题目录；每页先写结论，再列逐轮表。
-
-| 实验记录 | 问题 | 主要结论 |
-|---|---|---|
-| [行距响应](../Q02-tma-request/request-shape-response.md) | 2 | 单 CTA 下行距只增加可隐藏的单请求延迟；完整 GEMM 的响应取决于并发 CTA 的源共享，未接入 |
-| [探针控制预算](../Q02-tma-request/probe-control.md) | 2 | 零搬运控制 565 cycle/组等探针事实；复合预算属于探针，与直接端点矛盾，不迁移 |
-| [原生 D 链](../Q02-tma-request/native-d-chain.md) | 2 | 长度增长与驻留链相同，冻结外推通过；观察开启时首组最后 B 发出→full 为 425–607 cycle |
-| [共享源固定形式](../Q02-tma-request/shared-source-forms.md) | 2 | 十余个固定形式被排除；逐 SM 窗口在相同运行间变化 11%–17% |
-| [源组织](../Q02-tma-request/source-organization.md) | 2 | 共享／独立源窗口 5.09／17.89 µs；结束分布未解释 |
-| [GPC 共享通路](../Q02-tma-request/multi-cta-gpc-sharing.md) | 2 | 每 GPC 两槽服务冻结留出通过（3.64%） |
-| [源订阅与共享关系](../Q02-tma-request/gemm-source-reuse.md) | 2 | 共享关系缩短窗口；四个订阅版本被反证 |
-| [S16 单 CTA 控制](../Q02-tma-request/S16-single-cta-control.md)、[首填](../Q02-tma-request/first-fill.md) | 2 | 完成尾单独解释失败；首填不能跨配置共用 |
-| [源状态](../Q03-source-service/source-state-candidates.md) | 3 | 工作集、先前写入、暖机次序与两存储域获支持 |
-| [局部同步链](../Q04-sync-slot/local-sync-chain.md) | 4 | 冻结外推误差 ≤1.5%；迁移到 GEMM 失败 |
-| [G3 stage 信用](../Q04-sync-slot/g3-stage-credit.md) | 4 | stage 代价可被计算隐藏，支持有限输入信用 |
-| [释放观察](../Q04-sync-slot/release-feedback.md)、[barrier 返回](../Q04-sync-slot/barrier-return.md) | 4 | 观察扰动超门；无大额唤醒成本 |
-| [计算完成与提交](../Q05-wgmma/local-compute-chain.md) | 5 | d95 冻结留出通过；提交提前量未辨识 |
-| [输入／输出联合窗口](../Q07-smem/input-output-joint.md) | 7 | 重叠收益存在，max／serial 均不成立 |
-| [频率机制](../Q09-frequency/frequency-mechanism.md)、[cfg_c 双时钟](../Q09-frequency/cfg-c-clock-bracket.md) | 9 | 限定范围 C3 通过（2.96%）；阶段频率未通过 |
-| [相同 plain 重复](../Q10-time-mapping/plain-repeat.md)、[C1 计时协议](../Q10-time-mapping/c1-timing-protocol.md)、[cfg_c producer-tail](../Q10-time-mapping/cfg-c-producer-tail.md) | 10 | 逐 SM 端点不可复现；graph 计时降噪但非完全等价 |
-| [cfg_b 组合](../Q14-composition/cfg-b-composition.md)、[局部规则接回 GEMM](../Q14-composition/gemm-connection.md) | 14 | 10.225%／25.422%；局部规则未改善原12成绩 |
-| [工作放置](../Q01-scheduling/work-placement.md) | 1 | 放置改变响应符号，只按逻辑工作收费被排除 |
+全部实验记录见[按研究问题阅读](../README.md#research-questions)。
 
 ## 非实验结果目录
 
 <a id="non-experiment-results"></a>
 
-存放于 [non-experiment/records](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/README.md)。
-
-| 目录 | 用途 |
-|---|---|
-| [acceptance-20261006](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/acceptance-20261006/) | 2026-10-06 访问规则首批验收材料。 |
-| [pre-format-20261006](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/pre-format-20261006/) | 2026-10-06 格式整理前的原始结果副本。 |
-| [20261008-NCU-job737122](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261008-NCU-job737122/) | 性能计数器权限检查，日志返回ERR_NVGPUCTRPERM。 |
-| [20261012-repository-consolidation](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261012-repository-consolidation/) | 仓库整理、工作树与冻结身份核对，以及CPU回归元数据。 |
-| [20261012-authorized-measurement-integration](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261012-authorized-measurement-integration/) | 授权测量的集成记录。 |
-| [20261015-C1-storage-recovery-001](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261015-C1-storage-recovery-001/) | C1 开发期间的存储恢复。 |
-| [20261015-node-scratch-cleanup-001](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261015-node-scratch-cleanup-001/) | 节点临时空间清理；归档核对后删除已结束任务的临时副本。 |
-| [20261015-node-scratch-cleanup-002](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/20261015-node-scratch-cleanup-002/) | 后续五个开发块的节点临时副本清理与回执。 |
+重测批次、存储恢复与整理记录统一列在 [non-experiment/records 索引](../../../../../../results/gh200_resource_campaign/access_rules/non-experiment/records/README.md)。
 
 ## 模型、机制研究与公共入口
 
@@ -129,7 +98,7 @@
 
 - [运行、拟合与分析代码](../../../../../../microbench/gh200_resource_campaign/access_rules/)：预测入口为v09_model，供给/输出/时钟是独立纯模块；原分析CLI保留复现用途。
 - 两组R18方向配对统一由[r18_cases.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r18_cases.py)生成（`--family first-fill|input-map --axis m|n`）；四份已有JSON作为历史展开快照保留，`--check`核对全部字段。
-- [原始结果](../../../../../../results/gh200_resource_campaign/access_rules/README.md)按 `问题/合并实验/原轮次` 保存源码、构建、环境、样本与分析；每个合并实验的 README 列出全部轮次（含中间版本与失败尝试），冻结预测及绑定记录见各 V 页。2026-10-20 之前的平铺路径与新路径对照见 [MOVED-PATHS-20261020.tsv](../../../../../../results/gh200_resource_campaign/access_rules/MOVED-PATHS-20261020.tsv)。
+- [原始结果](../../../../../../results/gh200_resource_campaign/access_rules/README.md)按 `问题/合并实验/原轮次` 保存源码、构建、环境、样本与分析；每个合并实验的 README 列出全部轮次（含中间版本与失败尝试），冻结预测及绑定记录见各 V 页。10-20 前的平铺路径见 [MOVED-PATHS-20261020.tsv](../../../../../../results/gh200_resource_campaign/access_rules/MOVED-PATHS-20261020.tsv)；10-28 重组前的三层路径见 [MOVED-PATHS-20261028.tsv](../../../../../../results/gh200_resource_campaign/access_rules/MOVED-PATHS-20261028.tsv)。两表均指向当前目录。
 - [规则说明](RULES.md)保留计量约定、手算例子与 2026-10-08 一次性离线复现记录。
 - R09、R10、R13 的逐问题推导与证据在 2026-10-12 整合附录，随各页放在所属问题目录：[R09](../Q09-frequency/reanalysis/20261012-consolidation/R09/README.md)、[R10](../Q03-source-service/reanalysis/20261012-consolidation/R10/README.md)、[R13](../Q02-tma-request/reanalysis/20261012-consolidation/R13/README.md)；由对应 R 页逐条链接，是这三页的附录，不另立结论。
 - [历史过程文件](../../gh200_sm90_archive/access_rules/)保留原样；不作为当前执行要求。

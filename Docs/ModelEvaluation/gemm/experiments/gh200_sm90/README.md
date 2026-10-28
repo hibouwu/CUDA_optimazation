@@ -6,7 +6,7 @@
 
 ## 按研究问题阅读
 
-当前进行：[a044 锁频完整重测与逐阶段说明](Q10-time-mapping/A044-REMEASUREMENT.md)。旧卡结果保持原样，新轮次单独比较。
+a044 重测的采样阶段已结束，预约于 2026-10-27 22:10（巴黎时间）到期。各轮完成范围、资格与评分见[a044 逐阶段说明](Q10-time-mapping/A044-REMEASUREMENT.md)及其链接的结果报告。旧卡结果保持原样，新轮次单独比较。
 
 实验代码按探针集中在四个阅读目录中（单 CTA TMA、驻留链、多 CTA tensor、插桩 GEMM），请求级组合模型另有一个，入口见 [microbench 的“按探针阅读代码”](../../../../../microbench/gh200_resource_campaign/access_rules/README.md#按探针阅读代码)。
 
@@ -31,7 +31,7 @@
 | <a id="question-15"></a>15. 完整时间预测与模型对照 | 运行前输入 → kernel 完整时间与误差 | [规格基线](../../model/spec/spec_baseline.md)、[半经验模型](../../model/semi_empirical/MODEL-CANDIDATES.md)、[机制组合](../../model/mechanism/composition.md) | [V01](Q15-full-time/V01-validation.md)、[V02](Q15-full-time/V02-kernel-prediction.md)、[V03](Q15-full-time/V03-clock-rule.md)、[V04](Q15-full-time/V04-config-transfer.md)、[V05](Q15-full-time/V05-rule-transfer.md)、[V06](Q15-full-time/V06-revised-transfer.md)、[V07](Q15-full-time/V07-rule-validation.md)、[V08](Q15-full-time/V08-wider-validation.md)、[V09](Q15-full-time/V09-component-validation.md)、[COMPOSITION-01](Q14-composition/COMPOSITION-01-replay.md)、[C1-01 模型对照](Q16-config-selection/C1-01-selection.md) | C3 | 三类模型入口齐备，各版范围与成绩由原评分记录维护。 |
 | <a id="question-16"></a>16. 配置选择 | 候选预测时间与排序 → 所选配置 | [C1 目标](../../GOALS.md#52-c1-选配置)、[候选模型](../../model/semi_empirical/MODEL-CANDIDATES.md) | [C1-01](Q16-config-selection/C1-01-selection.md) | C1 | 开发比较已留档，正式独立留出未完成。 |
 
-实验页按主归属问题存放在 `Qnn-*/` 目录，一个合并实验一页，其他问题以链接引用；问题 10 的观测协议另有 `Q10-time-mapping/`，时间映射的证据仍在 INTERFACE 兼容副本、V09 与 C1-01。原始轮次存放在 `results/gh200_resource_campaign/access_rules/<问题>/<合并实验>/<YYYYMMDD-Qnn-名称-NNN>/`，新轮次放进对应合并实验目录，并在实验页的轮次表登记；新脚本以 `qnn_` 为前缀放在现有脚本目录。2026-10-20 的结果目录重排与旧页面路径对照见 [MOVED-PATHS](MOVED-PATHS.md)。
+实验页按主归属问题存放在 `Qnn-*/` 目录，一个合并实验一页，其他问题以链接引用；问题 10 的观测协议另有 `Q10-time-mapping/`，时间映射的证据仍在 INTERFACE 兼容副本、V09 与 C1-01。原始轮次存放在 `results/gh200_resource_campaign/access_rules/<问题>/<合并实验>/<YYYYMMDD-Qnn-名称-NNN>/`，新轮次放进对应合并实验目录，并在实验页的轮次表登记；新脚本以 `qnn_` 为前缀放在现有脚本目录。实验页旧路径与拆分页去向见 [MOVED-PATHS](MOVED-PATHS.md)。结果轮次的旧路径分别见 [10-20 对应表](../../../../../results/gh200_resource_campaign/access_rules/MOVED-PATHS-20261020.tsv)（旧平铺路径）和 [10-28 对应表](../../../../../results/gh200_resource_campaign/access_rules/MOVED-PATHS-20261028.tsv)（重组前的三层路径），两表均指向当前目录。
 
 ## 测量口径
 

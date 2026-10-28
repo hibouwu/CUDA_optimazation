@@ -130,7 +130,7 @@ T\ge\max\left(T_{\mathrm{dep,LB}},\ \max_r\frac{D_r}{\mu_r}\right).
 
 [Roofline 作者介绍](https://amcr.lbl.gov/wp-content/uploads/2025/11/roofline-intro.pdf) 可用于建立计算与数据搬运的吞吐限制；[ECM 原论文](https://arxiv.org/html/1410.5010v2) 提醒模型必须明确可重叠和不可重叠的成本。借鉴这些方法时，具体 CPU 重叠规则不直接用作 GPU 的规则。
 
-EDP [第 3 课](<../../../../../../../SiteCHPS/CHPS/M2/EDP/CM/3_edp_zh.md>) 中服务、等待、瞬态/稳态及 Little 定律的区分可用于检查这些关系。不能仅因存在排队就采用 M/M/1 或 Jackson 网络；它们的到达与服务假设需要另外成立。
+EDP 第 3 课中服务、等待、瞬态/稳态及 Little 定律的区分可用于检查这些关系。不能仅因存在排队就采用 M/M/1 或 Jackson 网络；它们的到达与服务假设需要另外成立。
 
 ## 7. 程序图的组织与组合
 

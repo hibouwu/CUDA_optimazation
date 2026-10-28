@@ -1,6 +1,5 @@
 .venv/
 .cache/
-__pycache__/
 snapshot/
 site/
 !data/
@@ -15,3 +14,7 @@ site/
 /audits/declarations-before-alignment-repair.json
 /audits/declarations-before-array-metadata.json
 /audits/declarations-before-scope-repair.json
+
+# data/ 保留源文件，不收集 Python 缓存
+__pycache__/
+*.py[cod]
