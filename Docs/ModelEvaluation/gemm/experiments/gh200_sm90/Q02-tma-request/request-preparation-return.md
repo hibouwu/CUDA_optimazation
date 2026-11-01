@@ -1,6 +1,6 @@
 # 请求准备、发出受理与返回反馈
 
-14 个目录（10-18 至 10-23）：producer 的逐轮准备、源受理返回与形成服务的返回反馈，在原生 D 链、TMA 探针与 G3 回放上检验。
+15 个目录（10-18 至 10-29）：producer 的逐轮准备、源受理返回与形成服务的返回反馈，在原生 D 链、TMA 探针与 G3 回放上检验。
 
 ## 结论
 
@@ -8,6 +8,7 @@
 - 逐轮准备 P240／309.75 cycle 接回 G3 后，A16 行距响应仍仅 0.0931%（实测 28.94%），两参数版本停止。
 - 返回连接已交付：同步 issue_return、异步准入与就绪分离、队列受理返回；队列受理返回 k565 的 Q4 误差 4.08%，保留开发假设。
 - 请求形成先于缓存查询：四个 L 的最大误差 34.4%→9.3%，plain 仍高 14.4%，停止当前参数版本；形成服务的两种返回反馈 unique Q1 最大误差 33.6%／31.3%，均停止；同地址评分修正后仍失败。
+- 形成前置版的残差定位（10-29，CPU）：unique Q1 等待外控制已吻合，issue 括号起点→等待返回的窗口每组少 156.5 ns，缺口在请求完成与阻塞返回之间分不开；只读平移括号内发出位置不能消除。unique Q4 等待 ≤41 ns 的组实测 57.2%、模型 17.6%。G3 的 L 周期误差含固定阶段频率项（算术分解，−13.5%～+7.4%）；g43 base 在 82 cycle 内统一后移 query 仍不能修复。
 
 ## 轮次
 
@@ -40,3 +41,5 @@
 - [请求返回同地址比较](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261023-Q14-address-matched-return-001/README.md)：固定形成轮参数，更正预测与评分进程的地址绑定；55调用、108.582秒、拟合／GPU0，unique Q1／Q4仍失败，当前参数版本继续停止。
 
 - [形成服务的返回反馈](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261023-Q14-formation-return-001/README.md)：producer后继接Formation PS2开始／结束两形式，unique Q1最大误差33.590%／31.312%（基线33.266%），24分项全部低估，均停止。控制已吻合、等待和仅0.57–0.62，缺口在低在途请求往返；41调用、拟合／GPU0。
+
+- [形成前置版的残差定位](../../../../../../results/gh200_resource_campaign/access_rules/Q02-tma-request/request-preparation-return/20261029-Q14-residual-localization-001/README.md)：只读已有观测与形成版时间线，得到逐端点的可定位区间和下一版必要条件；模型／拟合／GPU0。
