@@ -174,3 +174,66 @@ T_O(\tau) := \max\bigl(\{0\} \cup \{\tau(v) \mid v \in O\}\bigr).
   - 以下增删边比较均假定固定节点集、观察集合 $O$、源节点集合（$\mathrm{preds}(v)=\varnothing$）及其源起点区间，并保留共有边的偏移区间；若删边使某节点失去最后一条入边而成为新源节点，须重新核验其源起点约束，不能直接套用下述单调关系（在 §3.1 中移除跨拍边 `commit(g+1) -> rel(g)` 时，`rel(g)` 仍保留入边 `cmp(g) -> rel(g)`，不产生新源节点）。
   - 在不产生新源节点的前提下，省略程序边会放松 $\mathrm{ValidLower}$ 约束，因此子图下界 $L_{\mathrm{sub}}$ 仍是包含更多边的完整图的合法下界（$L_{\mathrm{sub}} \le L_{\mathrm{full}}$）；
   - 省略前驱边或将未知控制等待设为 0 会收紧 $\mathrm{ValidUpper}$，可能导致子图上界 $U_{\mathrm{sub}} \le U_{\mathrm{full}}$。因此，当观测值超出 $U_{\mathrm{sub}}$ 时，定理仅证伪“当前声明的子图边 $P_{\mathrm{sub}}$ 与偏移区间 $H_{\max}$ 的组合与观测相容”，其用途是发现不相容并限制后续解释，不能单独区分原因是漏边、区间偏小还是测量窗口差异。
+
+## 5. 真实程序短链的接入约定与当前缺口
+
+### 5.1 选定对象与图边界
+
+选用 [739011 历史条件](../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/cases.json) `v09d_cfg_b_G4_base`：M3328、N768、K512，tile 为 128×128×64，grid 为 `[1,132,1]`，S6。使用同目录 `static_setup.json` 和当前 `cfg_b_program.build_program / expand_cta`，取 CTA 0、输出 `j=0`（坐标 `[0,0]`，`g=0..7`）。本轮是历史程序输入的结构核验，不重新评分该历史留出条件，也不宣称当前 Python 与历史二进制已建立形式化等价。
+
+`expand_cta` 使用默认 `register_quota=False, epilogue_defer=0, separate_empty_completion=False`。保留 `j0.main_end` 的全部静态前驱闭包，唯一源为 `entry`，观察集合取 `O={j0.main_end}`，相对起点取 `entry=0`。从完整图导出的 `topological_order` 构造秩，限制到闭包仍逐边递增。该选择保留首个输出的准备、8 组输入/计算、两次同槽复用及尾部排空；省略的寄存器分配细节及其他 CTA 的资源竞争不因此消失。
+
+闭包包含 133 节点、174 边，完整 CTA 图为 275 节点、374 边；这些是当前 Python 实例的 CPU 核验结果，尚不是 Lean 导入证书。不能把闭包中的服务节点直接标为零延迟并声称其上界覆盖实测。
+
+### 5.2 五事件投影与不能直接复用的条件
+
+| 五事件 | 候选程序节点 | 对应关系与限制 |
+|---|---|---|
+| `acq(g)` | `g.acquire` | 表示获得槽后的节点；`entry → acquire(0)` 的准备时间存在，不能将源起点 `[0,0]` 原样移到真实 `acquire(0)` |
+| `rdy(g)` | `g.full_ready` | 依赖 `expect_tx` 和 A/B0/B1 三次完成；不等于消费者已经执行完等待 |
+| `commit(g)` | `g.commit` | 静态路径为 `full_ready → consumer_wait → compute_batch → commit`，并受 `full_query` 控制 |
+| `cmp(g)` | `g.compute_complete` | 与 `commit` 同为 `compute_batch` 的后继；静态图没有 `commit → compute_complete` 路径。§5.3 已给出计算递推前提下的 Lean 局部边证书，尚未修改 Python 静态图或导入整张图 |
+| `rel(g)` | `g.release` | `g<7` 由下一组 `wait1` 释放；`g=7` 由 `j0.wait0` 排空释放；默认图合并了释放发出与可见完成 |
+
+按该投影，槽复用边 `release(g) → acquire(g+6)` 为直接边；`g<7` 的跨拍边由 `commit(g+1) → wait1(g+1) → release(g)` 路径支持；相邻 acquire 通过上一组 B1 发出路径推进。它们提供静态先后关系，非零偏移仍须另证。
+
+第一阶段实例不能直接当作这个程序的双侧规范：
+
+- 实例中 `rdy → commit` 是唯一入边且区间为 `[0,0]`，双侧规范强制 `rdy=commit`；真实路径保留消费者推进与计算提交。仅将 `rdy` 改名为 `consumer_wait` 仍未覆盖随后发射时间。
+- `cmp → rel` 及复用控制边的零上偏移，也要求等待返回、释放和后续发射在相应前驱最大值处立即推进；源码先后关系不能给出这种上界。
+- 跨输出不能把所有 Ktile 连成同一种 `wait1` 规则。当前图中不存在 `g8.commit → g7.release` 路径；每输出末组由 `wait0` 释放。所选单输出避开这处边界，但不能推广到整个 pingpong 工作列表。
+- 释放事件最大值不是 `MAIN_END` 的已证等式。源码在 `mma_tail` 返回后打点，Python 默认图中仍有 `g7.release → j0.main_end` 边；观察开销或控制偏移尚未定界。
+
+接入时优先将这条细图实例化到现有 `Core.Graph`，保留当前五事件模型作为独立抽象实例。无需改变通用轨迹定义，也不能通过删去真实等待来强行复用五事件实例的数值结论。
+
+### 5.3 服务假设的资格
+
+| 服务 | 现有依据 | 进入双侧规范仍需满足的条件 |
+|---|---|---|
+| 计算提交与完成 | `supply_model.wgmma_compute_step`：`E=max(M,Eprev)+c`，`C=max(M+f,E−q)`，`D=E+λ` | 在 `c≥f≥0,q≥0,λ≥0` 下可推出 `M≤C≤E≤D` 及 `λ≤D−C≤q+λ`；但 `D−C` 不是 `c`，且单个函数本身不校验这些前提。数学候选关系不等于硬件事实 |
+| TMA 应答共享 | `cfg_b_input_network.ReplyGroup` 按活动请求数分摊处理速率，其他请求排队 | 必须限制其他请求的到达、剩余工作与排队量，或展开有依据的资源先后关系。每请求自身工作量不能直接充当完成偏移上界 |
+| 本地输入/计算服务 | `LocalServiceCalendar` 预留多个可用片段，`JointLocalInputNetwork` 共享该日历 | 实际有效延迟依赖已有预留，不能仅用一次回放的服务顺序宣称所有允许执行均受同一固定 DAG 覆盖 |
+| 控制与观测端点 | 程序源码给出调用顺序和打点位置 | 为 consumer wait、wait1/wait0、release、main_end 等保留可解释的推进上限；没有上限依据时仅可使用已证明其前提的下界结论 |
+
+两个局部反例用于限制误用：`M=Eprev=0,c=10,q=3,λ=1,f=0` 时计算服务给出 `E=10,C=7,D=11`，提交后剩余延迟为 4；应答组中单个工作量 10 的请求在 10 完成，两个同时到达的同样请求各在 20 完成。均为现有 Python 候选的行为，不是新增硬件测量。
+
+计算区间的代数依据为 `E≥M+c≥M+f`，故 `E−q≤C≤E`，代入 `D=E+λ` 得上述剩余延迟界。若另有 `λ∈[λmin,λmax]`、`q≤qmax`，则可选条件区间 `[λmin,qmax+λmax]`；这些参数界的硬件依据仍须单独建立。
+
+该关系已在 [Pipeline/Compute.lean](GemmProofs/Pipeline/Compute.lean) 中形式化，依赖通用 `Core.Model`，不改变五事件实例：
+
+- `signed_completion_window` 对整数 `M,Eprev,c,q,λ,f : Int` 在 `f≤c,q≥0` 下证明 `C+λ≤D≤C+(q+λ)`，其中 `E−q` 为普通带符号减法。此代数结论本身无需起点或 λ 非负；图的非负时间/偏移由后续 Nat 接口保证。
+- `commit_cast` 证明非负整数输入下，Nat 递推的提交时刻嵌入 Int 后，与带符号递推完全相同。无需额外假设 `q≤E`：当 `E−q<0` 时，非负的 `M+f` 分支已经占优。
+- `completion_window`、`residual_bounds` 对任意 Nat 输入及 `f≤c` 分别证明加法窗口和 `λ≤D−C≤q+λ`；前者保证 `C≤D`，不会利用自然数减法截断掩盖完成早于提交。
+- `edge_bounds` 将已知参数范围放宽为 `[λmin,qmax+λmax]`，并证明区间有序；`graph_edge` 对任意现有 `Core.Graph/Trace`，在提交/完成时间满足递推且存在该入边时，证明此边的下界约束与完成节点的多前驱最大值上界约束。不假定整图已满足上界规范，也不要求完成节点只有这一条入边。
+
+本轮补齐的是计算服务条件下的局部边依据；未将 Python 的浮点运算视为精确整数递推，未证明任意实数时间的整数化保持性。其他入边下界、源起点、该新增边与整图拓扑秩的相容性及参数硬件资格，仍须在具体图接入时分别核验。
+
+对所选多 CTA 条件，当前未建立覆盖共享服务的有效上偏移区间，也未完成源准备/控制推进区间的资格证明。静态前驱闭包不包含其他 CTA，也不包含可能在首输出尾部排空期间运行的本 CTA 下一输出；这些外部工作仍可能竞争资源。因此不能把这条静态闭包的极值上界用于真实执行的排除结论。静态零权路径先后可以核验，非平凡性能下界同样需要相应最小延迟依据。
+
+### 5.4 时间与观测窗口
+
+本次查阅 [G4 dual-00 原始记录](../results/gh200_resource_campaign/access_rules/Q15-full-time/V09-component-validation/20261009-V09-heldout-job739011/samples/v09d_cfg_b_G4_base/dual-00.json) 的实际 setup 为 `r18-dual-clock-events`、每 tile 10 字，不使用静态 setup 的 6 字布局解码。CTA 0 首输出坐标 `[0,0]`，溢出标记为 0，entry 与两消费者角色记录的 SM 相同。冻结 `v06_trace.hpp` 在每个打点先读 `clock64` 再读 `globaltimer`；collective 在首次 consumer wait 后、WGMMA 发射前记录 `FIRST_MMA`，kernel 在 `mma_tail` 后记录 `MAIN_END`。
+
+本短链的候选观察口径为 **ENTRY → MAIN_END，globaltimer 整数 ns**，原始记录差值为 4800；同次 `clock64` 差值为 8401。历史主循环口径 **FIRST_MMA → MAIN_END** 则为 2816 ns / 4556 cycles。两种窗口不能互换，两个时钟也不能混用。4800 仅是一次带打点执行的观测，不是区间上限或校准参数；没有据此拟合服务偏移，也未构造用于硬件证伪的 `I_obs`。
+
+若继续采用整数 ns，必须给出将物理/候选时间映射到整数轨迹的误差规则及测量误差范围，并向外放宽区间；现有 Python 的小数 ns 不可直接截断后当作已满足 Lean 约束。若改用主循环窗口，要保留 FIRST 之前的输入与资源状态，明确两个端点的差值或等价切分；不能把 FIRST 强制设为全图零源并丢弃先前工作。带打点窗口与 plain CUDA event 时间也不等价。
